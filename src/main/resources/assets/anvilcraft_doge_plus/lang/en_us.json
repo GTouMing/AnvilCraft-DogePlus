@@ -1,0 +1,11 @@
+{
+  "block.anvilcraft_doge_plus.chute_dispenser": "Chute Dispenser",
+  "container.anvilcraft_doge_plus.chute_dispenser": "Chute Dispenser",
+  "block.anvilcraft_doge_plus.chute_dropper": "Chute Dropper",
+  "container.anvilcraft_doge_plus.chute_dropper": "Chute Dropper",
+  "block.anvilcraft_doge_plus.magnetic_chute_dropper": "Magnetic Chute Dropper",
+  "container.anvilcraft_doge_plus.magnetic_chute_dropper": "Magnetic Chute Dropper",
+  "block.anvilcraft_doge_plus.magnetic_chute_dispenser": "Magnetic Chute Dispenser",
+  "container.anvilcraft_doge_plus.magnetic_chute_dispenser": "Magnetic Chute Dispenser",
+  "itemGroup.anvilcraft_doge_plus": "Doge+"
+}

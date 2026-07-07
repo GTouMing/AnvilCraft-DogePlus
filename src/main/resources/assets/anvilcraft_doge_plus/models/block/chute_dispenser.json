@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "anvilcraft:block/chute_top",
+    "front": "minecraft:block/dispenser_front",
+    "side": "minecraft:block/furnace_side",
+    "bottom": "minecraft:block/furnace_top"
+  }
+}

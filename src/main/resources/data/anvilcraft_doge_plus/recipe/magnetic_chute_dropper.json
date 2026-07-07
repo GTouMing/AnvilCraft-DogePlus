@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "id": "anvilcraft:magnetic_chute"
+    },
+    {
+      "id": "minecraft:dropper"
+    }
+  ],
+  "result": {
+    "id": "anvilcraft_doge_plus:magnetic_chute_dropper",
+    "count": 1
+  }
+}

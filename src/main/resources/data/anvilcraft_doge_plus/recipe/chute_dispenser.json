@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "id": "anvilcraft:chute"
+    },
+    {
+      "id": "minecraft:dispenser"
+    }
+  ],
+  "result": {
+    "id": "anvilcraft_doge_plus:chute_dispenser",
+    "count": 1
+  }
+}

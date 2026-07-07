@@ -1,0 +1,22 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "anvilcraft_doge_plus:block/chute_dispenser_vertical"
+    },
+    "facing=east": {
+      "model": "anvilcraft_doge_plus:block/chute_dispenser",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "anvilcraft_doge_plus:block/chute_dispenser"
+    },
+    "facing=south": {
+      "model": "anvilcraft_doge_plus:block/chute_dispenser",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "anvilcraft_doge_plus:block/chute_dispenser",
+      "y": 270
+    }
+  }
+}

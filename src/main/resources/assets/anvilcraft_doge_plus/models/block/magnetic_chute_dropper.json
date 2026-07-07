@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "anvilcraft:block/chute_top",
+    "north": "minecraft:block/dropper_front",
+    "south": "anvilcraft:block/chute_top",
+    "east": "minecraft:block/furnace_side",
+    "west": "minecraft:block/furnace_side",
+    "up": "minecraft:block/furnace_top",
+    "down": "minecraft:block/furnace_top"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "block.anvilcraft_doge_plus.chute_dispenser": "溜槽发射器",
+  "container.anvilcraft_doge_plus.chute_dispenser": "溜槽发射器",
+  "block.anvilcraft_doge_plus.chute_dropper": "溜槽投掷器",
+  "container.anvilcraft_doge_plus.chute_dropper": "溜槽投掷器",
+  "block.anvilcraft_doge_plus.magnetic_chute_dropper": "磁力溜槽投掷器",
+  "container.anvilcraft_doge_plus.magnetic_chute_dropper": "磁力溜槽投掷器",
+  "block.anvilcraft_doge_plus.magnetic_chute_dispenser": "磁力溜槽发射器",
+  "container.anvilcraft_doge_plus.magnetic_chute_dispenser": "磁力溜槽发射器",
+  "itemGroup.anvilcraft_doge_plus": "Doge+"
+}
