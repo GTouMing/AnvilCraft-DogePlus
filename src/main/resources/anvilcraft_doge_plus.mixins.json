@@ -1,10 +1,9 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "dev.anvilcraft.doge_plus.mixin",
+  "package": "dev.anvilcraft.gtouming.doge_plus.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "ItemEntityMixin"
   ],
   "client": [
     "ItemEntityRendererMixin"
