@@ -3,10 +3,10 @@
   "category": "misc",
   "ingredients": [
     {
-      "id": "anvilcraft:magnetic_chute"
+      "item": "anvilcraft:magnetic_chute"
     },
     {
-      "id": "minecraft:dispenser"
+      "item": "minecraft:dispenser"
     }
   ],
   "result": {

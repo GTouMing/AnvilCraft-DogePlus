@@ -3,10 +3,10 @@
   "category": "misc",
   "ingredients": [
     {
-      "id": "anvilcraft:chute"
+      "item": "anvilcraft:chute"
     },
     {
-      "id": "minecraft:dispenser"
+      "item": "minecraft:dispenser"
     }
   ],
   "result": {
