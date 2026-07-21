@@ -28,7 +28,7 @@ import java.util.function.BiFunction;
 
 public abstract class AbstractChuteScreen<T extends BaseChuteMenu<?>> extends BaseMachineScreen<T> implements IFilterScreen<T> {
     private static final ResourceLocation CONTAINER_LOCATION =
-            ResourceLocation.parse("anvilcraft:textures/gui/container/machine/background/chute.png");
+            ResourceLocation.parse("anvilcraft:textures/gui/machine/background/chute.png");
     private final BiFunction<Integer, Integer, EnableFilterButton> enableFilterButtonSupplier =
             this.getEnableFilterButtonSupplier(134, 36);
     private EnableFilterButton enableFilterButton;
@@ -45,11 +45,15 @@ public abstract class AbstractChuteScreen<T extends BaseChuteMenu<?>> extends Ba
     protected void init() {
         super.init();
         if (getMenu().getMachine() instanceof AbstractChuteBlockEntity be) {
-            this.getDirectionButton().setDirection(be.getDirection());
+            if (this.getDirectionButton() != null) {
+                this.getDirectionButton().setDirection(be.getDirection());
+            }
         }
         for (Direction value : Direction.values()) {
             if (shouldSkipDirection(value)) {
-                this.getDirectionButton().skip(value);
+                if (this.getDirectionButton() != null) {
+                    this.getDirectionButton().skip(value);
+                }
             }
         }
         this.enableFilterButton = enableFilterButtonSupplier.apply(this.leftPos, this.topPos);

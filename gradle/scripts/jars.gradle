@@ -8,7 +8,7 @@ jar {
     from(project.file("LICENSE"))
     from(project.file("ASSETS_LICENSE"))
     from(project.file("README.md"))
-    from(project.file("README_en.md"))
+    from(project.file("README_EN.md"))
 }
 
 base {

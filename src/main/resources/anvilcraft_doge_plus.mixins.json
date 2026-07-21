@@ -4,6 +4,9 @@
   "package": "dev.anvilcraft.gtouming.doge_plus.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ItemEntityMixin",
+    "MagnetizedNodeEntityMixin",
+    "PlayerEventListenerMixin"
   ],
   "client": [
     "ItemEntityRendererMixin"

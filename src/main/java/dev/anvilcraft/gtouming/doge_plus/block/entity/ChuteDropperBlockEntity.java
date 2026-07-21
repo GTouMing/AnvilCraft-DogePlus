@@ -42,7 +42,7 @@ public class ChuteDropperBlockEntity extends AbstractChuteBlockEntity {
 
     @Override
     protected boolean isEnabled() {
-        return true;
+        return !getBlockState().getValue(dev.anvilcraft.gtouming.doge_plus.block.AbstractChuteDropperBlock.TRIGGERED);
     }
 
     @Override
