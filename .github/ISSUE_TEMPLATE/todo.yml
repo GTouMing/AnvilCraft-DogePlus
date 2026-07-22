@@ -1,0 +1,36 @@
+name: Todo / 待办
+description: Track a task or improvement / 追踪任务或改进
+labels: ["todo"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Todo / 待办事项
+
+  - type: textarea
+    id: task
+    attributes:
+      label: Task Description / 任务描述
+      description: What needs to be done? / 需要做什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist / 检查清单
+      description: Break the task into actionable steps / 将任务拆解为可执行的步骤
+      placeholder: |
+        - [ ] Step 1 / 第一步
+        - [ ] Step 2 / 第二步
+        - [ ] Step 3 / 第三步
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / 备注
+      description: Any additional notes, references, or related issues / 额外的备注、参考或关联问题
