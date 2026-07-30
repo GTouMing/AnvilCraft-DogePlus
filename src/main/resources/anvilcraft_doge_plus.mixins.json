@@ -5,11 +5,14 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ItemEntityMixin",
+    "ItemStackMixin",
     "MagnetizedNodeEntityMixin",
     "PlayerEventListenerMixin"
   ],
   "client": [
-    "ItemEntityRendererMixin"
+    "ItemEntityRendererMixin",
+    "ItemRendererMixin",
+    "SoundEngineMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -4,44 +4,58 @@ import dev.anvilcraft.gtouming.doge_plus.block.ChuteDispenserBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.ChuteDropperBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.MagneticChuteDispenserBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.MagneticChuteDropperBlock;
-import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
-import net.minecraft.world.level.material.MapColor;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredBlock;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import dev.anvilcraft.lib.v2.registrum.util.entry.BlockEntry;
+import dev.dubhe.anvilcraft.util.DataGenUtil;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.Blocks;
 
-import static dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus.MOD_ID;
+import static dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus.REGISTRUM;
 
 public class ModBlocks {
-    public static final DeferredRegister.Blocks MOD_BLOCK =
-            DeferredRegister.createBlocks(MOD_ID);
+    static {
+        REGISTRUM.defaultCreativeTab(ModCreativeTab.DOGE_PLUS_TAB.getKey());
+    }
 
-    public static final DeferredBlock<ChuteDispenserBlock> CHUTE_DISPENSER =
-            MOD_BLOCK.registerBlock("chute_dispenser", ChuteDispenserBlock::new,
-                    BlockBehaviour.Properties.of().mapColor(MapColor.STONE)
-                            .instrument(NoteBlockInstrument.BASEDRUM)
-                            .requiresCorrectToolForDrops().strength(3.5F));
+    public static final BlockEntry<ChuteDispenserBlock> CHUTE_DISPENSER =
+            REGISTRUM.block("chute_dispenser", ChuteDispenserBlock::new)
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
+                    .blockstate(DataGenUtil::noExtraModelOrState)
+                    .item()
+                    .build()
+                    .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .register();
 
-    public static final DeferredBlock<ChuteDropperBlock> CHUTE_DROPPER =
-            MOD_BLOCK.registerBlock("chute_dropper", ChuteDropperBlock::new,
-                    BlockBehaviour.Properties.of().mapColor(MapColor.STONE)
-                            .instrument(NoteBlockInstrument.BASEDRUM)
-                            .requiresCorrectToolForDrops().strength(3.5F));
+    public static final BlockEntry<ChuteDropperBlock> CHUTE_DROPPER =
+            REGISTRUM.block("chute_dropper", ChuteDropperBlock::new)
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
+                    .blockstate(DataGenUtil::noExtraModelOrState)
+                    .item()
+                    .build()
+                    .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .register();
 
-    public static final DeferredBlock<MagneticChuteDropperBlock> MAGNETIC_CHUTE_DROPPER =
-            MOD_BLOCK.registerBlock("magnetic_chute_dropper", MagneticChuteDropperBlock::new,
-                    BlockBehaviour.Properties.of().mapColor(MapColor.STONE)
-                            .instrument(NoteBlockInstrument.BASEDRUM)
-                            .requiresCorrectToolForDrops().strength(3.5F));
+    public static final BlockEntry<MagneticChuteDropperBlock> MAGNETIC_CHUTE_DROPPER =
+            REGISTRUM.block("magnetic_chute_dropper", MagneticChuteDropperBlock::new)
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
+                    .blockstate(DataGenUtil::noExtraModelOrState)
+                    .item()
+                    .build()
+                    .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .register();
 
-    public static final DeferredBlock<MagneticChuteDispenserBlock> MAGNETIC_CHUTE_DISPENSER =
-            MOD_BLOCK.registerBlock("magnetic_chute_dispenser", MagneticChuteDispenserBlock::new,
-                    BlockBehaviour.Properties.of().mapColor(MapColor.STONE)
-                            .instrument(NoteBlockInstrument.BASEDRUM)
-                            .requiresCorrectToolForDrops().strength(3.5F));
+    public static final BlockEntry<MagneticChuteDispenserBlock> MAGNETIC_CHUTE_DISPENSER =
+            REGISTRUM.block("magnetic_chute_dispenser", MagneticChuteDispenserBlock::new)
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
+                    .blockstate(DataGenUtil::noExtraModelOrState)
+                    .item()
+                    .build()
+                    .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .register();
 
-    public static void register(IEventBus bus) {
-        MOD_BLOCK.register(bus);
+    public static void register() {
     }
 }

@@ -5,4 +5,12 @@ dependencies {
     // AnvilCraft
     implementation(libs.anvilcraft) { transitive = false }
     interfaceInjectionData(libs.anvilcraft) { transitive = false }
+
+    // JEI
+    compileOnly(libs.jei)
+    runtimeOnly(libs.jei)
+
+    // Curios API
+    compileOnly(libs.curios)
+    runtimeOnly(libs.curios)
 }

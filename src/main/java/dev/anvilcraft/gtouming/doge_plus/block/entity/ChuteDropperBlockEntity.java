@@ -1,8 +1,8 @@
 package dev.anvilcraft.gtouming.doge_plus.block.entity;
 
 import dev.anvilcraft.gtouming.doge_plus.block.ChuteDropperBlock;
-import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
+import dev.anvilcraft.gtouming.doge_plus.init.ModMenuTypes;
 import dev.anvilcraft.gtouming.doge_plus.inventory.ChuteDropperMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -10,14 +10,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import org.jetbrains.annotations.Nullable;
 
 public class ChuteDropperBlockEntity extends AbstractChuteBlockEntity {
 
-    public ChuteDropperBlockEntity(BlockPos pos, BlockState blockState) {
-        super(ModBlockEntities.CHUTE_DROPPER.get(), pos, blockState);
+    public ChuteDropperBlockEntity(BlockEntityType<? extends BlockEntity> type, BlockPos pos, BlockState blockState) {
+        super(type, pos, blockState);
     }
 
     @Override
@@ -54,6 +56,6 @@ public class ChuteDropperBlockEntity extends AbstractChuteBlockEntity {
     @Override
     public AbstractContainerMenu createMenu(int i, Inventory inventory, Player player) {
         if (player.isSpectator()) return null;
-        return new ChuteDropperMenu(i, inventory, this);
+        return new ChuteDropperMenu(ModMenuTypes.CHUTE_DROPPER.get(), i, inventory, this);
     }
 }

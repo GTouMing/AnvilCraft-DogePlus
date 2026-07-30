@@ -1,12 +1,12 @@
 package dev.anvilcraft.gtouming.doge_plus.client.gui.screen;
 
-import dev.anvilcraft.gtouming.doge_plus.inventory.DogeChuteMenu;
+import dev.anvilcraft.gtouming.doge_plus.inventory.ChuteDispenserMenu;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-public class ChuteDispenserScreen extends AbstractChuteScreen<DogeChuteMenu> {
-    public ChuteDispenserScreen(DogeChuteMenu menu, Inventory playerInventory, Component title) {
+public class ChuteDispenserScreen extends AbstractChuteScreen<ChuteDispenserMenu> {
+    public ChuteDispenserScreen(ChuteDispenserMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
     }
 

@@ -1,7 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.mixin;
 
-import dev.anvilcraft.gtouming.doge_plus.api.ICaptured;
-import dev.anvilcraft.gtouming.doge_plus.entity.CapturedItemsProvider;
+import dev.anvilcraft.gtouming.doge_plus.api.entity.ICaptured;
+import dev.anvilcraft.gtouming.doge_plus.api.entity.CapturedItemsProvider;
 import dev.dubhe.anvilcraft.entity.MagnetizedNodeEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -27,7 +27,6 @@ public abstract class MagnetizedNodeEntityMixin implements CapturedItemsProvider
 
     @Override
     public void doge_plus$add(ItemEntity entity, int index) {
-        entity.noPhysics = true;
         entity.setNoGravity(true);
         entity.setUnlimitedLifetime();
         entity.setNeverPickUp();
@@ -41,7 +40,6 @@ public abstract class MagnetizedNodeEntityMixin implements CapturedItemsProvider
     public void doge_plus$remove(Predicate<ItemEntity> predicate) {
         doge_plus$capturedItems.removeIf(entity -> {
             if (predicate.test(entity)) {
-                entity.noPhysics = false;
                 ((ICaptured) entity).doge_plus$setCaptured(false);
                 entity.setNoPickUpDelay();
                 entity.setNoGravity(false);
@@ -67,10 +65,6 @@ public abstract class MagnetizedNodeEntityMixin implements CapturedItemsProvider
                     int toMerge = Math.min(stack.getCount(), space);
                     existing.getItem().grow(toMerge);
                     stack.shrink(toMerge);
-                    if (stack.isEmpty()) {
-                        entity.kill();
-                        return;
-                    }
                 }
             }
         }
@@ -104,24 +98,20 @@ public abstract class MagnetizedNodeEntityMixin implements CapturedItemsProvider
         Level level = self.level();
         if (level.isClientSide) return;
 
-        if (!self.isAlive() || self.isRemoved()) {
-            doge_plus$release();
-            return;
-        }
-
         AABB box = new AABB(self.position(), self.position()).inflate(0.6);
         List<ItemEntity> nearby = level.getEntitiesOfClass(ItemEntity.class, box);
 
         // 移除：不存活或不在AABB中
-        doge_plus$remove(entity -> !entity.isAlive() || !nearby.contains(entity));
+        doge_plus$remove(
+                entity -> !entity.isAlive()
+                        || ((entity instanceof ICaptured iCaptured) && !iCaptured.doge_plus$isCaptured()));
 
         if (doge_plus$capturedItems.size() >= 8) return;
 
         // 捕获：在AABB中、未捕获、不在列表中、存活
         for (ItemEntity item : nearby) {
             if (!item.isAlive()) continue;
-            if (((ICaptured) item).doge_plus$isCaptured()) continue;
-            if (doge_plus$capturedItems.contains(item)) continue;
+            if (doge_plus$capturedItems.contains(item) && ((ICaptured) item).doge_plus$isCaptured()) continue;
 
             doge_plus$captureOrMerge(item, level, self.position());
             if (doge_plus$capturedItems.size() >= 8) break;

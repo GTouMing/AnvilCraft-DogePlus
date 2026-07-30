@@ -2,7 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import dev.anvilcraft.gtouming.doge_plus.api.ICaptured;
+import dev.anvilcraft.gtouming.doge_plus.api.entity.ICaptured;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.ItemEntityRenderer;

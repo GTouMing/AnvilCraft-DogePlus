@@ -1,11 +1,13 @@
 package dev.anvilcraft.gtouming.doge_plus.mixin;
 
-import dev.anvilcraft.gtouming.doge_plus.api.ICaptured;
+import dev.anvilcraft.gtouming.doge_plus.api.entity.ICaptured;
+import dev.dubhe.anvilcraft.entity.MagnetizedNodeEntity;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -61,6 +63,20 @@ public abstract class ItemEntityMixin implements ICaptured {
     )
     private void anvilcraft$redirectMove(ItemEntity itemEntity, MoverType moverType, Vec3 vec3) {
         if (!doge_plus$isCaptured()) itemEntity.move(moverType, vec3);
+    }
+
+    @Inject(method = "tick", at = @At(value = "HEAD"))
+    private void onTickRemove(CallbackInfo ci) {
+        ItemEntity self = (ItemEntity) (Object) this;
+        AABB ab = new AABB(self.position(), self.position()).inflate(0.6);
+
+        if (self.level().getEntitiesOfClass(MagnetizedNodeEntity.class, ab).isEmpty()) {
+            if (self instanceof ICaptured iCaptured && iCaptured.doge_plus$isCaptured()) {
+                iCaptured.doge_plus$setCaptured(false);
+                self.setNoPickUpDelay();
+                self.setNoGravity(false);
+            }
+        }
     }
 
     static {

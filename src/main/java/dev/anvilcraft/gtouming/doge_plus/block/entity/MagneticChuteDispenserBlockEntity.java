@@ -1,8 +1,8 @@
 package dev.anvilcraft.gtouming.doge_plus.block.entity;
 
 import dev.anvilcraft.gtouming.doge_plus.block.MagneticChuteDispenserBlock;
-import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
+import dev.anvilcraft.gtouming.doge_plus.init.ModMenuTypes;
 import dev.anvilcraft.gtouming.doge_plus.inventory.MagneticDispenserMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -10,14 +10,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import org.jetbrains.annotations.Nullable;
 
 public class MagneticChuteDispenserBlockEntity extends AbstractChuteBlockEntity {
 
-    public MagneticChuteDispenserBlockEntity(BlockPos pos, BlockState blockState) {
-        super(ModBlockEntities.MAGNETIC_CHUTE_DISPENSER.get(), pos, blockState);
+    public MagneticChuteDispenserBlockEntity(BlockEntityType<? extends BlockEntity> type, BlockPos pos, BlockState blockState) {
+        super(type, pos, blockState);
     }
 
     @Override
@@ -54,6 +56,6 @@ public class MagneticChuteDispenserBlockEntity extends AbstractChuteBlockEntity 
     @Override
     public AbstractContainerMenu createMenu(int i, Inventory inventory, Player player) {
         if (player.isSpectator()) return null;
-        return new MagneticDispenserMenu(i, inventory, this);
+        return new MagneticDispenserMenu(ModMenuTypes.MAGNETIC_CHUTE_DISPENSER.get(), i, inventory, this);
     }
 }

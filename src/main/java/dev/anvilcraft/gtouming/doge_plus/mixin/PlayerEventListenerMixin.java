@@ -1,6 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.mixin;
 
-import dev.anvilcraft.gtouming.doge_plus.entity.CapturedItemsProvider;
+import dev.anvilcraft.gtouming.doge_plus.api.entity.CapturedItemsProvider;
 import dev.dubhe.anvilcraft.entity.MagnetizedNodeEntity;
 import dev.dubhe.anvilcraft.event.PlayerEventListener;
 import dev.dubhe.anvilcraft.init.item.ModItemTags;

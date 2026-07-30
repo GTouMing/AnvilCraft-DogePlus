@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "anvilcraft:active_silencer"
+    }
+  ],
+  "result": {
+    "id": "anvilcraft_doge_plus:mobile_silencer",
+    "count": 1
+  }
+}

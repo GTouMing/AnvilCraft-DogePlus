@@ -1,6 +1,6 @@
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
-package dev.anvilcraft.gtouming.doge_plus.entity;
+package dev.anvilcraft.gtouming.doge_plus.client.gui.widget;
 
 import net.minecraft.MethodsReturnNonnullByDefault;
 

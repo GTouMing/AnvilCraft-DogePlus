@@ -2,6 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.block;
 
 import com.mojang.serialization.MapCodec;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.ChuteDropperBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -22,6 +23,6 @@ public class ChuteDropperBlock extends AbstractChuteDropperBlock {
 
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new ChuteDropperBlockEntity(pos, state);
+        return new ChuteDropperBlockEntity(ModBlockEntities.CHUTE_DROPPER.get(), pos, state);
     }
 }

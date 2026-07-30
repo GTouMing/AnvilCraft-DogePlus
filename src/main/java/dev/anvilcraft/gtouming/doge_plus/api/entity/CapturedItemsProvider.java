@@ -1,4 +1,4 @@
-package dev.anvilcraft.gtouming.doge_plus.entity;
+package dev.anvilcraft.gtouming.doge_plus.api.entity;
 
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;

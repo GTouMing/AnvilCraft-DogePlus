@@ -15,6 +15,13 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        client2 {
+            client()
+            gameDirectory.set(layout.projectDirectory.dir("run2"))
+            programArguments.addAll "--username", "Dev2", "--width", "1440", "--height", "841"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
         server {
             server()
             programArgument '--nogui'

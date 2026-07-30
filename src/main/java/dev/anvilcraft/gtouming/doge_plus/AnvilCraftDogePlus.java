@@ -1,40 +1,39 @@
 package dev.anvilcraft.gtouming.doge_plus;
 
-import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.ChuteDropperScreen;
-import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.ChuteDispenserScreen;
-import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.MagneticChuteDropperScreen;
-import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.MagneticDispenserScreen;
-import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
-import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
-import dev.anvilcraft.gtouming.doge_plus.init.ModCreativeTab;
-import dev.anvilcraft.gtouming.doge_plus.init.ModEntities;
-import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
-import dev.anvilcraft.gtouming.doge_plus.init.ModMenuTypes;
+import dev.anvilcraft.gtouming.doge_plus.init.*;
+import dev.anvilcraft.lib.v2.network.register.NetworkRegistrar;
+import dev.anvilcraft.lib.v2.registrum.Registrum;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 @Mod(AnvilCraftDogePlus.MOD_ID)
 public class AnvilCraftDogePlus {
     public static final String MOD_ID = "anvilcraft_doge_plus";
+    public static final Registrum REGISTRUM = Registrum.create(MOD_ID);
 
     public AnvilCraftDogePlus(IEventBus modEventBus, ModContainer ignoredModContainer) {
 
-        ModMenuTypes.MENU_TYPES.register(modEventBus);
-        ModBlocks.register(modEventBus);
-        ModItems.register(modEventBus);
-        ModBlockEntities.register(modEventBus);
         ModCreativeTab.CREATIVE_TABS.register(modEventBus);
-        ModEntities.register(modEventBus);
-
-        modEventBus.addListener(this::onRegisterScreens);
+        ModCurios.register();
+        ModBlocks.register();
+        ModItems.register();
+        ModBlockEntities.register();
+        ModMenuTypes.register();
+        ModDataComponentTypes.register(modEventBus);
+        modEventBus.addListener(AnvilCraftDogePlus::registerPayload);
+        modEventBus.addListener(ModCurios.ICURIOS::onClientSetup);
     }
 
-    private void onRegisterScreens(RegisterMenuScreensEvent event) {
-        event.register(ModMenuTypes.DOGE_CHUTE.get(), ChuteDispenserScreen::new);
-        event.register(ModMenuTypes.MAGNETIC_CHUTE_DISPENSER.get(), MagneticDispenserScreen::new);
-        event.register(ModMenuTypes.CHUTE_DROPPER.get(), ChuteDropperScreen::new);
-        event.register(ModMenuTypes.MAGNETIC_CHUTE_DROPPER.get(), MagneticChuteDropperScreen::new);
+    public static ResourceLocation of(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
+    }
+
+    public static void registerPayload(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar("1");
+        NetworkRegistrar.register(registrar, AnvilCraftDogePlus.MOD_ID);
     }
 }

@@ -1,4 +1,4 @@
-package dev.anvilcraft.gtouming.doge_plus.api;
+package dev.anvilcraft.gtouming.doge_plus.api.entity;
 
 public interface ICaptured {
     boolean doge_plus$isCaptured();
