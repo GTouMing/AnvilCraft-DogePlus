@@ -52,7 +52,7 @@ public class PlayerEventListenerMixin {
         if (player.isShiftKeyDown()) stack = player.isCreative() ? item.copy() : item.copyAndClear();
 
 
-        if (item.isEmpty()) provider.doge_plus$releaseToPlayer(player);
+        if (stack.isEmpty()) provider.doge_plus$releaseToPlayer(player);
         else {
             ItemEntity fresh = new ItemEntity(level, node.position().x, node.position().y, node.position().z, stack);
             fresh.setDeltaMovement(Vec3.ZERO);
