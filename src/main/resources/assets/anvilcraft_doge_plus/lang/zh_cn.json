@@ -9,6 +9,7 @@
   "container.anvilcraft_doge_plus.magnetic_chute_dispenser": "磁性溜槽发射器",
   "itemGroup.anvilcraft_doge_plus.doge_plus": "铁砧工艺:Doge+",
   "item.anvilcraft_doge_plus.mobile_silencer": "移动式消音器",
+  "entity.anvilcraft_doge_plus.flying_anvil": "飞行铁砧",
   "key.categories.anvilcraft_doge_plus": "铁砧工艺:Doge+",
   "key.anvilcraft_doge_plus.open_silencer": "打开消音器"
 }

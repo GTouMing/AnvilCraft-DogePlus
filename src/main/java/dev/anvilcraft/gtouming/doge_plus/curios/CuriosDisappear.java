@@ -1,6 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.curios;
 
-import dev.anvilcraft.gtouming.doge_plus.api.SoundTransformer;
+import dev.anvilcraft.gtouming.doge_plus.util.SoundTransformer;
 import dev.anvilcraft.gtouming.doge_plus.api.curios.ICurios;
 import dev.anvilcraft.gtouming.doge_plus.api.sound.DogePlusSoundHelper;
 import dev.anvilcraft.gtouming.doge_plus.item.MobileSilencer;

@@ -5,8 +5,12 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ItemEntityMixin",
+    "ItemMixin",
     "ItemStackMixin",
+    "LivingEntityMixin",
+    "MagnetItemMixin",
     "MagnetizedNodeEntityMixin",
+    "MultiToolItemMixin",
     "PlayerEventListenerMixin"
   ],
   "client": [

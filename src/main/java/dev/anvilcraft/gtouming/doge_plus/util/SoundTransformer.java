@@ -1,4 +1,4 @@
-package dev.anvilcraft.gtouming.doge_plus.api;
+package dev.anvilcraft.gtouming.doge_plus.util;
 
 import dev.dubhe.anvilcraft.api.sound.ISoundEventListener;
 

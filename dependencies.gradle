@@ -13,4 +13,7 @@ dependencies {
     // Curios API
     compileOnly(libs.curios)
     runtimeOnly(libs.curios)
+
+    // Jade（玉）— 仅开发环境测试用
+    runtimeOnly(libs.jade)
 }

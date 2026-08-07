@@ -2,12 +2,23 @@ package dev.anvilcraft.gtouming.doge_plus.block;
 
 import com.mojang.serialization.MapCodec;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.AbstractChuteBlockEntity;
+import dev.dubhe.anvilcraft.api.hammer.IHammerRemovable;
 import dev.dubhe.anvilcraft.api.itemhandler.FilteredItemStackHandler;
+import dev.dubhe.anvilcraft.block.better.BetterBaseEntityBlock;
 import dev.dubhe.anvilcraft.block.entity.BaseChuteBlockEntity;
+import dev.dubhe.anvilcraft.init.ModMenuTypes;
+import dev.dubhe.anvilcraft.init.item.ModItemTags;
+import dev.dubhe.anvilcraft.init.item.ModItems;
+import dev.dubhe.anvilcraft.network.MachineEnableFilterPacket;
+import dev.dubhe.anvilcraft.network.MachineOutputDirectionPacket;
+import dev.dubhe.anvilcraft.network.SlotDisableChangePacket;
+import dev.dubhe.anvilcraft.network.SlotFilterChangePacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -22,12 +33,13 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import static dev.dubhe.anvilcraft.block.ChuteBlock.getFacing;
 import static dev.dubhe.anvilcraft.block.ChuteBlock.isChuteBlock;
 
-public abstract class AbstractChuteBlock extends BaseEntityBlock {
+public abstract class AbstractChuteBlock extends BetterBaseEntityBlock implements IHammerRemovable {
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
     public AbstractChuteBlock(Properties properties) {
@@ -87,13 +99,48 @@ public abstract class AbstractChuteBlock extends BaseEntityBlock {
     public abstract MapCodec<? extends BaseEntityBlock> codec();
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (level.isClientSide) return InteractionResult.SUCCESS;
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof AbstractChuteBlockEntity) {
-            player.openMenu((AbstractChuteBlockEntity) be, pos);
+    public InteractionResult use(
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand,
+            BlockHitResult hit) {
+        if (level.isClientSide) {
+            return InteractionResult.SUCCESS;
         }
-        return InteractionResult.CONSUME;
+        // 手持铁砧锤时由 change 方法处理旋转/爆炸，不打开 GUI
+        if (player.getItemInHand(hand).is(ModItemTags.ANVIL_HAMMER)) {
+            return InteractionResult.PASS;
+        }
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (blockEntity instanceof AbstractChuteBlockEntity entity) {
+            if (player.getItemInHand(hand).is(ModItems.DISK.get())) {
+                return entity.useDisk(level, player, hand, player.getItemInHand(hand), hit);
+            }
+            if (player instanceof ServerPlayer serverPlayer) {
+                ModMenuTypes.open(serverPlayer, entity, pos);
+                PacketDistributor.sendToPlayer(serverPlayer, new MachineOutputDirectionPacket(entity.getDirection()));
+                PacketDistributor.sendToPlayer(serverPlayer, new MachineEnableFilterPacket(entity.isFilterEnabled()));
+                for (int i = 0; i < entity.getFilteredItems().size(); i++) {
+                    PacketDistributor.sendToPlayer(
+                            serverPlayer,
+                            new SlotDisableChangePacket(
+                                    i,
+                                    entity.getItemHandler().getDisabled().get(i)
+                            )
+                    );
+                    PacketDistributor.sendToPlayer(
+                            serverPlayer,
+                            new SlotFilterChangePacket(
+                                    i,
+                                    entity.getFilter(i)
+                            )
+                    );
+                }
+            }
+        }
+        return InteractionResult.SUCCESS;
     }
 
     @Nullable

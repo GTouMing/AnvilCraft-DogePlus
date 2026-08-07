@@ -16,12 +16,21 @@ public class ModDataComponentTypes {
     public static final DeferredRegister<DataComponentType<?>> COMPONENTS =
         DeferredRegister.create(BuiltInRegistries.DATA_COMPONENT_TYPE, MOD_ID);
 
-    public static final DeferredHolder<DataComponentType<?>,DataComponentType<List<ResourceLocation>>> SOUNDS_SET =
+    public static final DeferredHolder<DataComponentType<?>,DataComponentType<List<ResourceLocation>>> SOUNDS_LIST =
             COMPONENTS.register(
-                    "sounds_set",
+                    "sounds_list",
                     () -> DataComponentType.<List<ResourceLocation>>builder()
                             .persistent(ResourceLocation.CODEC.listOf())
                             .networkSynchronized(ByteBufCodecs.fromCodec(ResourceLocation.CODEC.listOf()))
+                            .build()
+            );
+
+    public static final DeferredHolder<DataComponentType<?>,DataComponentType<ResourceLocation>> MAGNET_HAS_ANVIL =
+            COMPONENTS.register(
+                    "magnet_has_anvil",
+                    () -> DataComponentType.<ResourceLocation>builder()
+                            .persistent(ResourceLocation.CODEC)
+                            .networkSynchronized(ByteBufCodecs.fromCodec(ResourceLocation.CODEC))
                             .build()
             );
 

@@ -19,14 +19,14 @@ public class MobileSilencer extends Item implements Equipable {
     // ===== 持久化 =====
 
     public static List<ResourceLocation> getMutedSounds(ItemStack stack) {
-        var list = stack.get(ModDataComponentTypes.SOUNDS_SET.get());
+        var list = stack.get(ModDataComponentTypes.SOUNDS_LIST.get());
         if (list == null) return new CopyOnWriteArrayList<>();
         return list;
     }
 
     public static void setMutedSounds(ItemStack stack, List<ResourceLocation> sounds) {
         if (!(stack.getItem() instanceof MobileSilencer)) return;
-        stack.set(ModDataComponentTypes.SOUNDS_SET.get(), sounds);
+        stack.set(ModDataComponentTypes.SOUNDS_LIST.get(), sounds);
     }
 
 
