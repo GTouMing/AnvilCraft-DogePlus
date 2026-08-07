@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "anvilcraft_doge_plus:item/mobile_silencer_item",
+    "particle": "anvilcraft_doge_plus:item/mobile_silencer_item"
+  }
+}
