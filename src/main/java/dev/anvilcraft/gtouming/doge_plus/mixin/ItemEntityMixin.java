@@ -33,7 +33,6 @@ public abstract class ItemEntityMixin extends Entity implements ICaptured {
         super(entityType, level);
     }
 
-
     @Override
     public boolean doge_plus$isCaptured() {
         return this.getEntityData().get(doge_plus$CAPTURED);
@@ -41,18 +40,17 @@ public abstract class ItemEntityMixin extends Entity implements ICaptured {
 
     @Override
     public void doge_plus$setCaptured(boolean captured) {
-        ((ItemEntity) (Object) this).getEntityData().set(doge_plus$CAPTURED, captured);
+        this.getEntityData().set(doge_plus$CAPTURED, captured);
     }
 
     @Override
     public int doge_plus$getIndex() {
-
-        return ((ItemEntity) (Object) this).getEntityData().get(doge_plus$INDEX);
+        return this.getEntityData().get(doge_plus$INDEX);
     }
 
     @Override
     public void doge_plus$setIndex(int index) {
-        ((ItemEntity) (Object) this).getEntityData().set(doge_plus$INDEX, index);
+        this.getEntityData().set(doge_plus$INDEX, index);
     }
 
     @Inject(method = "defineSynchedData", at = @At(value = "TAIL"))
@@ -71,23 +69,18 @@ public abstract class ItemEntityMixin extends Entity implements ICaptured {
             )
     )
     private void anvilcraft$redirectMove(ItemEntity itemEntity, MoverType moverType, Vec3 vec3) {
-        ItemEntity entity = Util.cast(this);
         if (!doge_plus$isCaptured()) itemEntity.move(moverType, vec3);
         //move方法中热方块点燃原油锅的必要检测
-        if (!entity.isRemoved()) this.tryCheckInsideBlocks();
+        if (!this.isRemoved()) this.tryCheckInsideBlocks();
     }
 
     @Inject(method = "tick", at = @At(value = "HEAD"))
     private void onTickRemove(CallbackInfo ci) {
-        ItemEntity self = (ItemEntity) (Object) this;
-        AABB ab = new AABB(self.position(), self.position()).inflate(0.6);
-
-        if (self.level().getEntitiesOfClass(MagnetizedNodeEntity.class, ab).isEmpty()) {
-            if (self instanceof ICaptured iCaptured && iCaptured.doge_plus$isCaptured()) {
-                iCaptured.doge_plus$setCaptured(false);
-                self.setNoPickUpDelay();
-                self.setNoGravity(false);
-            }
+        if (!this.doge_plus$isCaptured()) return;
+        if (this.level().getEntitiesOfClass(MagnetizedNodeEntity.class,
+                new AABB(this.position(), this.position()).inflate(0.6)).isEmpty()) {
+            this.doge_plus$setCaptured(false);
+            ((ItemEntity) Util.cast(this)).setNoPickUpDelay();
         }
     }
 

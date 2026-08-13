@@ -1,6 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.inventory;
 
-import dev.anvilcraft.gtouming.doge_plus.block.entity.MagneticChuteDispenserBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.MagneticChuteDispenserBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
 import dev.dubhe.anvilcraft.inventory.BaseChuteMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;

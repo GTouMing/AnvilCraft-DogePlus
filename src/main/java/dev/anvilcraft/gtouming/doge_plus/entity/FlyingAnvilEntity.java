@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.entity;
 
-import dev.anvilcraft.gtouming.doge_plus.api.entity.IAnvilTarget;
+import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.init.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -51,6 +52,10 @@ public class FlyingAnvilEntity extends ThrowableProjectile {
         super(type, level);
     }
 
+    public FlyingAnvilEntity(Level level) {
+        this(ModEntities.FLYING_ANVIL.get(), level);
+    }
+
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(BLOCK_ID, "minecraft:anvil");
@@ -61,23 +66,22 @@ public class FlyingAnvilEntity extends ThrowableProjectile {
      *
      * @param owner   发射者
      * @param anvilId 铁砧方块 ID
-     * @param speed   发射速度（蓄力固定为满）
      */
-    public void init(Player owner, ResourceLocation anvilId, float speed) {
+    public void init(Player owner, ResourceLocation anvilId) {
         this.ownerUuid = owner.getUUID();
         this.getEntityData().set(BLOCK_ID, anvilId.toString());
-        this.setPos(owner.getX(), owner.getEyeY() - 0.1, owner.getZ());
+        this.setPos(owner.getEyePosition());
         Vec3 look = owner.getLookAngle();
-        this.shoot(look.x, look.y, look.z, speed, 1.0F);
+        this.shoot(look.x, look.y, look.z, (float) AnvilCraftDogePlus.CONFIG.anvilSpeed, 1.0F);
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (!this.level().isClientSide && this.tickCount > CONFIG.flyLifetime) {
-            this.dropAnvilItem();
-            this.discard();
-        }
+        if (this.level().isClientSide) return;
+        if (this.tickCount <= CONFIG.flyLifetime) return;
+        this.dropAnvilItem();
+        this.discard();
     }
 
     @Override
@@ -88,8 +92,7 @@ public class FlyingAnvilEntity extends ThrowableProjectile {
             if (ehr.getEntity() instanceof LivingEntity target && this.hitEntities.add(target.getId())) {
                 Player owner = this.ownerUuid != null ? this.level().getPlayerByUUID(this.ownerUuid) : null;
                 if (target == owner) return;
-                int targetMarks = target instanceof IAnvilTarget at ? at.doge_plus$getMarks() : 0;
-                int damage = CONFIG.baseDamage + targetMarks * CONFIG.perMark;
+                int damage = CONFIG.baseDamage;
                 DamageSource source = owner != null
                         ? owner.damageSources().source(DamageTypes.FALLING_ANVIL)
                         : this.level().damageSources().source(DamageTypes.FALLING_ANVIL);

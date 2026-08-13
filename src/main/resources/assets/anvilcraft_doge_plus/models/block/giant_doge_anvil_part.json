@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "anvilcraft_doge_plus:block/giant_doge_anvil_side"
+  }
+}

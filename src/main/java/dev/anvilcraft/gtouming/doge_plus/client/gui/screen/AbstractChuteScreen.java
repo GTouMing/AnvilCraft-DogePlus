@@ -1,6 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.client.gui.screen;
 
-import dev.anvilcraft.gtouming.doge_plus.block.entity.AbstractChuteBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.AbstractChuteBlockEntity;
 import dev.dubhe.anvilcraft.api.itemhandler.SlotItemHandlerWithFilter;
 import dev.dubhe.anvilcraft.client.gui.component.EnableFilterButton;
 import dev.dubhe.anvilcraft.client.gui.screen.BaseMachineScreen;

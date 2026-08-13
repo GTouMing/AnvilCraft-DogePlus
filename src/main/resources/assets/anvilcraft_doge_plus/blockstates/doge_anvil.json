@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "anvilcraft_doge_plus:block/doge_anvil"
+    },
+    "facing=east": {
+      "model": "anvilcraft_doge_plus:block/doge_anvil",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "anvilcraft_doge_plus:block/doge_anvil",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "anvilcraft_doge_plus:block/doge_anvil",
+      "y": 270
+    }
+  }
+}

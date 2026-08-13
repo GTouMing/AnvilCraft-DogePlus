@@ -3,6 +3,10 @@
     "facing=down": {
       "model": "anvilcraft_doge_plus:block/chute_dropper_vertical"
     },
+    "facing=up": {
+      "model": "anvilcraft_doge_plus:block/chute_dropper_vertical",
+      "x": 180
+    },
     "facing=east": {
       "model": "anvilcraft_doge_plus:block/chute_dropper",
       "y": 90

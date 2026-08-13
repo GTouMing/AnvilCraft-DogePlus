@@ -4,14 +4,11 @@
   "package": "dev.anvilcraft.gtouming.doge_plus.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ChuteDogeNodeMixin",
+    "GiantRingBlockEntityMixin",
     "ItemEntityMixin",
-    "ItemMixin",
     "ItemStackMixin",
-    "LivingEntityMixin",
-    "MagnetItemMixin",
-    "MagnetizedNodeEntityMixin",
-    "MultiToolItemMixin",
-    "PlayerEventListenerMixin"
+    "MagnetizedNodeEntityAccessor"
   ],
   "client": [
     "ItemEntityRendererMixin",

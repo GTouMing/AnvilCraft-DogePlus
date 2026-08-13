@@ -1,6 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.inventory;
 
-import dev.anvilcraft.gtouming.doge_plus.block.entity.ChuteDropperBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDropperBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
 import dev.dubhe.anvilcraft.inventory.BaseChuteMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;

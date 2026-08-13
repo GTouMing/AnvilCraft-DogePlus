@@ -14,10 +14,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AnvilBlock;
 import net.minecraft.world.level.block.Block;
 
-/**
- * 磁铁（MagnetItem / 磁铁模式的多功能工具）铁砧收纳、放置、蓄力的共享逻辑。
- * <p>供 {@code MagnetItemMixin} 与 {@code MultiToolItemMixin} 复用。</p>
- */
 public class MagnetAnvilUtil {
 
     /**
@@ -80,18 +76,5 @@ public class MagnetAnvilUtil {
             return true;
         }
         return false;
-    }
-
-    /**
-     * 带铁砧的磁铁右键进入蓄力。
-     *
-     * @return 是否开始蓄力（此时调用方应返回 success）
-     */
-    public static boolean tryStartCharge(Level level, Player player, InteractionHand usedHand) {
-        ItemStack stack = player.getItemInHand(usedHand);
-        if (!MagnetHandler.hasAnvil(stack)) return false;
-        if (player.isShiftKeyDown()) return false;
-        if (!level.isClientSide) player.startUsingItem(usedHand);
-        return true;
     }
 }

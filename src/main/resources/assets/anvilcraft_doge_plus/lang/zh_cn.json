@@ -7,9 +7,18 @@
   "container.anvilcraft_doge_plus.magnetic_chute_dropper": "磁性溜槽投掷器",
   "block.anvilcraft_doge_plus.magnetic_chute_dispenser": "磁性溜槽发射器",
   "container.anvilcraft_doge_plus.magnetic_chute_dispenser": "磁性溜槽发射器",
+  "block.anvilcraft_doge_plus.doge_anvil": "Doge 砧",
+  "block.anvilcraft_doge_plus.giant_doge_anvil": "巨型 Doge 砧",
+  "message.anvilcraft_doge_plus.doge_anvil.growth": "成长值 %1$s/%2$s",
+  "message.anvilcraft_doge_plus.doge_anvil.no_space": "空间不足，无法成长为巨型 Doge 砧",
   "itemGroup.anvilcraft_doge_plus.doge_plus": "铁砧工艺:Doge+",
+  "item.anvilcraft_doge_plus.doge_steel_ingot": "Doge 钢锭",
+  "item.anvilcraft_doge_plus.doge_magnet": "手持 Doge 磁铁",
+  "block.anvilcraft_doge_plus.doge_steel_block": "Doge 钢块",
+  "block.anvilcraft_doge_plus.heavy_doge_steel_block": "重质 Doge 钢块",
   "item.anvilcraft_doge_plus.mobile_silencer": "移动式消音器",
   "entity.anvilcraft_doge_plus.flying_anvil": "飞行铁砧",
+  "entity.anvilcraft_doge_plus.doge_node": "Doge 节点",
   "key.categories.anvilcraft_doge_plus": "铁砧工艺:Doge+",
   "key.anvilcraft_doge_plus.open_silencer": "打开消音器"
 }

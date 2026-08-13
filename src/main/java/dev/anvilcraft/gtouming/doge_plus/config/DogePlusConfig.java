@@ -37,4 +37,12 @@ public class DogePlusConfig {
     @Comment("铁砧飞行硬性超时（tick）。")
     @BoundedDiscrete(max = 72000, min = 20)
     public int flyLifetime = 400;
+
+    @Comment("Doge砧长成巨型Doge砧所需成长值。")
+    @BoundedDiscrete(max = 1280, min = 1)
+    public int maxGrowth = 128;
+
+    @Comment("每个生肉提供的成长值。")
+    @BoundedDiscrete(max = 128, min = 1)
+    public int growthPerMeat = 1;
 }

@@ -23,7 +23,7 @@ public class FlyingAnvilEntityRenderer extends EntityRenderer<FlyingAnvilEntity>
     public void render(FlyingAnvilEntity entity, float entityYaw, float partialTick,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         poseStack.pushPose();
-        poseStack.translate(0.0, 0.5, 0.0);
+        poseStack.translate(-0.5, 0.0, -0.5);
         Minecraft.getInstance().getBlockRenderer().renderSingleBlock(
                 entity.getAnvilBlockState(),
                 poseStack,

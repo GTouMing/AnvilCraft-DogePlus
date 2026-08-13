@@ -7,9 +7,18 @@
   "container.anvilcraft_doge_plus.magnetic_chute_dropper": "Magnetic Chute Dropper",
   "block.anvilcraft_doge_plus.magnetic_chute_dispenser": "Magnetic Chute Dispenser",
   "container.anvilcraft_doge_plus.magnetic_chute_dispenser": "Magnetic Chute Dispenser",
+  "block.anvilcraft_doge_plus.doge_anvil": "Doge Anvil",
+  "block.anvilcraft_doge_plus.giant_doge_anvil": "Giant Doge Anvil",
+  "message.anvilcraft_doge_plus.doge_anvil.growth": "Growth %1$s/%2$s",
+  "message.anvilcraft_doge_plus.doge_anvil.no_space": "Not enough space to grow into a Giant Doge Anvil",
   "itemGroup.anvilcraft_doge_plus.doge_plus": "AnvilCraft:Doge+",
+  "item.anvilcraft_doge_plus.doge_steel_ingot": "Doge Steel Ingot",
+  "item.anvilcraft_doge_plus.doge_magnet": "Hand Doge Magnet",
+  "block.anvilcraft_doge_plus.doge_steel_block": "Doge Steel Block",
+  "block.anvilcraft_doge_plus.heavy_doge_steel_block": "Heavy Doge Steel Block",
   "item.anvilcraft_doge_plus.mobile_silencer": "Mobile Silencer",
   "entity.anvilcraft_doge_plus.flying_anvil": "Flying Anvil",
+  "entity.anvilcraft_doge_plus.doge_node": "Doge Node",
   "key.categories.anvilcraft_doge_plus": "AnvilCraft:Doge+",
   "key.anvilcraft_doge_plus.open_silencer": "Open Silencer"
 }

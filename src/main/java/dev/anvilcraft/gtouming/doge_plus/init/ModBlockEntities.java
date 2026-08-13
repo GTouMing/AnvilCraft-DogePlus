@@ -1,9 +1,9 @@
 package dev.anvilcraft.gtouming.doge_plus.init;
 
-import dev.anvilcraft.gtouming.doge_plus.block.entity.ChuteDispenserBlockEntity;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.ChuteDropperBlockEntity;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.MagneticChuteDispenserBlockEntity;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.MagneticChuteDropperBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDispenserBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDropperBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.MagneticChuteDispenserBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.MagneticChuteDropperBlockEntity;
 import dev.anvilcraft.lib.v2.registrum.util.entry.BlockEntityEntry;
 
 import static dev.dubhe.anvilcraft.AnvilCraft.REGISTRUM;

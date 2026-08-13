@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "cube=center": {
+      "model": "anvilcraft_doge_plus:block/giant_doge_anvil"
+    },
+    "cube=corner": {
+      "model": "anvilcraft_doge_plus:block/giant_doge_anvil_part"
+    }
+  }
+}
