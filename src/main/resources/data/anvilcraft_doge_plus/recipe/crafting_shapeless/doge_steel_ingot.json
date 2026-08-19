@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "anvilcraft_doge_plus:doge_steel_block"
+    }
+  ],
+  "result": {
+    "id": "anvilcraft_doge_plus:doge_steel_ingot",
+    "count": 9
+  }
+}

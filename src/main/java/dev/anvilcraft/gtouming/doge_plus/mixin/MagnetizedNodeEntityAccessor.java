@@ -12,5 +12,5 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface MagnetizedNodeEntityAccessor {
 
     @Accessor("blockState")
-    void anvilcraft$setBlockState(BlockState state);
+    void doge_plus$setBlockState(BlockState state);
 }

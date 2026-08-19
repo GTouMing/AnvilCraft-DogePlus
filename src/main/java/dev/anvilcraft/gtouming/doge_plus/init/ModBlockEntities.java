@@ -1,5 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.init;
 
+import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDispenserBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDropperBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.MagneticChuteDispenserBlockEntity;
@@ -25,6 +27,10 @@ public class ModBlockEntities {
     public static final BlockEntityEntry<MagneticChuteDispenserBlockEntity> MAGNETIC_CHUTE_DISPENSER =REGISTRUM.blockEntity(
             "magnetic_chute_dispenser",
             MagneticChuteDispenserBlockEntity::new).validBlock(ModBlocks.MAGNETIC_CHUTE_DISPENSER).register();
+
+    public static final BlockEntityEntry<InlayTableBlockEntity> INLAY_TABLE = AnvilCraftDogePlus.REGISTRUM.blockEntity(
+            "inlay_table",
+            InlayTableBlockEntity::new).validBlock(ModBlocks.INLAY_TABLE).register();
 
     public static void register() {
     }

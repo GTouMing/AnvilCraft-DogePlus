@@ -24,7 +24,7 @@ public class ItemRendererMixin {
             argsOnly = true,
             index = 8
     )
-    public BakedModel modifyModel(
+    public BakedModel doge_plus$modifyModel(
             BakedModel originalModel,
             ItemStack stack,
             ItemDisplayContext displayContext,

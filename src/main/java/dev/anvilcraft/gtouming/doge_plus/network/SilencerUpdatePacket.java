@@ -1,7 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.network;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
-import dev.anvilcraft.gtouming.doge_plus.init.ModCurios;
+import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import dev.anvilcraft.gtouming.doge_plus.item.MobileSilencer;
 import dev.anvilcraft.lib.v2.network.packet.IInsensitiveBiPacket;
 import dev.anvilcraft.lib.v2.network.packet.IPacket;
@@ -29,10 +29,7 @@ public record SilencerUpdatePacket(List<ResourceLocation> sounds) implements IIn
 
     @Override
     public void handleOnBothSide(Player player) {
-        var stack = ModCurios.ICURIOS.findMobileSilencer(player);
-        if (stack == null) return;
-        if (stack.getItem() instanceof MobileSilencer) {
-            MobileSilencer.setMutedSounds(stack, sounds);
-        }
+        var stack = MobileSilencer.findMobileSilencer(player);
+        MobileSilencer.setMutedSounds(stack, sounds);
     }
 }

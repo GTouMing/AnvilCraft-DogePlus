@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(SoundEngine.class)
 public class SoundEngineMixin {
     @Inject(method = "play", at = @At(value = "HEAD"), cancellable = true)
-    private void onSoundPlay(SoundInstance sound, CallbackInfo ci) {
+    private void doge_plus$onPlay(SoundInstance sound, CallbackInfo ci) {
         if (DogePlusSoundHelper.INSTANCE.shouldMute(
                 sound.getLocation(),
                 new Vec3(sound.getX(), sound.getY(), sound.getZ())

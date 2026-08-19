@@ -1,0 +1,10 @@
+{
+  "ingredient": [
+    {
+      "item": "minecraft:comparator"
+    }
+  ],
+  "attributes": [
+    "or_gate"
+  ]
+}

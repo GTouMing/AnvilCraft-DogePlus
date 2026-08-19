@@ -26,7 +26,7 @@ public class ItemEntityRendererMixin {
     private final RandomSource doge_plus$random = RandomSource.create();
 
     @Inject(method = "render*", at = @At("HEAD"), cancellable = true)
-    private void anvilcraftDoge$onRender(ItemEntity entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, CallbackInfo ci) {
+    private void doge_plus$onRender(ItemEntity entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, CallbackInfo ci) {
         if (!((entity instanceof ICaptured iCaptured) && iCaptured.doge_plus$isCaptured())) return;
         ci.cancel();
         poseStack.pushPose();

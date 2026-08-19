@@ -7,6 +7,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.AnvilBlock;
 
+import javax.annotation.Nullable;
+
 public class MagnetHandler {
     public static boolean hasAnvil(ItemStack stack) {
         ResourceLocation resourceLocation = stack.get(ModDataComponentTypes.MAGNET_HAS_ANVIL);
@@ -14,11 +16,13 @@ public class MagnetHandler {
         return getAnvil(resourceLocation) != null;
     }
 
+    @Nullable
     public static AnvilBlock getAnvil(ResourceLocation location) {
         if (BuiltInRegistries.BLOCK.get(location) instanceof AnvilBlock anvil) return anvil;
         return null;
     }
 
+    @Nullable
     public static ResourceLocation getAnvilId(ItemStack stack) {
         return stack.get(ModDataComponentTypes.MAGNET_HAS_ANVIL);
     }

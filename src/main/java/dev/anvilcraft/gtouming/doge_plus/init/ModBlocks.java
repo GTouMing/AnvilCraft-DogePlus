@@ -2,6 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.init;
 
 import dev.anvilcraft.gtouming.doge_plus.block.DogeAnvil;
 import dev.anvilcraft.gtouming.doge_plus.block.GiantDogeAnvil;
+import dev.anvilcraft.gtouming.doge_plus.block.InlayTableBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.ChuteDispenserBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.ChuteDropperBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.MagneticChuteDispenserBlock;
@@ -95,6 +96,16 @@ public class ModBlocks {
 
     public static final BlockEntry<MagneticChuteDispenserBlock> MAGNETIC_CHUTE_DISPENSER =
             REGISTRUM.block("magnetic_chute_dispenser", MagneticChuteDispenserBlock::new)
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
+                    .blockstate(DataGenUtil::noExtraModelOrState)
+                    .item()
+                    .build()
+                    .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .register();
+
+    public static final BlockEntry<InlayTableBlock> INLAY_TABLE =
+            REGISTRUM.block("inlay_table", InlayTableBlock::new)
                     .initialProperties(() -> Blocks.IRON_BLOCK)
                     .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
                     .blockstate(DataGenUtil::noExtraModelOrState)

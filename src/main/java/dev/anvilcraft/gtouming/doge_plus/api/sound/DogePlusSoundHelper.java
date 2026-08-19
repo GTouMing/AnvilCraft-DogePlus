@@ -12,6 +12,7 @@ public class DogePlusSoundHelper {
     private final List<ISoundEventListener> listeners = new CopyOnWriteArrayList<>();
 
     public void register(ISoundEventListener listener) {
+        if (listeners.contains(listener)) return;
         listeners.add(listener);
     }
 

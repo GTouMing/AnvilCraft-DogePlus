@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.curios;
 
+import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import dev.anvilcraft.gtouming.doge_plus.util.SoundTransformer;
 import dev.anvilcraft.gtouming.doge_plus.api.curios.ICurios;
 import dev.anvilcraft.gtouming.doge_plus.api.sound.DogePlusSoundHelper;
@@ -10,7 +11,6 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import org.jetbrains.annotations.Nullable;
 
 public class CuriosDisappear implements ICurios {
     public void register() {
@@ -22,8 +22,9 @@ public class CuriosDisappear implements ICurios {
     }
 
     @Override
-    public @Nullable ItemStack findMobileSilencer(Player player) {
-        return player.getItemBySlot(EquipmentSlot.HEAD);
+    public ItemStack findMobileSilencer(Player player) {
+        ItemStack stack = player.getItemBySlot(EquipmentSlot.HEAD);
+        return stack.is(ModItems.MOBILE_SILENCER) ? stack : ItemStack.EMPTY;
     }
 
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {

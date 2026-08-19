@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.init;
 
+import com.mojang.serialization.Codec;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -31,6 +32,26 @@ public class ModDataComponentTypes {
                     () -> DataComponentType.<ResourceLocation>builder()
                             .persistent(ResourceLocation.CODEC)
                             .networkSynchronized(ByteBufCodecs.fromCodec(ResourceLocation.CODEC))
+                            .build()
+            );
+
+    /** 镶嵌：记录已镶嵌的材料物品 ID 列表（长度 = 已占用镶孔数）。 */
+    public static final DeferredHolder<DataComponentType<?>,DataComponentType<List<ResourceLocation>>> INLAY =
+            COMPONENTS.register(
+                    "inlay",
+                    () -> DataComponentType.<List<ResourceLocation>>builder()
+                            .persistent(ResourceLocation.CODEC.listOf())
+                            .networkSynchronized(ByteBufCodecs.fromCodec(ResourceLocation.CODEC.listOf()))
+                            .build()
+            );
+
+    /** 高温：累加的伤害值。 */
+    public static final DeferredHolder<DataComponentType<?>,DataComponentType<Integer>> HEAT =
+            COMPONENTS.register(
+                    "heat",
+                    () -> DataComponentType.<Integer>builder()
+                            .persistent(Codec.INT)
+                            .networkSynchronized(ByteBufCodecs.VAR_INT)
                             .build()
             );
 

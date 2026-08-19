@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 加速环/偏转环在 {@code attractGianAnvil} 中吸引巨型铁砧后，
@@ -30,16 +31,16 @@ public class GiantRingBlockEntityMixin {
 
     /** 已放置的巨型铁砧方块类型。 */
     @Unique
-    private Block anvilcraft$attractedGiantBlock;
+    private Block doge_plus$attractedGiantBlock;
 
     /** 被吸引的下坠巨型铁砧的方块状态（放置型方块不存在时使用）。 */
     @Unique
-    private BlockState anvilcraft$fallingGiantState;
+    private BlockState doge_plus$fallingGiantState;
 
     @Inject(method = "attractGianAnvil", at = @At("HEAD"))
-    private void anvilcraft$resetAttractedGiant(CallbackInfo ci) {
-        this.anvilcraft$attractedGiantBlock = null;
-        this.anvilcraft$fallingGiantState = null;
+    private void doge_plus$resetAttractedGiant(CallbackInfo ci) {
+        this.doge_plus$attractedGiantBlock = null;
+        this.doge_plus$fallingGiantState = null;
     }
 
     /** 捕获已放置的巨型铁砧方块类型（移除旧结构前）。 */
@@ -50,8 +51,8 @@ public class GiantRingBlockEntityMixin {
             target = "Ldev/dubhe/anvilcraft/block/GiantAnvilBlock;removePartsAndUpdate(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)V"
         )
     )
-    private void anvilcraft$captureAttractedGiant(GiantAnvilBlock block, Level level, BlockPos pos) {
-        this.anvilcraft$attractedGiantBlock = block;
+    private void doge_plus$captureAttractedGiant(GiantAnvilBlock block, Level level, BlockPos pos) {
+        this.doge_plus$attractedGiantBlock = block;
         block.removePartsAndUpdate(level, pos);
     }
 
@@ -63,7 +64,7 @@ public class GiantRingBlockEntityMixin {
             target = "Lnet/minecraft/world/level/Level;getEntitiesOfClass(Ljava/lang/Class;Lnet/minecraft/world/phys/AABB;)Ljava/util/List;"
         )
     )
-    private List<FallingGiantAnvilEntity> anvilcraft$captureFallingGiantState(
+    private List<FallingGiantAnvilEntity> doge_plus$captureFallingGiantState(
         Level level, Class<FallingGiantAnvilEntity> cls, AABB aabb
     ) {
         List<FallingGiantAnvilEntity> list = level.getEntitiesOfClass(cls, aabb);
@@ -78,7 +79,7 @@ public class GiantRingBlockEntityMixin {
             }
         }
         if (nearest != null) {
-            this.anvilcraft$fallingGiantState = nearest.getBlockState();
+            this.doge_plus$fallingGiantState = nearest.getBlockState();
         }
         return list;
     }
@@ -91,13 +92,10 @@ public class GiantRingBlockEntityMixin {
             target = "Ldev/anvilcraft/lib/v2/registrum/util/entry/BlockEntry;getDefaultState()Lnet/minecraft/world/level/block/state/BlockState;"
         )
     )
-    private BlockState anvilcraft$rebuildWithAttractedGiant(BlockEntry<?> entry) {
-        if (this.anvilcraft$attractedGiantBlock != null) {
-            return this.anvilcraft$attractedGiantBlock.defaultBlockState();
+    private BlockState doge_plus$rebuildWithAttractedGiant(BlockEntry<?> entry) {
+        if (this.doge_plus$attractedGiantBlock != null) {
+            return this.doge_plus$attractedGiantBlock.defaultBlockState();
         }
-        if (this.anvilcraft$fallingGiantState != null) {
-            return this.anvilcraft$fallingGiantState;
-        }
-        return entry.getDefaultState();
+        return Objects.requireNonNullElseGet(this.doge_plus$fallingGiantState, entry::getDefaultState);
     }
 }

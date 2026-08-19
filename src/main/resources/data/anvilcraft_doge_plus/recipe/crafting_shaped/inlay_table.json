@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "III",
+    "I I",
+    "I I"
+  ],
+  "key": {
+    "I": {
+      "item": "anvilcraft_doge_plus:doge_steel_ingot"
+    }
+  },
+  "result": {
+    "id": "anvilcraft_doge_plus:inlay_table",
+    "count": 1
+  }
+}

@@ -1,14 +1,13 @@
 package dev.anvilcraft.gtouming.doge_plus.event;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import dev.anvilcraft.gtouming.doge_plus.util.SoundTransformer;
 import dev.anvilcraft.gtouming.doge_plus.api.sound.DogePlusSoundHelper;
-import dev.anvilcraft.gtouming.doge_plus.item.MobileSilencer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.PlayLevelSoundEvent;
@@ -24,10 +23,10 @@ public class MobileSilencerEvent {
         ItemStack from = event.getFrom();
         ItemStack to = event.getTo();
 
-        if (event.getFrom().getItem() instanceof MobileSilencer) {
+        if (from.is(ModItems.MOBILE_SILENCER)) {
             DogePlusSoundHelper.INSTANCE.unregister(SoundTransformer.asSoundListener(from));
         }
-        if (event.getTo().getItem() instanceof MobileSilencer) {
+        if (to.is(ModItems.MOBILE_SILENCER)) {
             DogePlusSoundHelper.INSTANCE.register(SoundTransformer.asSoundListener(to));
         }
     }
@@ -38,8 +37,8 @@ public class MobileSilencerEvent {
         if (event.getSound() == null) return;
         event.setCanceled(DogePlusSoundHelper.INSTANCE.shouldMute(
                 event.getSound().value().getLocation(),
-                new Vec3(entity.getX(), entity.getY(), entity.getZ())
-        ));
+                entity.position())
+        );
     }
 
     @SubscribeEvent

@@ -1,0 +1,11 @@
+{
+  "ingredient": [
+    {
+      "item": "anvilcraft:ember_metal_ingot"
+    }
+  ],
+  "attributes": [
+    "fire_proof",
+    "high_temp"
+  ]
+}

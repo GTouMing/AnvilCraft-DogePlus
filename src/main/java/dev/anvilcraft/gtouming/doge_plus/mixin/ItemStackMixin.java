@@ -24,7 +24,7 @@ public class ItemStackMixin implements ISoundEventListener {
     }
 
     @Inject(method = "inventoryTick", at = @At(value = "HEAD"))
-    private void onTick(Level level, Entity entity, int inventorySlot, boolean isCurrentItem, CallbackInfo ci) {
+    private void doge_plus$onTick(Level level, Entity entity, int inventorySlot, boolean isCurrentItem, CallbackInfo ci) {
         doge_plus$range = AABB.ofSize(Vec3.atCenterOf(entity.getOnPos()), 31, 31, 31);
     }
 }

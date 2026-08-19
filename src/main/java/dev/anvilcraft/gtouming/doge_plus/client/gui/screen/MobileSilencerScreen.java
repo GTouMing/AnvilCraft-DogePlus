@@ -114,6 +114,11 @@ public class MobileSilencerScreen extends Screen {
         super.onClose();
     }
 
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
     // ===== 搜索 =====
 
     private void onSearchTextChange(String text) {

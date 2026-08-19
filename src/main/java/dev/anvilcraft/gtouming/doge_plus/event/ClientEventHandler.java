@@ -1,13 +1,17 @@
-package dev.anvilcraft.gtouming.doge_plus.client;
+package dev.anvilcraft.gtouming.doge_plus.event;
 
+import dev.anvilcraft.gtouming.doge_plus.client.KeyBindings;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.MobileSilencerScreen;
-import dev.anvilcraft.gtouming.doge_plus.init.ModCurios;
+import dev.anvilcraft.gtouming.doge_plus.client.renderer.blockentity.InlayTableRenderer;
+import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
+import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import dev.anvilcraft.gtouming.doge_plus.item.MobileSilencer;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 
 @EventBusSubscriber(value = Dist.CLIENT)
 public class ClientEventHandler {
@@ -19,10 +23,14 @@ public class ClientEventHandler {
         var player = minecraft.player;
         if (player == null) return;
 
-        var stack = ModCurios.ICURIOS.findMobileSilencer(player);
-        if (stack == null) return;
-        if (stack.getItem() instanceof MobileSilencer) {
+        var stack = MobileSilencer.findMobileSilencer(player);
+        if (stack.is(ModItems.MOBILE_SILENCER)) {
             minecraft.setScreen(new MobileSilencerScreen(stack));
         }
+    }
+
+    @SubscribeEvent
+    public static void registerBlockEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.INLAY_TABLE.get(), InlayTableRenderer::new);
     }
 }

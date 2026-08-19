@@ -5,14 +5,12 @@ import dev.anvilcraft.gtouming.doge_plus.api.curios.ICurios;
 import dev.anvilcraft.gtouming.doge_plus.api.sound.DogePlusSoundHelper;
 import dev.anvilcraft.gtouming.doge_plus.client.renderer.CuriosRenderer;
 import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
-import dev.anvilcraft.gtouming.doge_plus.item.MobileSilencer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import org.jetbrains.annotations.Nullable;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotResult;
 import top.theillusivec4.curios.api.client.CuriosRendererRegistry;
@@ -29,11 +27,11 @@ public class CuriosExist implements ICurios {
     }
 
     @Override
-    public @Nullable ItemStack findMobileSilencer(Player player) {
+    public ItemStack findMobileSilencer(Player player) {
         var result = CuriosApi.getCuriosInventory(player);
-        if (result.isEmpty()) return null;
+        if (result.isEmpty()) return ItemStack.EMPTY;
         var handler = result.get();
-        var found = handler.findFirstCurio(stack -> stack.getItem() instanceof MobileSilencer);
+        var found = handler.findFirstCurio(stack -> stack.is(ModItems.MOBILE_SILENCER));
         return found.map(SlotResult::stack).orElse(player.getItemBySlot(EquipmentSlot.HEAD));
     }
 
@@ -48,10 +46,10 @@ public class CuriosExist implements ICurios {
         ItemStack from = event.getFrom();
         ItemStack to = event.getTo();
 
-        if (from.getItem() instanceof MobileSilencer) {
+        if (from.is(ModItems.MOBILE_SILENCER)) {
             DogePlusSoundHelper.INSTANCE.unregister(SoundTransformer.asSoundListener(from));
         }
-        if (to.getItem() instanceof MobileSilencer) {
+        if (to.is(ModItems.MOBILE_SILENCER)) {
             DogePlusSoundHelper.INSTANCE.register(SoundTransformer.asSoundListener(to));
         }
     }
@@ -65,8 +63,7 @@ public class CuriosExist implements ICurios {
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
 
         var stack = findMobileSilencer(event.getEntity());
-        if (stack == null) return;
-        if (!(stack.getItem() instanceof MobileSilencer)) return;
+        if (!(stack.is(ModItems.MOBILE_SILENCER))) return;
 
         DogePlusSoundHelper.INSTANCE.register(SoundTransformer.asSoundListener(stack));
     }

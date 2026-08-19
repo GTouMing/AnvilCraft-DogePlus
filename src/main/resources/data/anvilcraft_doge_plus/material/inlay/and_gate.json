@@ -1,0 +1,10 @@
+{
+  "ingredient": [
+    {
+      "item": "minecraft:repeater"
+    }
+  ],
+  "attributes": [
+    "and_gate"
+  ]
+}

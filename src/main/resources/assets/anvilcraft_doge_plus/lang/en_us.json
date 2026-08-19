@@ -1,24 +1,52 @@
 {
   "block.anvilcraft_doge_plus.chute_dispenser": "Chute Dispenser",
-  "container.anvilcraft_doge_plus.chute_dispenser": "Chute Dispenser",
   "block.anvilcraft_doge_plus.chute_dropper": "Chute Dropper",
-  "container.anvilcraft_doge_plus.chute_dropper": "Chute Dropper",
   "block.anvilcraft_doge_plus.magnetic_chute_dropper": "Magnetic Chute Dropper",
-  "container.anvilcraft_doge_plus.magnetic_chute_dropper": "Magnetic Chute Dropper",
   "block.anvilcraft_doge_plus.magnetic_chute_dispenser": "Magnetic Chute Dispenser",
-  "container.anvilcraft_doge_plus.magnetic_chute_dispenser": "Magnetic Chute Dispenser",
   "block.anvilcraft_doge_plus.doge_anvil": "Doge Anvil",
   "block.anvilcraft_doge_plus.giant_doge_anvil": "Giant Doge Anvil",
-  "message.anvilcraft_doge_plus.doge_anvil.growth": "Growth %1$s/%2$s",
-  "message.anvilcraft_doge_plus.doge_anvil.no_space": "Not enough space to grow into a Giant Doge Anvil",
-  "itemGroup.anvilcraft_doge_plus.doge_plus": "AnvilCraft:Doge+",
-  "item.anvilcraft_doge_plus.doge_steel_ingot": "Doge Steel Ingot",
-  "item.anvilcraft_doge_plus.doge_magnet": "Hand Doge Magnet",
+  "block.anvilcraft_doge_plus.inlay_table": "Inlay Table",
   "block.anvilcraft_doge_plus.doge_steel_block": "Doge Steel Block",
   "block.anvilcraft_doge_plus.heavy_doge_steel_block": "Heavy Doge Steel Block",
+
+  "container.anvilcraft_doge_plus.chute_dispenser": "Chute Dispenser",
+  "container.anvilcraft_doge_plus.chute_dropper": "Chute Dropper",
+  "container.anvilcraft_doge_plus.magnetic_chute_dropper": "Magnetic Chute Dropper",
+  "container.anvilcraft_doge_plus.magnetic_chute_dispenser": "Magnetic Chute Dispenser",
+
+  "gui.anvilcraft_doge_plus.jei.inlay": "Inlay",
+
+  "tooltip.anvilcraft_doge_plus.inlay_property.fire_proof": "Fire-proof: will not be burned",
+  "tooltip.anvilcraft_doge_plus.inlay_property.magnetic": "Magnetic: will be attracted by magnets",
+  "tooltip.anvilcraft_doge_plus.inlay_property.high_temp": "High Temp: the longer in lava or fire, the more accumulated damage; attacking consumes it",
+  "tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount": "High Temp: current accumulated damage %s",
+  "tooltip.anvilcraft_doge_plus.inlay_property.cold_forged": "Cold Forged: slowly repairs durability in water or powder snow",
+  "tooltip.anvilcraft_doge_plus.inlay_property.eternal": "Eternal: indestructible, immune to fire, explosion, cactus, time and void",
+  "tooltip.anvilcraft_doge_plus.inlay_property.nirvana": "Nirvana: triggers a totem of undying on death, then the material shatters",
+  "tooltip.anvilcraft_doge_plus.inlay_property.defense": "Defense: grants +2 armor when held or equipped",
+  "tooltip.anvilcraft_doge_plus.inlay_property.life": "Life: grants +2 max health when held or equipped",
+  "tooltip.anvilcraft_doge_plus.inlay_property.attack": "Attack: grants +2 attack damage when held or equipped",
+  "tooltip.anvilcraft_doge_plus.inlay_property.enchant": "Enchant: merges enchantments when inlaid, extracts them when removed",
+  "tooltip.anvilcraft_doge_plus.inlay_property.direction": "Direction: makes sockets directional, active when 6 sockets are present",
+  "tooltip.anvilcraft_doge_plus.inlay_property.redstone": "Redstone: accepts and outputs redstone signals",
+  "tooltip.anvilcraft_doge_plus.inlay_property.not_gate": "NOT Gate: outputs inverted signal from the opposite side",
+  "tooltip.anvilcraft_doge_plus.inlay_property.and_gate": "AND Gate: outputs AND signal from adjacent inputs (in order)",
+  "tooltip.anvilcraft_doge_plus.inlay_property.or_gate": "OR Gate: outputs OR signal from adjacent inputs (in order)",
+  "tooltip.anvilcraft_doge_plus.inlay_details": "Hold [Shift] for inlay info",
+  "tooltip.anvilcraft_doge_plus.material_attributes": "Inlay attributes:",
+
+  "message.anvilcraft_doge_plus.doge_anvil.growth": "Growth %1$s/%2$s",
+  "message.anvilcraft_doge_plus.doge_anvil.no_space": "Not enough space to grow into a Giant Doge Anvil",
+
+  "itemGroup.anvilcraft_doge_plus.doge_plus": "AnvilCraft:Doge+",
+
+  "item.anvilcraft_doge_plus.doge_steel_ingot": "Doge Steel Ingot",
+  "item.anvilcraft_doge_plus.doge_magnet": "Hand Doge Magnet",
   "item.anvilcraft_doge_plus.mobile_silencer": "Mobile Silencer",
+
   "entity.anvilcraft_doge_plus.flying_anvil": "Flying Anvil",
   "entity.anvilcraft_doge_plus.doge_node": "Doge Node",
+
   "key.categories.anvilcraft_doge_plus": "AnvilCraft:Doge+",
   "key.anvilcraft_doge_plus.open_silencer": "Open Silencer"
 }

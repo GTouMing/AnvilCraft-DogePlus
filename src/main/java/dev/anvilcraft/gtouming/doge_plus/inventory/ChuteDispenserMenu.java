@@ -20,6 +20,6 @@ public class ChuteDispenserMenu extends BaseChuteMenu<MagneticChuteDispenserBloc
     }
     @Override
     protected Block getBlock() {
-        return ModBlocks.MAGNETIC_CHUTE_DISPENSER.get();
+        return ModBlocks.CHUTE_DISPENSER.get();
     }
 }
