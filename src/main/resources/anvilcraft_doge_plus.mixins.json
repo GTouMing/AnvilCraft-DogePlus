@@ -13,12 +13,12 @@
     "ItemEntityMixin",
     "ItemStackMixin",
     "ItemTooltipMixin",
-    "SignalGetterMixin",
     "LivingEntityMixin",
     "MagnetizedNodeEntityAccessor",
     "PistonBaseBlockMixin",
     "PistonMovingBlockEntityMixin",
     "PlayerInlayMixin",
+    "SignalGetterMixin",
     "SlidingBlockSectionMixin",
     "SlidingRailMixin"
   ],

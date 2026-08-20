@@ -126,6 +126,20 @@ public class BlockInlayManager extends SavedData {
         }
     }
 
+    public static void updatePowerProducer(Level level, BlockPos pos) {
+        if (level.isClientSide()) return;
+
+        PowerGridManager manager = PowerGridManager.get(level);
+        if (manager == null) return;
+
+        if (hasProperty(level, pos, InlayProperty.GENERATOR)) {
+            InlayPowerProducer producer = new InlayPowerProducer(level, pos);
+            manager.add(pos, producer);
+        } else {
+            manager.remove(pos);
+        }
+    }
+
     // ==================== 方块移动（活塞/滑轨）迁移 ====================
 
     /** 同时移动的方块暂存队列（FIFO，防御性限长防止移动失败时无限累积）。 */

@@ -7,10 +7,10 @@ import java.util.List;
 public class DirectionsOrder {
     public static List<Direction> getOrder() {
         return  List.of(
-                        Direction.EAST,   // 0
+                        Direction.EAST,// 0
                         Direction.SOUTH,  // 1
-                        Direction.WEST,   // 2
-                        Direction.UP,     // 3
+                        Direction.UP,     // 2
+                        Direction.WEST,   // 3
                         Direction.NORTH,  // 4
                         Direction.DOWN    // 5
                 );

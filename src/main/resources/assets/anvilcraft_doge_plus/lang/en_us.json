@@ -7,7 +7,6 @@
   "block.anvilcraft_doge_plus.giant_doge_anvil": "Giant Doge Anvil",
   "block.anvilcraft_doge_plus.inlay_table": "Inlay Table",
   "block.anvilcraft_doge_plus.doge_steel_block": "Doge Steel Block",
-  "block.anvilcraft_doge_plus.heavy_doge_steel_block": "Heavy Doge Steel Block",
 
   "container.anvilcraft_doge_plus.chute_dispenser": "Chute Dispenser",
   "container.anvilcraft_doge_plus.chute_dropper": "Chute Dropper",
@@ -22,7 +21,7 @@
   "tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount": "High Temp: current accumulated damage %s",
   "tooltip.anvilcraft_doge_plus.inlay_property.cold_forged": "Cold Forged: slowly repairs durability in water or powder snow",
   "tooltip.anvilcraft_doge_plus.inlay_property.eternal": "Eternal: indestructible, immune to fire, explosion, cactus, time and void",
-  "tooltip.anvilcraft_doge_plus.inlay_property.nirvana": "Nirvana: triggers a totem of undying on death, then the material shatters",
+  "tooltip.anvilcraft_doge_plus.inlay_property.nirvana": "Nirvana: triggers a totem on death, then the material shatters",
   "tooltip.anvilcraft_doge_plus.inlay_property.defense": "Defense: grants +2 armor when held or equipped",
   "tooltip.anvilcraft_doge_plus.inlay_property.life": "Life: grants +2 max health when held or equipped",
   "tooltip.anvilcraft_doge_plus.inlay_property.attack": "Attack: grants +2 attack damage when held or equipped",
@@ -32,6 +31,7 @@
   "tooltip.anvilcraft_doge_plus.inlay_property.not_gate": "NOT Gate: outputs inverted signal from the opposite side",
   "tooltip.anvilcraft_doge_plus.inlay_property.and_gate": "AND Gate: outputs AND signal from adjacent inputs (in order)",
   "tooltip.anvilcraft_doge_plus.inlay_property.or_gate": "OR Gate: outputs OR signal from adjacent inputs (in order)",
+  "tooltip.anvilcraft_doge_plus.inlay_property.generator": "Generator: produces 512 kW of power after place",
   "tooltip.anvilcraft_doge_plus.inlay_details": "Hold [Shift] for inlay info",
   "tooltip.anvilcraft_doge_plus.material_attributes": "Inlay attributes:",
 

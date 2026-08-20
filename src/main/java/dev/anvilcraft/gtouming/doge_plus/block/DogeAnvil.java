@@ -81,7 +81,6 @@ public class DogeAnvil extends BetterAnvilBlock implements IHammerRemovable {
         builder.add(GROWTH);
     }
 
-    @SuppressWarnings("UnreachableCode")
     @Override
     public InteractionResult use(
             BlockState state,

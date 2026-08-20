@@ -7,7 +7,6 @@
   "block.anvilcraft_doge_plus.giant_doge_anvil": "巨型 Doge 砧",
   "block.anvilcraft_doge_plus.inlay_table": "镶嵌台",
   "block.anvilcraft_doge_plus.doge_steel_block": "Doge 钢块",
-  "block.anvilcraft_doge_plus.heavy_doge_steel_block": "重质 Doge 钢块",
 
   "container.anvilcraft_doge_plus.chute_dispenser": "溜槽发射器",
   "container.anvilcraft_doge_plus.chute_dropper": "溜槽投掷器",
@@ -22,7 +21,7 @@
   "tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount": "高温：当前累加伤害 %s",
   "tooltip.anvilcraft_doge_plus.inlay_property.cold_forged": "冷锻：在水中或细雪中缓慢回复耐久",
   "tooltip.anvilcraft_doge_plus.inlay_property.eternal": "永恒：无法破坏，免疫火焰、爆炸、仙人掌、时间与虚空",
-  "tooltip.anvilcraft_doge_plus.inlay_property.nirvana": "涅槃：死亡时触发不死图腾，然后该材料碎裂",
+  "tooltip.anvilcraft_doge_plus.inlay_property.nirvana": "涅槃：死亡时触发图腾，然后该材料碎裂",
   "tooltip.anvilcraft_doge_plus.inlay_property.defense": "防御：手持或装备时提升 2 点盔甲值",
   "tooltip.anvilcraft_doge_plus.inlay_property.life": "生命：手持或装备时提升 2 点生命上限",
   "tooltip.anvilcraft_doge_plus.inlay_property.attack": "攻击：手持或装备时提升 2 点攻击力",
@@ -32,6 +31,7 @@
   "tooltip.anvilcraft_doge_plus.inlay_property.not_gate": "非门：该面输出反面输入的反信号",
   "tooltip.anvilcraft_doge_plus.inlay_property.and_gate": "与门：该面输出邻面输入的与信号（按序查找）",
   "tooltip.anvilcraft_doge_plus.inlay_property.or_gate": "或门：该面输出邻面输入的或信号（按序查找）",
+  "tooltip.anvilcraft_doge_plus.inlay_property.generator": "发电：放置后产生 512 kW 电力",
   "tooltip.anvilcraft_doge_plus.inlay_details": "按住 [Shift] 查看镶嵌信息",
   "tooltip.anvilcraft_doge_plus.material_attributes": "镶嵌属性：",
 

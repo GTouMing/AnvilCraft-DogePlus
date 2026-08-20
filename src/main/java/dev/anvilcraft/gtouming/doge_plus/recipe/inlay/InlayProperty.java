@@ -113,6 +113,13 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             "tooltip.anvilcraft_doge_plus.inlay_property.or_gate",
             0x44FF00)); // 黄绿色
 
+    /** 发电：放置后产生 512 kW 电力*/
+    public static final InlayProperty GENERATOR = register(new InlayProperty(
+            AnvilCraftDogePlus.of("generator"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.generator",
+            0xFF8800
+    ));
+
     // ==================== 数据 ====================
 
     /** tooltip 描述行组件（带颜色）。 */
