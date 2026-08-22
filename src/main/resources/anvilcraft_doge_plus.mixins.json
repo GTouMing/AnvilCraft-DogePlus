@@ -4,6 +4,7 @@
   "package": "dev.anvilcraft.gtouming.doge_plus.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "AbstractMultiPartBlockMixin",
     "BlockBehaviourMixin",
     "BlockItemMixin",
     "BlockMixin",

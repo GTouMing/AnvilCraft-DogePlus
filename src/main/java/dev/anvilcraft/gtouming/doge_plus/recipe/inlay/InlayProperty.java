@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * 镶嵌性质（可注册，带命名空间）。
  *
- * <p>性质与材料一一对应、由材料数据包 {@code material/attributes/} 分配；
+ * <p>性质与材料一一对应、由材料数据包 {@code material/inlays/} 分配；
  * 具体行为由各系统读取 {@code INLAY} 组件后施加。其他模组可通过
  * {@link #register(InlayProperty)} 注册自定义性质。</p>
  *
@@ -89,10 +89,16 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             "tooltip.anvilcraft_doge_plus.inlay_property.direction",
             0x00CCFF)); // 天蓝色
 
-    /** 红石：使方块接受和输出红石信号。 */
-    public static final InlayProperty REDSTONE = register(new InlayProperty(
-            AnvilCraftDogePlus.of("redstone"),
-            "tooltip.anvilcraft_doge_plus.inlay_property.redstone",
+    /** 输出：该面输出红石信号。 */
+    public static final InlayProperty OUTPUT = register(new InlayProperty(
+            AnvilCraftDogePlus.of("output"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.output",
+            0xFF3333)); // 亮红色
+
+    /** 输出：该面输出红石信号。 */
+    public static final InlayProperty INPUT = register(new InlayProperty(
+            AnvilCraftDogePlus.of("input"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.input",
             0xFF3333)); // 亮红色
 
     /** 非门：该面输出反面输入的反信号。 */

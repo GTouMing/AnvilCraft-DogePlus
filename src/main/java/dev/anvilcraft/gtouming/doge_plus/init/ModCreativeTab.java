@@ -15,7 +15,7 @@ public class ModCreativeTab {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DOGE_PLUS_TAB = CREATIVE_TABS.register("doge_plus",
             () -> CreativeModeTab.builder()
                     .title(REGISTRUM.addLang("itemGroup", AnvilCraftDogePlus.of("doge_plus"), "AnvilCraft:Doge+"))
-                    .icon(ModBlocks.CHUTE_DISPENSER::asStack)
+                    .icon(ModBlocks.DOGE_ANVIL::asStack)
                     .displayItems((parameters, output) -> {})
                     .build());
 }

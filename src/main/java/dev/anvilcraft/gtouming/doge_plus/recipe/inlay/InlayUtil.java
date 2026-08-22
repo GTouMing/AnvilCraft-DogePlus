@@ -9,8 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.item.*;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
@@ -81,6 +80,18 @@ public class InlayUtil {
         return withInlays(base, inlays);
     }
 
+    /**
+     * 从基材中移除最旧的镶嵌物（FIFO）
+     *
+     * @param base 基材物品
+     * @return 移除最旧镶嵌物后的基材，如果无法移除则返回 null
+     */
+    public static ItemStack withRemovedOldestInlay(ItemStack base) {
+        List<ResourceLocation> inlays = new ArrayList<>(getInlays(base));
+        if (!inlays.isEmpty()) inlays.removeFirst();
+        return withInlays(base, inlays);
+    }
+
     private static ItemStack withInlays(ItemStack base, List<ResourceLocation> inlays) {
         ItemStack result = base.copy();
         result.setCount(1);
@@ -90,6 +101,23 @@ public class InlayUtil {
             result.set(ModDataComponentTypes.INLAY, inlays);
         }
         return reapplyAttributeModifiers(result);
+    }
+
+    public static ItemAttributeModifiers getCurrentModifiers(ItemStack stack) {
+        Item item = stack.getItem();
+
+        // 优先从组件获取
+        ItemAttributeModifiers fromComponent = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
+        if (fromComponent != null && fromComponent != ItemAttributeModifiers.EMPTY) {
+            return fromComponent;
+        }
+
+        // 如果组件为空，从 Item 获取默认修饰器
+        if (item instanceof ArmorItem armorItem) {
+            return armorItem.getDefaultAttributeModifiers();
+        }
+
+        return ItemAttributeModifiers.EMPTY;
     }
 
     /**
@@ -102,29 +130,51 @@ public class InlayUtil {
         int attack = countProperty(stack, InlayProperty.ATTACK);
         if (defense == 0 && life == 0 && attack == 0) return stack;
 
-        // 以物品现有属性修饰（继承自物品默认组件，如铁剑的攻击）为底
-        ItemAttributeModifiers.Builder builder = ItemAttributeModifiers.builder();
-        for (ItemAttributeModifiers.Entry entry :
-                stack.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY).modifiers()) {
-            builder.add(entry.attribute(), entry.modifier(), entry.slot());
-        }
+        // ⭐ 获取当前所有修饰器（包括默认的）
+        ItemAttributeModifiers modifiers = getCurrentModifiers(stack);
+
+        EquipmentSlotGroup slotGroup = getSlotGroupForItem(stack);
+
         if (defense > 0) {
-            builder.add(Attributes.ARMOR, new AttributeModifier(
-                    AnvilCraftDogePlus.of( "inlay_defense"),
-                    2.0 * defense, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.ANY);
+            modifiers = modifiers.withModifierAdded(
+                    Attributes.ARMOR,
+                    new AttributeModifier(AnvilCraftDogePlus.of("inlay_defense"), 2.0 * defense, AttributeModifier.Operation.ADD_VALUE),
+                    slotGroup
+            );
         }
         if (life > 0) {
-            builder.add(Attributes.MAX_HEALTH, new AttributeModifier(
-                    AnvilCraftDogePlus.of("inlay_life"),
-                    2.0 * life, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.ANY);
+            modifiers = modifiers.withModifierAdded(
+                    Attributes.MAX_HEALTH,
+                    new AttributeModifier(AnvilCraftDogePlus.of("inlay_life"), 2.0 * life, AttributeModifier.Operation.ADD_VALUE),
+                    slotGroup
+            );
         }
         if (attack > 0) {
-            builder.add(Attributes.ATTACK_DAMAGE, new AttributeModifier(
-                    AnvilCraftDogePlus.of( "inlay_attack"),
-                    2.0 * attack, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND);
+            modifiers = modifiers.withModifierAdded(
+                    Attributes.ATTACK_DAMAGE,
+                    new AttributeModifier(AnvilCraftDogePlus.of("inlay_attack"), 2.0 * attack, AttributeModifier.Operation.ADD_VALUE),
+                    EquipmentSlotGroup.MAINHAND
+            );
         }
-        stack.set(DataComponents.ATTRIBUTE_MODIFIERS, builder.build());
+
+        stack.set(DataComponents.ATTRIBUTE_MODIFIERS, modifiers);
         return stack;
+    }
+
+    private static EquipmentSlotGroup getSlotGroupForItem(ItemStack stack) {
+        Item item = stack.getItem();
+        return switch (item) {
+            case ArmorItem armor -> switch (armor.getEquipmentSlot()) {
+                case HEAD -> EquipmentSlotGroup.HEAD;
+                case CHEST -> EquipmentSlotGroup.CHEST;
+                case LEGS -> EquipmentSlotGroup.LEGS;
+                case FEET -> EquipmentSlotGroup.FEET;
+                default -> EquipmentSlotGroup.ANY;
+            };
+            case ShieldItem ignored -> EquipmentSlotGroup.OFFHAND;
+            case TieredItem ignored -> EquipmentSlotGroup.MAINHAND;
+            default -> EquipmentSlotGroup.ANY;
+        };
     }
 
     /**

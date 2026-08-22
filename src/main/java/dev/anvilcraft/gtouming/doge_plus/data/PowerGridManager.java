@@ -94,14 +94,14 @@ public class PowerGridManager extends SavedData {
         return tag;
     }
 
-    public static PowerGridManager load(CompoundTag tag, HolderLookup.Provider registries, Level level) {
+    public static PowerGridManager load(CompoundTag tag, HolderLookup.Provider ignoredRegistries, Level level) {
         PowerGridManager manager = new PowerGridManager(level);
         ListTag list = tag.getList("producers", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entryTag = list.getCompound(i);
             BlockPos pos = BlockPos.of(entryTag.getLong("pos"));
             InlayPowerProducer producer = new InlayPowerProducer(manager.level, pos);
-            manager.producers.put(pos, producer);
+            manager.add(pos, producer);
         }
         return manager;
     }

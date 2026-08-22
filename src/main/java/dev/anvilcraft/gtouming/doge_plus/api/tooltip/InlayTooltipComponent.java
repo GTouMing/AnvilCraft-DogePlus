@@ -10,8 +10,10 @@ import java.util.List;
  *
  * @param materialStacks 已镶嵌的材料物品（按镶嵌顺序）
  * @param sockets        基材总镶孔数（含空镶孔）
+ * @param hasDirection   是否具有「方向」性质；是则在每个镶孔正下方渲染该槽对应方位
  */
 public record InlayTooltipComponent(
         List<ItemStack> materialStacks,
-        int sockets) implements TooltipComponent {
+        int sockets,
+        boolean hasDirection) implements TooltipComponent {
 }

@@ -1,0 +1,5 @@
+{
+  "type": "anvilcraft_doge_plus:inlay",
+  "inlay": "attack",
+  "base": "melee_weapons"
+}

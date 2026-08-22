@@ -1,6 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.data;
 
-import dev.anvilcraft.gtouming.doge_plus.api.behavior.ILogicGate;
+import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayUtil;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public record BlockInlays(Block block, List<ResourceLocation> inlays, Map<Direction, ILogicGate.GateType> directions) {
+public record BlockInlays(Block block, List<ResourceLocation> inlays, Map<Direction, LogicGateType> directions) {
     public static final StreamCodec<ByteBuf, BlockInlays> STREAM_CODEC = StreamCodec.composite(
             ResourceLocation.STREAM_CODEC.map(
                     BuiltInRegistries.BLOCK::get,
@@ -29,7 +29,7 @@ public record BlockInlays(Block block, List<ResourceLocation> inlays, Map<Direct
             ByteBufCodecs.map(
                     HashMap::new,
                     Direction.STREAM_CODEC,
-                    ILogicGate.GateType.STREAM_CODEC
+                    LogicGateType.STREAM_CODEC
             ), BlockInlays::directions,
             BlockInlays::new
     );
@@ -46,10 +46,10 @@ public record BlockInlays(Block block, List<ResourceLocation> inlays, Map<Direct
         // 方向顺序：东、南、西、上、北、下（对应槽位 0-5）
         List<Direction> directionOrder = DirectionsOrder.getOrder();
 
-        Map<Direction, ILogicGate.GateType> directions = new HashMap<>();
+        Map<Direction, LogicGateType> directions = new HashMap<>();
 
         for (Direction dir : directionOrder) {
-            directions.put(dir, ILogicGate.GateType.NONE);
+            directions.put(dir, LogicGateType.NONE);
         }
 
         // 遍历镶孔，填充对应方向的门类型
@@ -59,7 +59,7 @@ public record BlockInlays(Block block, List<ResourceLocation> inlays, Map<Direct
 
             // 获取材料定义
             MaterialManager.InlayMaterial material = InlayUtil.getMaterial(id);
-            ILogicGate.GateType gateType = ILogicGate.GateType.NONE;
+            LogicGateType gateType = LogicGateType.NONE;
 
             if (material != null) {
                 gateType = detectGateType(material);
@@ -75,26 +75,29 @@ public record BlockInlays(Block block, List<ResourceLocation> inlays, Map<Direct
      * 检测材料包含的门逻辑类型。
      * 优先级：非门 > 与门 > 或门 > 红石 > 方向
      */
-    private static ILogicGate.GateType detectGateType(MaterialManager.InlayMaterial material) {
+    private static LogicGateType detectGateType(MaterialManager.InlayMaterial material) {
         if (material.has(InlayProperty.NOT_GATE)) {
-            return ILogicGate.GateType.NOT_GATE;
+            return LogicGateType.NOT_GATE;
         }
         if (material.has(InlayProperty.AND_GATE)) {
-            return ILogicGate.GateType.AND_GATE;
+            return LogicGateType.AND_GATE;
         }
         if (material.has(InlayProperty.OR_GATE)) {
-            return ILogicGate.GateType.OR_GATE;
+            return LogicGateType.OR_GATE;
         }
-        if (material.has(InlayProperty.REDSTONE)) {
-            return ILogicGate.GateType.RED_STONE;
+        if (material.has(InlayProperty.OUTPUT)) {
+            return LogicGateType.OUTPUT;
         }
-        return ILogicGate.GateType.NONE;
+        if (material.has(InlayProperty.INPUT)) {
+            return LogicGateType.INPUT;
+        }
+        return LogicGateType.NONE;
     }
 
     /**
      * 获取指定方向的门逻辑类型。
      */
-    public ILogicGate.GateType getGateType(Direction direction) {
-        return directions.getOrDefault(direction, ILogicGate.GateType.NONE);
+    public LogicGateType getGateType(Direction direction) {
+        return directions.getOrDefault(direction, LogicGateType.NONE);
     }
 }

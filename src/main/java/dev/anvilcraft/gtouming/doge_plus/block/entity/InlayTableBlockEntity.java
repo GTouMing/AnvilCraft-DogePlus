@@ -168,7 +168,10 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandler {
      * 未满时追加镶嵌，满镶时替换最旧镶嵌并将旧材料弹出到旧镶嵌物槽。
      * 每次消耗 1 个材料 + 1 个基材，产出 1 个镶嵌后的物品。</p>
      *
-     * @return 是否至少完成了一次镶嵌
+     * <p>当材料槽为空时：依次取下已镶嵌的材料（从最旧到最新），
+     * 每次砸击取下最旧的一个镶嵌物，放入旧镶嵌物槽。</p>
+     *
+     * @return 是否至少完成了一次镶嵌或取下操作
      */
     public boolean processInlay(Level level) {
         if (level.isClientSide) return false;
@@ -177,6 +180,7 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandler {
         ItemStack base = slots[SLOT_BASE];
         int processed = 0;
 
+        // ==================== 模式 1：材料槽有材料 → 执行镶嵌 ====================
         while (processed < 64 && !material.isEmpty() && !base.isEmpty()) {
             InlayRecipe recipe = findRecipe(level, material, base);
             if (recipe == null) break;
@@ -213,7 +217,7 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandler {
 
             if (deny(SLOT_PRODUCT, result)) break;
 
-            // 提交
+            // 提交镶嵌
             material.shrink(1);
             base.shrink(1);
             if (!oldStack.isEmpty()) insertStack(SLOT_OLD_MATERIAL, oldStack, false);
@@ -221,6 +225,49 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandler {
             processed++;
         }
 
+        // ==================== 模式 2：材料槽为空 → 取下已镶嵌材料 ====================
+        if (processed == 0 && material.isEmpty() && !base.isEmpty()) {
+            while (processed < 64) {
+                // 检查基材是否有镶嵌物
+                int inlayCount = InlayUtil.getInlayCount(base);
+                if (inlayCount <= 0) break;
+
+                // 获取最旧的镶嵌物（FIFO：最早镶嵌的）
+                ResourceLocation oldestId = InlayUtil.getFirstInlay(base);
+                if (oldestId == null) break;
+
+                // 检查旧镶嵌物槽是否可容纳
+                ItemStack removedStack = new ItemStack(BuiltInRegistries.ITEM.get(oldestId));
+
+                // 如果镶嵌物有附魔，提取附魔
+                MaterialManager.InlayMaterial removedMaterial = MaterialManager.getInlay(removedStack);
+                if (removedMaterial != null && removedMaterial.has(InlayProperty.ENCHANT)) {
+                    removedStack = InlayUtil.extractFirstEnchantment(base, removedStack);
+                }
+
+                // 检查旧镶嵌物槽是否已满或不能堆叠
+                if (deny(SLOT_OLD_MATERIAL, removedStack)) break;
+
+                // 从基材中移除最旧的镶嵌物
+                ItemStack result = InlayUtil.withRemovedOldestInlay(base);
+                if (result.isEmpty()) break;
+
+                // 检查产物槽是否可容纳
+                if (deny(SLOT_PRODUCT, result)) break;
+
+                // 提交取下操作
+                base.shrink(1);
+                insertStack(SLOT_OLD_MATERIAL, removedStack, false);
+                insertStack(SLOT_PRODUCT, result, false);
+                processed++;
+
+                // 更新 base 引用（可能已经变化）
+                base = slots[SLOT_BASE];
+                if (base.isEmpty()) break;
+            }
+        }
+
+        // ==================== 完成处理 ====================
         if (processed > 0) {
             syncToClient();
             level.playSound(null, getBlockPos(), SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0f, 1.0f);

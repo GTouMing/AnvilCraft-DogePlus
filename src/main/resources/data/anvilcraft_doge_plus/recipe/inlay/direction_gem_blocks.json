@@ -1,5 +1,5 @@
 {
   "type": "anvilcraft_doge_plus:inlay",
   "inlay": "direction",
-  "base": "iron_block"
+  "base": "gem_blocks"
 }

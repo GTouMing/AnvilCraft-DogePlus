@@ -1,7 +1,7 @@
 {
   "ingredient": [
     {
-      "tag": "minecraft:anvil"
+      "item": "anvilcraft:deflection_ring"
     }
   ],
   "sockets": 1

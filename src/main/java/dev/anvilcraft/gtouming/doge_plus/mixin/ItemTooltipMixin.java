@@ -102,6 +102,7 @@ public abstract class ItemTooltipMixin {
             materialStacks.add(new ItemStack(materialItem));
         }
         int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
-        cir.setReturnValue(Optional.of(new InlayTooltipComponent(materialStacks, sockets)));
+        boolean hasDirection = InlayUtil.hasProperty(stack, InlayProperty.DIRECTION);
+        cir.setReturnValue(Optional.of(new InlayTooltipComponent(materialStacks, sockets, hasDirection)));
     }
 }

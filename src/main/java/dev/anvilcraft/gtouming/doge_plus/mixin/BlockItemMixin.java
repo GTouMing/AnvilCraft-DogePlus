@@ -1,8 +1,12 @@
 package dev.anvilcraft.gtouming.doge_plus.mixin;
 
+import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
+import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayUtil;
+import dev.anvilcraft.lib.v2.util.Util;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -33,6 +37,11 @@ public abstract class BlockItemMixin {
         if (level.isClientSide) return;
         List<ResourceLocation> inlays = InlayUtil.getInlays(context.getItemInHand());
         if (inlays.isEmpty()) return;
-        BlockInlayManager.put(level, context.getClickedPos(), BlockInlays.fromInlays(state.getBlock(), inlays));
+        BlockPos mainPos = context.getClickedPos();
+        BlockItem block = Util.cast(this);
+        if (block.getBlock() instanceof IMultiPartBlock part) mainPos = part.doge_plus$getMainPos(mainPos, state);
+        BlockInlayManager.put(level, mainPos, BlockInlays.fromInlays(state.getBlock(), inlays));
+        // 放置逻辑门后立即重建网络拓扑，避免依赖邻居变化才触发导致门无输出
+        LogicGateNetworkManager.topologyChanged(level, mainPos);
     }
 }

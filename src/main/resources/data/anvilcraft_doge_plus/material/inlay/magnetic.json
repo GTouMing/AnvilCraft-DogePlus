@@ -1,0 +1,10 @@
+{
+  "ingredient": [
+    {
+      "item": "anvilcraft:magnet_ingot"
+    }
+  ],
+  "attributes": [
+    "magnetic"
+  ]
+}

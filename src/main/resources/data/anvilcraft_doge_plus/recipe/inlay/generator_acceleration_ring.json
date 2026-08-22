@@ -1,5 +1,5 @@
 {
   "type": "anvilcraft_doge_plus:inlay",
   "inlay": "generator",
-  "base": "iron_block"
+  "base": "acceleration_ring"
 }

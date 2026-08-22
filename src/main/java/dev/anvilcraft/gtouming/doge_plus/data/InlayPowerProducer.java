@@ -39,6 +39,11 @@ public class InlayPowerProducer implements IPowerProducer {
     }
 
     @Override
+    public int getRange() {
+        return RANGE;
+    }
+
+    @Override
     public void setGrid(@Nullable PowerGrid grid) {
         this.grid = grid;
     }

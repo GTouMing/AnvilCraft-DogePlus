@@ -1,0 +1,10 @@
+{
+  "ingredient": [
+    {
+      "item": "anvilcraft:royal_steel_ingot"
+    }
+  ],
+  "attributes": [
+    "life"
+  ]
+}

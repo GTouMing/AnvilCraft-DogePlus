@@ -1,0 +1,10 @@
+{
+  "ingredient": [
+    {
+      "item": "minecraft:observer"
+    }
+  ],
+  "attributes": [
+    "input"
+  ]
+}

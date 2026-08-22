@@ -1,6 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.mixin;
 
-import dev.anvilcraft.gtouming.doge_plus.data.LogicGateManager;
+import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.SignalGetter;
@@ -26,11 +26,7 @@ public interface SignalGetterMixin {
         Level level = (Level) this;
         if (level.isClientSide()) return;
 
-        LogicGateManager manager = LogicGateManager.get(level);
-        if (manager == null) return;
-
-        if (!manager.hasLogicGate(pos)) return;
-
-        cir.setReturnValue(0);
+        if (LogicGateNetworkManager.isLogicGate(level, pos))
+            cir.setReturnValue(0);
     }
 }

@@ -1,5 +1,5 @@
 {
   "type": "anvilcraft_doge_plus:inlay",
-  "inlay": "totems",
-  "base": "swords"
+  "inlay": "input",
+  "base": "gem_blocks"
 }
