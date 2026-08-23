@@ -128,31 +128,33 @@ public class InlayUtil {
         int defense = countProperty(stack, InlayProperty.DEFENSE);
         int life = countProperty(stack, InlayProperty.LIFE);
         int attack = countProperty(stack, InlayProperty.ATTACK);
-        if (defense == 0 && life == 0 && attack == 0) return stack;
 
         // ⭐ 获取当前所有修饰器（包括默认的）
         ItemAttributeModifiers modifiers = getCurrentModifiers(stack);
 
         EquipmentSlotGroup slotGroup = getSlotGroupForItem(stack);
 
-        if (defense > 0) {
+        // 共鸣：附加的防御/生命/攻击翻倍（+2 → +4）
+        double baseValue = hasProperty(stack, InlayProperty.RESONANCE) ? 4.0 : 2.0;
+
+        if (defense >= 0) {
             modifiers = modifiers.withModifierAdded(
                     Attributes.ARMOR,
-                    new AttributeModifier(AnvilCraftDogePlus.of("inlay_defense"), 2.0 * defense, AttributeModifier.Operation.ADD_VALUE),
+                    new AttributeModifier(AnvilCraftDogePlus.of("inlay_defense"), baseValue * defense, AttributeModifier.Operation.ADD_VALUE),
                     slotGroup
             );
         }
-        if (life > 0) {
+        if (life >= 0) {
             modifiers = modifiers.withModifierAdded(
                     Attributes.MAX_HEALTH,
-                    new AttributeModifier(AnvilCraftDogePlus.of("inlay_life"), 2.0 * life, AttributeModifier.Operation.ADD_VALUE),
+                    new AttributeModifier(AnvilCraftDogePlus.of("inlay_life"), baseValue * life, AttributeModifier.Operation.ADD_VALUE),
                     slotGroup
             );
         }
-        if (attack > 0) {
+        if (attack >= 0) {
             modifiers = modifiers.withModifierAdded(
                     Attributes.ATTACK_DAMAGE,
-                    new AttributeModifier(AnvilCraftDogePlus.of("inlay_attack"), 2.0 * attack, AttributeModifier.Operation.ADD_VALUE),
+                    new AttributeModifier(AnvilCraftDogePlus.of("inlay_attack"), baseValue * attack, AttributeModifier.Operation.ADD_VALUE),
                     EquipmentSlotGroup.MAINHAND
             );
         }
@@ -185,6 +187,8 @@ public class InlayUtil {
         if (matEnch.isEmpty()) return;
 
         ItemEnchantments.Mutable mutable = new ItemEnchantments.Mutable(getEnchants(result));
+        // 共鸣：镶嵌时合并附魔，并有 50% 概率把合并后的附魔等级再提升 1 级
+        boolean resonance = hasProperty(result, InlayProperty.RESONANCE);
         for (Object2IntMap.Entry<Holder<Enchantment>> e : matEnch.entrySet()) {
             Holder<Enchantment> ench = e.getKey();
             int level = e.getIntValue();
@@ -197,6 +201,9 @@ public class InlayUtil {
             } else {
                 newLevel = level;
             }
+            if (resonance && Math.random() < 0.5) {
+                newLevel = Math.min(newLevel + 1, ench.value().getMaxLevel());
+            }
             mutable.set(ench, newLevel);
         }
         result.set(DataComponents.ENCHANTMENTS, mutable.toImmutable());
@@ -206,6 +213,11 @@ public class InlayUtil {
     public static ItemStack extractFirstEnchantment(ItemStack base, ItemStack oldStack) {
         ItemEnchantments ench = getEnchants(base);
         if (ench.isEmpty()) return oldStack;
+
+        // 共鸣：移除时仅 50% 概率提取附魔（否则附魔留在 base）
+        if (hasProperty(base, InlayProperty.RESONANCE) && Math.random() < 0.5) {
+            return oldStack;
+        }
 
         Object2IntMap.Entry<Holder<Enchantment>> first = ench.entrySet().iterator().next();
         // 从基材移除第一个附魔

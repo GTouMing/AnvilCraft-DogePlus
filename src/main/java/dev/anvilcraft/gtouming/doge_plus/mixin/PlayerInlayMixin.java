@@ -32,6 +32,11 @@ public abstract class PlayerInlayMixin {
         if (target.isAlive()) {
             target.hurt(self.damageSources().playerAttack(self), heat);
         }
-        weapon.set(ModDataComponentTypes.HEAT, 0);
+        if (InlayUtil.hasProperty(weapon, InlayProperty.RESONANCE)) {
+            // 共鸣：攻击时缓慢消耗累加的伤害（只消耗一半）
+            weapon.set(ModDataComponentTypes.HEAT, heat / 2);
+        } else {
+            weapon.set(ModDataComponentTypes.HEAT, 0);
+        }
     }
 }

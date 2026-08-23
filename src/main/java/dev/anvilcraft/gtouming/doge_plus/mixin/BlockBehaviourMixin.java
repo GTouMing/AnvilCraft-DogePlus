@@ -212,12 +212,12 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
         return BlockInlayManager.get(level, pos).getGateType(outputDir);
     }
 
-    @Override
-    public int doge_plus$calculateOutput(Level level, BlockPos pos, Direction outputDir, DirectionalSignals inputs) {
-        LogicGateType type = doge_plus$getGateType(level, pos, outputDir);
-        if (type == LogicGateType.NONE || type == LogicGateType.INPUT) return 0;
-        return type.calculate(inputs.toMap(), outputDir, findInputFaces(level, pos, outputDir));
-    }
+//    @Override
+//    public int doge_plus$calculateOutput(Level level, BlockPos pos, Direction outputDir, DirectionalSignals inputs) {
+//        LogicGateType type = doge_plus$getGateType(level, pos, outputDir);
+//        if (type == LogicGateType.NONE || type == LogicGateType.INPUT) return 0;
+//        return type.calculate(inputs.toMap(), outputDir, findInputFaces(level, pos, outputDir));
+//    }
 
     /**
      * 从本门槽位序号之后（DirectionsOrder 循环）查找 INPUT 门标记的输入面。

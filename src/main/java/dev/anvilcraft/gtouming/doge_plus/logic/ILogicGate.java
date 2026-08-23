@@ -11,10 +11,5 @@ public interface ILogicGate {
     /**
      * 获取门类型
      */
-    dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType doge_plus$getGateType(Level level, BlockPos pos, Direction outputDir);
-
-    /**
-     * 计算输出信号
-     */
-    int doge_plus$calculateOutput(Level level, BlockPos pos, Direction outputDir, DirectionalSignals inputs);
+    LogicGateType doge_plus$getGateType(Level level, BlockPos pos, Direction outputDir);
 }

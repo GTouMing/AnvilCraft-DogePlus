@@ -126,6 +126,13 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             0xFF8800
     ));
 
+    /** 共鸣：增强其他镶孔的部分材料属性。 */
+    public static final InlayProperty RESONANCE = register(new InlayProperty(
+            AnvilCraftDogePlus.of("resonance"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.resonance",
+            0xFF66CC
+    ));
+
     // ==================== 数据 ====================
 
     /** tooltip 描述行组件（带颜色）。 */

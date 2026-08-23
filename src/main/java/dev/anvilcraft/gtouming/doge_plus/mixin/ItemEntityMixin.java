@@ -253,7 +253,9 @@ public abstract class ItemEntityMixin extends Entity implements ICaptured {
         ItemStack stack = this.getItem();
         if (stack.isEmpty() || !InlayUtil.hasProperty(stack, InlayProperty.HIGH_TEMP)) return;
         if (this.isInLava() || this.isOnFire()) {
-            stack.set(ModDataComponentTypes.HEAT, Math.min(stack.getOrDefault(ModDataComponentTypes.HEAT, 0) + 1, 100));
+            // 共鸣：累加更快
+            int add = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE) ? 2 : 1;
+            stack.set(ModDataComponentTypes.HEAT, Math.min(stack.getOrDefault(ModDataComponentTypes.HEAT, 0) + add, 100));
         }
     }
 
@@ -265,7 +267,9 @@ public abstract class ItemEntityMixin extends Entity implements ICaptured {
         if (stack.isEmpty() || !InlayUtil.hasProperty(stack, InlayProperty.COLD_FORGED)) return;
         if (stack.getMaxDamage() <= 0 || stack.getDamageValue() <= 0) return;
         if (!this.isInWater() && !this.isInPowderSnow) return;
-        stack.setDamageValue(Math.max(0, stack.getDamageValue() - 1));
+        // 共鸣：回复更快
+        int repair = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE) ? 2 : 1;
+        stack.setDamageValue(Math.max(0, stack.getDamageValue() - repair));
     }
 
     /** 镶嵌「永恒」性质：免疫火焰、爆炸、仙人掌与虚空伤害。 */

@@ -8,6 +8,8 @@ import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.Item;
@@ -15,11 +17,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -57,13 +61,16 @@ public abstract class ItemTooltipMixin {
         if (InlayUtil.getInlays(stack).isEmpty()) return;
         boolean showDetails = flag.hasShiftDown() || flag.isCreative();
         if (showDetails) {
+            // 共鸣：其他镶孔的材料属性描述增强
+            boolean resonance = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE);
             // 依次渲染各镶嵌材料属性与描述
             for (ResourceLocation id : InlayUtil.getInlays(stack)) {
                MaterialManager.InlayMaterial inlay = MaterialManager.getInlay(BuiltInRegistries.ITEM.get(id).getDefaultInstance());
                 if (inlay == null) continue;
                 for (InlayProperty property : inlay.properties()) {
-                    if (tooltipComponents.contains(property.getTooltip())) continue;
-                    tooltipComponents.add(property.getTooltip());
+                    Component line = resonance ? doge_plus$enhancedTooltip(property) : property.getTooltip();
+                    if (tooltipComponents.contains(line)) continue;
+                    tooltipComponents.add(line);
                 }
             }
             // 高温：当前累加伤害
@@ -104,5 +111,24 @@ public abstract class ItemTooltipMixin {
         int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
         boolean hasDirection = InlayUtil.hasProperty(stack, InlayProperty.DIRECTION);
         cir.setReturnValue(Optional.of(new InlayTooltipComponent(materialStacks, sockets, hasDirection)));
+    }
+
+    /** 共鸣增强的属性描述 key；非增强属性返回 null。 */
+    @Unique
+    @Nullable
+    private static String doge_plus$resonanceKey(InlayProperty property) {
+        return switch (property.id().getPath()) {
+            case "cold_forged", "high_temp", "nirvana", "defense", "life", "attack", "enchant" ->
+                    "tooltip.anvilcraft_doge_plus.inlay_property.resonance." + property.id().getPath();
+            default -> null;
+        };
+    }
+
+    /** 共鸣时该属性的增强描述组件；无增强 key 时退回普通描述。 */
+    @Unique
+    private static Component doge_plus$enhancedTooltip(InlayProperty property) {
+        String key = doge_plus$resonanceKey(property);
+        return key == null ? property.getTooltip()
+                : Component.translatable(key).withStyle(Style.EMPTY.withColor(TextColor.fromRgb(property.getColor())));
     }
 }

@@ -81,9 +81,13 @@ public abstract class LivingEntityMixin {
         ItemStack itemStack = totemItem.getDefaultInstance();
         boolean result = handler.execute(damageSource, instance, itemStack);
         if (result) {
-            ArrayList<ResourceLocation> inlayList = InlayUtil.getInlays(handStack);
-            inlayList.removeIf(p);
-            InlayUtil.setInlays(handStack, inlayList);
+            // 共鸣：该材料 50% 概率碎裂；无共鸣时总是碎裂
+            if (!InlayUtil.hasProperty(handStack, InlayProperty.RESONANCE)
+                    || ((LivingEntity) (Object) this).level().random.nextFloat() < 0.5f) {
+                ArrayList<ResourceLocation> inlayList = InlayUtil.getInlays(handStack);
+                inlayList.removeIf(p);
+                InlayUtil.setInlays(handStack, inlayList);
+            }
             if (itemStack.is(ModItems.TOTEM_OF_RAGE)) {
                 this.doge_plus$raged = true;
             }
