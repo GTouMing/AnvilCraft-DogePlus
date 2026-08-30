@@ -8,6 +8,10 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
@@ -58,18 +62,22 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
             ProfilerFiller profiler) {
         INLAYS.clear();
         BASES.clear();
+        var registryOps = RegistryOps.create(
+                JsonOps.INSTANCE,
+                RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)
+        );
         for (Map.Entry<ResourceLocation, JsonElement> entry : map.entrySet()) {
             ResourceLocation file = entry.getKey();
             String path = file.getPath();
             try {
                 if (path.startsWith("inlay/")) {
                     InlayMaterial material = InlayMaterial.CODEC.codec()
-                            .parse(JsonOps.INSTANCE, entry.getValue())
+                            .parse(registryOps, entry.getValue())
                             .getOrThrow();
                     INLAYS.put(file.withPath(path.substring("inlay/".length())), material);
                 } else if (path.startsWith("base/")) {
                     BaseMaterial base = BaseMaterial.CODEC.codec()
-                            .parse(JsonOps.INSTANCE, entry.getValue())
+                            .parse(registryOps, entry.getValue())
                             .getOrThrow();
                     BASES.put(file.withPath(path.substring("base/".length())), base);
                 }
@@ -84,7 +92,7 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
      * 匹配规则：优先匹配物品，然后匹配标签
      */
     @Nullable
-    public static InlayMaterial getInlay(ItemStack stack) {
+    public static InlayMaterial getInlayMaterial(ItemStack stack) {
         for (InlayMaterial material : INLAYS.values()) {
             if (material.ingredient().test(stack)) {
                 return material;
@@ -115,19 +123,23 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
 
     /** 按材料定义文件名查询（键：{@code anvilcraft_doge_plus:doge_steel_ingot}）；未定义返回 null。 */
     @Nullable
-    public static InlayMaterial getInlay(ResourceLocation fileKey) {
+    public static InlayMaterial getInlayMaterial(ResourceLocation fileKey) {
         return INLAYS.get(fileKey);
     }
 
     /** 按基材定义文件名查询（键：{@code anvilcraft_doge_plus:anvil}）；未定义返回 null。 */
     @Nullable
-    public static BaseMaterial getBase(ResourceLocation fileKey) {
+    public static BaseMaterial getBaseMaterial(ResourceLocation fileKey) {
         return BASES.get(fileKey);
     }
 
     /**
-     * 基材镶孔定义：使用 Ingredient 匹配物品/标签。
-     * JSON 格式：{"ingredient": {"item": "..."} 或 {"tag": "..."}, "sockets": 1}
+     * 基材镶孔定义：优先解析数据组件格式，其次解析普通物品/标签格式。
+     * JSON 格式：
+     *   - 数据组件：{"ingredient": {"type": "neoforge:data_component", "items": [{"item": "minecraft:potion"}], "components": {"minecraft:potion_contents": {}}, "strict": false}, "sockets": 1}
+     *   - 普通物品：{"ingredient": {"item": "minecraft:stone"}, "sockets": 3}
+     *   - 物品数组：{"ingredient": [{"item": "minecraft:stone"}, {"item": "minecraft:granite"}], "sockets": 2}
+     *   - 标签：{"ingredient": {"tag": "minecraft:planks"}, "sockets": 2}
      */
     public record BaseMaterial(Ingredient ingredient, int sockets) {
         public static final MapCodec<BaseMaterial> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
@@ -137,8 +149,12 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
     }
 
     /**
-     * 材料定义：使用 Ingredient 匹配物品/标签。
-     * JSON 格式：{"ingredient": {"item": "..."} 或 {"tag": "..."}, "attributes": ["fire_proof", "magnetic"]}
+     * 材料定义：优先解析数据组件格式，其次解析普通物品/标签格式。
+     * JSON 格式：
+     *   - 数据组件：{"ingredient": {"type": "neoforge:data_component", "items": [{"item": "minecraft:potion"}], "components": {"minecraft:potion_contents": {"potion": "minecraft:strength"}}, "strict": false}, "attributes": ["effect"]}
+     *   - 普通物品：{"ingredient": {"item": "minecraft:diamond"}, "attributes": ["attack", "defense"]}
+     *   - 物品数组：{"ingredient": [{"item": "minecraft:diamond"}, {"item": "minecraft:emerald"}], "attributes": ["defense"]}
+     *   - 标签：{"ingredient": {"tag": "minecraft:logs"}, "attributes": ["life"]}
      */
     public record InlayMaterial(Ingredient ingredient, HashSet<InlayProperty> properties) {
         public static final MapCodec<InlayMaterial> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
@@ -148,9 +164,5 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
                         set -> DataResult.success(new ArrayList<>(set))
                 ).fieldOf("attributes").forGetter(InlayMaterial::properties)
         ).apply(instance, InlayMaterial::new));
-
-        public boolean has(InlayProperty property) {
-            return properties.contains(property);
-        }
     }
 }

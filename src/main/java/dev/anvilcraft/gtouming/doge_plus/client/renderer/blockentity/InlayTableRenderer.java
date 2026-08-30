@@ -2,6 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayTableBlockEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -17,29 +18,29 @@ import javax.annotation.Nullable;
 
 /**
  * 渲染镶嵌台各槽位物品：基材与镶嵌材料平躺居中于平台（基材占满平台、材料缩小至中央孔洞），
- * 产品与旧镶嵌物平躺于平台下方。
+ * 产品与旧镶嵌物渲染于平台侧面。
  */
 public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEntity> {
 
     private static final float[] ITEM_Y = {
             0.75F,   // SLOT_BASE 平台中央
-            0.90F,   // SLOT_MATERIAL 平台中央孔洞（略高于基材避免闪烁）
-            0.80F, // SLOT_PRODUCT 平台下方
-            0.80F  // SLOT_OLD_MATERIAL 平台下方
+            0.90F,   // SLOT_MATERIAL 平台中央孔洞
+            0.81F, // SLOT_PRODUCT
+            0.81F  // SLOT_OLD_MATERIAL
     };
     private static final float[] BLOCK_Y = {
             0.60F,   // SLOT_BASE 平台中央
-            0.90F,   // SLOT_MATERIAL 平台中央孔洞（略高于基材避免闪烁）
-            0.80F, // SLOT_PRODUCT 平台下方
-            0.80F  // SLOT_OLD_MATERIAL 平台下方
+            0.90F,   // SLOT_MATERIAL 平台中央孔洞
+            0.81F, // SLOT_PRODUCT
+            0.81F  // SLOT_OLD_MATERIAL
     };
 
     /** 各槽位的缩放（NONE 变换无内置缩放，此处即最终大小）。 */
     private static final float[] BLOCK_SCALE = {
             0.375F,   // SLOT_BASE 占满平台
             0.25F,  // SLOT_MATERIAL 缩小至中央孔洞
-            0.3F,  // SLOT_PRODUCT
-            0.3F   // SLOT_OLD_MATERIAL
+            0.25F,  // SLOT_PRODUCT
+            0.25F   // SLOT_OLD_MATERIAL
     };
 
     /** 各槽位的缩放（NONE 变换无内置缩放，此处即最终大小）。 */
@@ -62,12 +63,18 @@ public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEn
             int packedLight,
             int packedOverlay) {
         for (int slot = 0; slot < InlayTableBlockEntity.SLOT_COUNT; slot++) {
-            ItemStack stack = blockEntity.getStackInSlot(slot);
+            ItemStack stack = blockEntity.getItemHandler().getStackInSlot(slot);
             if (stack.isEmpty()) continue;
-            boolean isBlock = stack.getItem() instanceof BlockItem;
+            boolean isBlock = false;
+            float multi = 1F;
+            if (stack.getItem() instanceof BlockItem item) {
+                isBlock = true;
+                if (item.getBlock() instanceof IMultiPartBlock)
+                    multi = 1/3F;
+            }
 
             float region = isBlock ? BLOCK_Y[slot] : ITEM_Y[slot];
-            float scale = isBlock ? BLOCK_SCALE[slot] :  ITEM_SCALE[slot];
+            float scale = isBlock ? BLOCK_SCALE[slot] * multi :  ITEM_SCALE[slot];
 
             poseStack.pushPose();
             if (slot <= 1) {
@@ -108,10 +115,10 @@ public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEn
 
     private float[] getOffset(int i) {
         return switch (i) {
-            case 1 -> new float[]{0F, 0.5F};
-            case 2 -> new float[]{0.5F, 0F};
-            case 3 -> new float[]{1F, 0.5F};
-            default -> new float[]{0.5F, 1F};
+            case 1 -> new float[]{-0.01F, 0.5F};
+            case 2 -> new float[]{0.5F, -0.01F};
+            case 3 -> new float[]{1.01F, 0.5F};
+            default -> new float[]{0.5F, 1.01F};
         };
     }
 }

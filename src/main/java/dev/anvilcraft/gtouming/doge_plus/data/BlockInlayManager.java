@@ -1,10 +1,11 @@
 package dev.anvilcraft.gtouming.doge_plus.data;
 
-import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
+import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType;
 import dev.anvilcraft.gtouming.doge_plus.network.BlockInlaySyncPacket;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
-import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayUtil;
+import dev.anvilcraft.gtouming.doge_plus.util.DirectionsOrder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -54,9 +55,11 @@ public class BlockInlayManager extends SavedData {
     /** 该坐标是否携带指定镶嵌性质（任一镶嵌材料带该性质即视为携带）。 */
     public static boolean hasProperty(BlockGetter level, BlockPos pos, InlayProperty property) {
         BlockInlays bi = get(level, pos);
-        for (ResourceLocation id : bi.inlays()) {
-            MaterialManager.InlayMaterial material = InlayUtil.getMaterial(id);
-            if (material != null && material.has(property)) return true;
+        for (InlayEntry entry : bi.inlays()) {
+            for (ResourceLocation propertyId : entry.attributes()) {
+                if (property.id() == propertyId) return true;
+
+            }
         }
         return false;
     }
@@ -70,23 +73,7 @@ public class BlockInlayManager extends SavedData {
 
         // 服务端：从管理器获取
         BlockInlayManager manager = get(level);
-        if (manager == null) {
-            return BlockInlays.nulls();
-        }
-
-        BlockInlays bi = manager.INLAID_BLOCKS.get(pos);
-        if (bi == null) {
-            return BlockInlays.nulls();
-        }
-
-        // 检查方块类型是否匹配，不匹配则清理并返回空
-        Block currentBlock = level.getBlockState(pos).getBlock();
-        if (bi.block() != currentBlock) {
-            remove(level, pos);
-            return BlockInlays.nulls();
-        }
-
-        return bi;
+        return manager == null ? BlockInlays.nulls() : manager.INLAID_BLOCKS.getOrDefault(pos, BlockInlays.nulls());
     }
 
     /** 记录坐标的镶嵌材料列表（覆盖旧值），并广播到客户端。 */
@@ -102,7 +89,7 @@ public class BlockInlayManager extends SavedData {
     public static void remove(BlockGetter level, BlockPos pos) {
         BlockInlayManager manager = get(level);
         if (manager == null) return;
-        if (manager.INLAID_BLOCKS.remove(pos) != null) {
+        if (manager.INLAID_BLOCKS.remove(pos) != null ) {
             manager.setDirty();
             syncToClients((Level) level, pos, BlockInlays.nulls());
         }
@@ -130,8 +117,6 @@ public class BlockInlayManager extends SavedData {
 
     /** 同时移动的方块暂存队列（FIFO，防御性限长防止移动失败时无限累积）。 */
     private static final ArrayDeque<BlockInlays> PENDING_MOVES = new ArrayDeque<>();
-
-// 在 BlockInlayManager 中添加
 
     /**
      * 移动开始时：从旧位置取出镶嵌数据暂存
@@ -174,47 +159,180 @@ public class BlockInlayManager extends SavedData {
 
 // ==================== 持久化 ====================
 
-    @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag list = new ListTag();
+
         for (Map.Entry<BlockPos, BlockInlays> entry : INLAID_BLOCKS.entrySet()) {
             CompoundTag entryTag = new CompoundTag();
             BlockPos pos = entry.getKey();
             BlockInlays inlays = entry.getValue();
 
+            // 位置
             entryTag.putLong("P", pos.asLong());
+
+            // 方块 ID
             entryTag.putString("B", BuiltInRegistries.BLOCK.getKey(inlays.block()).toString());
 
-            ListTag ids = new ListTag();
-            for (ResourceLocation id : inlays.inlays()) {
-                ids.add(StringTag.valueOf(id.toString()));
+            // ===== 保存 InlayEntry 列表 =====
+            ListTag inlayList = new ListTag();
+            for (InlayEntry inlayEntry : inlays.inlays()) {
+                CompoundTag inlayTag = new CompoundTag();
+
+                // 保存 id
+                inlayTag.putString("id", inlayEntry.id().toString());
+
+                // 保存 extra 列表
+                ListTag extraList = new ListTag();
+                for (ResourceLocation extra : inlayEntry.extra()) {
+                    extraList.add(StringTag.valueOf(extra.toString()));
+                }
+                inlayTag.put("extra", extraList);
+
+                ListTag attributesList = new ListTag();
+                for (ResourceLocation attribute : inlayEntry.attributes()) {
+                    extraList.add(StringTag.valueOf(attribute.toString()));
+                }
+                inlayTag.put("attributes", attributesList);
+
+                inlayList.add(inlayTag);
             }
-            entryTag.put("I", ids);
+            entryTag.put("I", inlayList);
+
+            // 保存方向映射 (如果需要持久化)
+            ListTag dirList = new ListTag();
+            for (Map.Entry<Direction, LogicGateType> dirEntry : inlays.directions().entrySet()) {
+                CompoundTag dirTag = new CompoundTag();
+                dirTag.putString("dir", dirEntry.getKey().getName());
+                dirTag.putString("type", dirEntry.getValue().name());
+                dirList.add(dirTag);
+            }
+            entryTag.put("D", dirList);
+
             list.add(entryTag);
         }
+
         tag.put("InlaidBlocks", list);
         return tag;
     }
 
+    // ==================== 加载 ====================
+
     public static BlockInlayManager load(CompoundTag tag, HolderLookup.Provider registries) {
         BlockInlayManager data = new BlockInlayManager();
         ListTag list = tag.getList("InlaidBlocks", Tag.TAG_COMPOUND);
+
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entryTag = list.getCompound(i);
+
+            // 读取位置
             BlockPos pos = BlockPos.of(entryTag.getLong("P"));
 
-            // ⭐ 读取方块 ID
+            // 读取方块 ID
             String blockId = entryTag.getString("B");
             Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(blockId));
 
-            ListTag ids = entryTag.getList("I", Tag.TAG_STRING);
-            List<ResourceLocation> inlayIds = new ArrayList<>(ids.size());
-            for (int j = 0; j < ids.size(); j++) {
-                inlayIds.add(ResourceLocation.parse(ids.getString(j)));
+            // ===== 读取 InlayEntry 列表 =====
+            List<InlayEntry> inlayEntries = new ArrayList<>();
+            ListTag inlayList = entryTag.getList("I", Tag.TAG_COMPOUND);
+
+            for (int j = 0; j < inlayList.size(); j++) {
+                CompoundTag inlayTag = inlayList.getCompound(j);
+
+                // 读取 id
+                String idStr = inlayTag.getString("id");
+                ResourceLocation id = ResourceLocation.parse(idStr);
+
+                // 读取 extra 列表
+                List<ResourceLocation> extra = new ArrayList<>();
+                ListTag extraList = inlayTag.getList("extra", Tag.TAG_STRING);
+                for (int k = 0; k < extraList.size(); k++) {
+                    extra.add(ResourceLocation.parse(extraList.getString(k)));
+                }
+
+                List<ResourceLocation> attributes = new ArrayList<>();
+                ListTag attributesList = inlayTag.getList("attributes", Tag.TAG_STRING);
+                for (int k = 0; k < attributesList.size(); k++) {
+                    attributes.add(ResourceLocation.parse(attributesList.getString(k)));
+                }
+
+                inlayEntries.add(new InlayEntry(id, extra, attributes));
             }
 
-            data.INLAID_BLOCKS.put(pos, BlockInlays.fromInlays(block, inlayIds));
+            // 读取方向映射 (兼容旧数据)
+            Map<Direction, LogicGateType> directions = new HashMap<>();
+            ListTag dirList = entryTag.getList("D", Tag.TAG_COMPOUND);
+            if (!dirList.isEmpty()) {
+                for (int j = 0; j < dirList.size(); j++) {
+                    CompoundTag dirTag = dirList.getCompound(j);
+                    String dirName = dirTag.getString("dir");
+                    String typeName = dirTag.getString("type");
+                    Direction dir = Direction.byName(dirName);
+                    LogicGateType type = LogicGateType.valueOf(typeName);
+                    if (dir != null) {
+                        directions.put(dir, type);
+                    }
+                }
+            } else {
+                // 兼容旧数据：从 inlayEntries 重新构建方向映射
+                directions = buildDirectionsFromInlays(inlayEntries);
+            }
+
+            // 构建 BlockInlays 并存入
+            BlockInlays inlays = new BlockInlays(block, inlayEntries, directions);
+            data.INLAID_BLOCKS.put(pos, inlays);
         }
+
         return data;
+    }
+
+    /**
+     * 从 InlayEntry 列表构建方向映射
+     */
+    private static Map<Direction, LogicGateType> buildDirectionsFromInlays(List<InlayEntry> inlays) {
+        List<Direction> directionOrder = DirectionsOrder.getOrder();
+        Map<Direction, LogicGateType> directions = new HashMap<>();
+
+        // 初始化为 NONE
+        for (Direction dir : directionOrder) {
+            directions.put(dir, LogicGateType.NONE);
+        }
+
+        // 遍历镶孔，填充对应方向的门类型
+        for (int i = 0; i < Math.min(inlays.size(), directionOrder.size()); i++) {
+            InlayEntry entry = inlays.get(i);
+            Direction dir = directionOrder.get(i);
+            LogicGateType gateType = detectGateType(entry);
+            directions.put(dir, gateType);
+        }
+
+        return directions;
+    }
+
+    /**
+     * 从 InlayEntry 检测门逻辑类型
+     */
+    private static LogicGateType detectGateType(InlayEntry entry) {
+        // 从 extra 中检测门逻辑
+        for (ResourceLocation extra : entry.extra()) {
+            String path = extra.getPath();
+            switch (path) {
+                case "not_gate" -> {
+                    return LogicGateType.NOT_GATE;
+                }
+                case "and_gate" -> {
+                    return LogicGateType.AND_GATE;
+                }
+                case "or_gate" -> {
+                    return LogicGateType.OR_GATE;
+                }
+                case "output" -> {
+                    return LogicGateType.OUTPUT;
+                }
+                case "input" -> {
+                    return LogicGateType.INPUT;
+                }
+            }
+        }
+        return LogicGateType.NONE;
     }
 }

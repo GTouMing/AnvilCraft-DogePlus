@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.init;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.GiantDogeAnvilBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDispenserBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDropperBlockEntity;
@@ -31,6 +32,9 @@ public class ModBlockEntities {
     public static final BlockEntityEntry<InlayTableBlockEntity> INLAY_TABLE = AnvilCraftDogePlus.REGISTRUM.blockEntity(
             "inlay_table",
             InlayTableBlockEntity::new).validBlock(ModBlocks.INLAY_TABLE).register();
+    public static final BlockEntityEntry<GiantDogeAnvilBlockEntity> GIANT_DOGE_ANVIL = AnvilCraftDogePlus.REGISTRUM.blockEntity(
+            "giant_doge_anvil",
+            GiantDogeAnvilBlockEntity::new).validBlock(ModBlocks.GIANT_DOGE_ANVIL).register();
 
     public static void register() {
     }

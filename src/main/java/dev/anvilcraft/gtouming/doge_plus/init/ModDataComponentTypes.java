@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.init;
 
 import com.mojang.serialization.Codec;
+import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -36,12 +37,12 @@ public class ModDataComponentTypes {
             );
 
     /** 镶嵌：记录已镶嵌的材料物品 ID 列表（长度 = 已占用镶孔数）。 */
-    public static final DeferredHolder<DataComponentType<?>,DataComponentType<List<ResourceLocation>>> INLAY =
+    public static final DeferredHolder<DataComponentType<?>,DataComponentType<List<InlayEntry>>> INLAY =
             COMPONENTS.register(
                     "inlay",
-                    () -> DataComponentType.<List<ResourceLocation>>builder()
-                            .persistent(ResourceLocation.CODEC.listOf())
-                            .networkSynchronized(ByteBufCodecs.fromCodec(ResourceLocation.CODEC.listOf()))
+                    () -> DataComponentType.<List<InlayEntry>>builder()
+                            .persistent(InlayEntry.CODEC.listOf())
+                            .networkSynchronized(InlayEntry.STREAM_CODEC.apply(ByteBufCodecs.list()))
                             .build()
             );
 

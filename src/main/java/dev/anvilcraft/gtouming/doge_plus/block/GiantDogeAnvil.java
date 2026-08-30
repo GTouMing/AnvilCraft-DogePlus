@@ -1,6 +1,8 @@
 package dev.anvilcraft.gtouming.doge_plus.block;
 
 import com.mojang.serialization.MapCodec;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.GiantDogeAnvilBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
 import dev.dubhe.anvilcraft.api.event.AnvilEvent;
 import dev.dubhe.anvilcraft.block.GiantAnvilBlock;
@@ -17,17 +19,22 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.common.NeoForge;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 巨型 Doge 砧：由小型 {@link DogeAnvil} 喂满成长值后原地长成。
  * 复用前置模组 {@link GiantAnvilBlock} 的巨型铁砧功能（3×3×3 多方块、坠落、铁砧菜单）。
  */
-public class GiantDogeAnvil extends GiantAnvilBlock {
+public class GiantDogeAnvil extends GiantAnvilBlock implements EntityBlock {
 
     public GiantDogeAnvil(Properties properties) {
         super(properties);
@@ -40,53 +47,108 @@ public class GiantDogeAnvil extends GiantAnvilBlock {
 
     /**
      * 按模型轮廓做碰撞：根据巨型 Doge 砧模型的 16 个元素（含旋转元素包围盒），
-     * 逐部件概括出碰撞形状，避免使用父类巨型铁砧的分部件形状造成"看不见的墙"把玩家弹开。
+     * 逐部件概括出碰撞形状。
      */
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return switch (state.getValue(HALF)) {
-            case BOTTOM_WN -> Shapes.or(Block.box(4, 0, 4, 16, 8, 16), Block.box(8, 8, 8, 16, 11, 16),
-                    Block.box(12.7, 11, 12.7, 16, 16, 16), Block.box(10, 11, 10, 16, 16, 16));
-            case BOTTOM_N -> Shapes.or(Block.box(0, 0, 4, 16, 8, 16), Block.box(0, 8, 8, 16, 11, 16),
-                    Block.box(0, 11, 12.7, 16, 16, 16), Block.box(0, 7.7, 12.7, 16, 16, 16));
-            case BOTTOM_EN -> Shapes.or(Block.box(0, 0, 4, 12, 8, 16), Block.box(0, 8, 8, 8, 11, 16),
-                    Block.box(0, 11, 12.7, 3.3, 16, 16), Block.box(0, 11, 10, 6, 16, 16));
-            case BOTTOM_W -> Shapes.or(Block.box(4, 0, 0, 16, 8, 16), Block.box(8, 8, 0, 16, 11, 16),
-                    Block.box(12.7, 11, 0, 16, 16, 16), Block.box(12.7, 7.7, 0, 16, 16, 16));
-            case BOTTOM_E -> Shapes.or(Block.box(0, 0, 0, 12, 8, 16), Block.box(0, 8, 0, 8, 11, 16),
-                    Block.box(0, 11, 0, 3.3, 16, 16), Block.box(0, 7.7, 0, 3.3, 16, 16));
-            case BOTTOM_WS -> Shapes.or(Block.box(4, 0, 0, 16, 8, 12), Block.box(8, 8, 0, 16, 11, 8),
-                    Block.box(12.7, 11, 0, 16, 16, 3.3), Block.box(10, 11, 0, 16, 16, 6));
-            case BOTTOM_S -> Shapes.or(Block.box(0, 0, 0, 16, 8, 12), Block.box(0, 8, 0, 16, 11, 8),
-                    Block.box(0, 11, 0, 16, 16, 3.3), Block.box(0, 7.7, 0, 16, 16, 3.3));
-            case BOTTOM_ES -> Shapes.or(Block.box(0, 0, 0, 12, 8, 12), Block.box(0, 8, 0, 8, 11, 8),
-                    Block.box(0, 11, 0, 3.3, 16, 3.3), Block.box(0, 11, 0, 6, 16, 6));
-            case MID_WN -> Shapes.or(Block.box(2, 15, 2, 16, 16, 16), Block.box(12.7, 0, 12.7, 16, 11, 16),
-                    Block.box(10, 0, 10, 16, 11, 16), Block.box(2.8, 11, 2.8, 16, 15, 16));
-            case MID_N -> Shapes.or(Block.box(0, 15, 2, 16, 16, 16), Block.box(0, 0, 12.7, 16, 11, 16),
-                    Block.box(0, 0, 12.7, 16, 14.3, 16), Block.box(0, 11, 2.8, 16, 15, 16),
-                    Block.box(6, 11, 10, 10, 15, 16));
-            case MID_EN -> Shapes.or(Block.box(0, 15, 2, 14, 16, 16), Block.box(0, 0, 12.7, 3.3, 11, 16),
-                    Block.box(0, 0, 10, 6, 11, 16), Block.box(0, 11, 2.8, 13.2, 15, 16));
-            case MID_W -> Shapes.or(Block.box(2, 15, 0, 16, 16, 16), Block.box(12.7, 0, 0, 16, 11, 16),
-                    Block.box(12.7, 0, 0, 16, 14.3, 16), Block.box(2.8, 11, 0, 16, 15, 16),
-                    Block.box(10, 11, 6, 16, 15, 10));
-            case MID_E -> Shapes.or(Block.box(0, 15, 0, 14, 16, 16), Block.box(0, 0, 0, 3.3, 11, 16),
-                    Block.box(0, 0, 0, 3.3, 14.3, 16), Block.box(0, 11, 0, 13.2, 15, 16),
-                    Block.box(0, 11, 6, 6, 15, 10));
-            case MID_WS -> Shapes.or(Block.box(2, 15, 0, 16, 16, 14), Block.box(12.7, 0, 0, 16, 11, 3.3),
-                    Block.box(10, 0, 0, 16, 11, 6), Block.box(2.8, 11, 0, 16, 15, 13.2));
-            case MID_S -> Shapes.or(Block.box(0, 15, 0, 16, 16, 14), Block.box(0, 0, 0, 16, 11, 3.3),
-                    Block.box(0, 0, 0, 16, 14.3, 3.3), Block.box(0, 11, 0, 16, 15, 13.2),
-                    Block.box(6, 11, 0, 10, 15, 6));
-            case MID_ES -> Shapes.or(Block.box(0, 16, 0, 14, 16, 14), Block.box(0, 0, 0, 3.3, 11, 3.3),
-                    Block.box(0, 0, 0, 6, 11, 6), Block.box(0, 11, 0, 13.2, 15, 13.2));
-            case TOP_WN -> Shapes.or(Block.box(1, 9, 1, 16, 16, 16), Block.box(2, 0, 2, 16, 9, 16));
-            case TOP_EN -> Shapes.or(Block.box(0, 9, 1, 15, 16, 16), Block.box(0, 0, 2, 14, 9, 16));
-            case TOP_WS -> Shapes.or(Block.box(1, 9, 0, 16, 16, 15), Block.box(2, 0, 0, 16, 9, 14));
-            case TOP_ES -> Shapes.or(Block.box(0, 9, 0, 15, 16, 15), Block.box(0, 0, 0, 14, 9, 14));
-            case TOP_CENTER, MID_CENTER, BOTTOM_CENTER -> Shapes.or(Block.box(0, 0, 0, 16, 16, 16));
-            case TOP_N, TOP_W, TOP_E, TOP_S -> Shapes.or(Block.box(0, 0, 0, 16, 16, 16));
+            // ==================== 底部 (BOTTOM) ====================
+            case BOTTOM_WN -> Shapes.or(
+                    Block.box(4, 0, 4, 16, 8, 16),
+                    Block.box(8, 8, 8, 16, 11, 16),
+                    Block.box(10, 11, 10, 16, 16, 16));
+            case BOTTOM_N -> Shapes.or(
+                    Block.box(0, 0, 4, 16, 8, 16),
+                    Block.box(0, 8, 8, 16, 11, 16));
+            case BOTTOM_EN -> Shapes.or(
+                    Block.box(0, 0, 4, 12, 8, 16),
+                    Block.box(0, 8, 8, 8, 11, 16),
+                    Block.box(0, 11, 10, 6, 16, 16));
+            case BOTTOM_W -> Shapes.or(
+                    Block.box(4, 0, 0, 16, 8, 16),
+                    Block.box(8, 8, 0, 16, 11, 16));
+            case BOTTOM_E -> Shapes.or(
+                    Block.box(0, 0, 0, 12, 8, 16),
+                    Block.box(0, 8, 0, 8, 11, 16));
+            case BOTTOM_WS -> Shapes.or(
+                    Block.box(4, 0, 0, 16, 8, 12),
+                    Block.box(8, 8, 0, 16, 11, 8),
+                    Block.box(10, 11, 0, 16, 16, 6));
+            case BOTTOM_S -> Shapes.or(
+                    Block.box(0, 0, 0, 16, 8, 12),
+                    Block.box(0, 8, 0, 16, 11, 8));
+            case BOTTOM_ES -> Shapes.or(
+                    Block.box(0, 0, 0, 12, 8, 12),
+                    Block.box(0, 8, 0, 8, 11, 8),
+                    Block.box(0, 11, 0, 6, 16, 6));
+            case BOTTOM_CENTER, TOP_CENTER, MID_CENTER -> Shapes.or(Block.box(0, 0, 0, 16, 16, 16));
+
+            // ==================== 中部 (MID) ====================
+            // 角 (4个box): 柱(0-11) + 下梁(11-13) + 上梁(13-15) + 台(15-16)
+            case MID_WN -> Shapes.or(
+                    Block.box(10, 0, 10, 16, 11, 16),      // 柱
+                    Block.box(8, 11, 8, 16, 13, 16),       // 下梁
+                    Block.box(6, 13, 6, 16, 15, 16),       // 上梁
+                    Block.box(2, 15, 2, 16, 16, 16));      // 台
+            case MID_EN -> Shapes.or(
+                    Block.box(0, 0, 10, 6, 11, 16),        // 柱
+                    Block.box(0, 11, 8, 8, 13, 16),        // 下梁
+                    Block.box(0, 13, 6, 10, 15, 16),        // 上梁
+                    Block.box(0, 15, 2, 14, 16, 16));      // 台
+            case MID_WS -> Shapes.or(
+                    Block.box(10, 0, 0, 16, 11, 6),        // 柱
+                    Block.box(8, 11, 0, 16, 13, 8),        // 下梁
+                    Block.box(6, 13, 0, 16, 15, 10),        // 上梁
+                    Block.box(2, 15, 0, 16, 16, 14));      // 台
+            case MID_ES -> Shapes.or(
+                    Block.box(0, 0, 0, 6, 11, 6),          // 柱
+                    Block.box(0, 11, 0, 8, 13, 8),         // 下梁
+                    Block.box(0, 13, 0, 10, 15, 10),         // 上梁
+                    Block.box(0, 15, 0, 14, 16, 14));      // 台
+
+            // 边 (3个box): 下梁(11-13) + 上梁(13-15) + 台(15-16)，没有柱
+            case MID_N -> Shapes.or(
+                    Block.box(0, 11, 8, 16, 13, 16),       // 下梁
+                    Block.box(0, 13, 6, 16, 15, 16),       // 上梁
+                    Block.box(0, 15, 2, 16, 16, 16));      // 台
+            case MID_S -> Shapes.or(
+                    Block.box(0, 11, 0, 16, 13, 8),        // 下梁
+                    Block.box(0, 13, 0, 16, 15, 10),        // 上梁
+                    Block.box(0, 15, 0, 16, 16, 14));      // 台
+            case MID_W -> Shapes.or(
+                    Block.box(8, 11, 0, 16, 13, 16),       // 下梁
+                    Block.box(6, 13, 0, 16, 15, 16),       // 上梁
+                    Block.box(2, 15, 0, 16, 16, 16));      // 台
+            case MID_E -> Shapes.or(
+                    Block.box(0, 11, 0, 8, 13, 16),        // 下梁
+                    Block.box(0, 13, 0, 10, 15, 16),        // 上梁
+                    Block.box(0, 15, 0, 14, 16, 16));      // 台
+
+            // ==================== 顶部 (TOP) ====================
+            case TOP_WN -> Shapes.or(
+                    Block.box(2, 0, 2, 16, 9, 16),      // 下部分 檐 (y=0-9)
+                    Block.box(1, 9, 1, 16, 16, 16));    // 上部分 台面 (y=9-16)
+            case TOP_EN -> Shapes.or(
+                    Block.box(0, 0, 2, 14, 9, 16),      // 下部分 檐 (y=0-9)
+                    Block.box(0, 9, 1, 15, 16, 16));    // 上部分 台面 (y=9-16)
+            case TOP_WS -> Shapes.or(
+                    Block.box(2, 0, 0, 16, 9, 14),      // 下部分 檐 (y=0-9)
+                    Block.box(1, 9, 0, 16, 16, 15));    // 上部分 台面 (y=9-16)
+            case TOP_ES -> Shapes.or(
+                    Block.box(0, 0, 0, 14, 9, 14),      // 下部分 檐 (y=0-9)
+                    Block.box(0, 9, 0, 15, 16, 15));    // 上部分 台面 (y=9-16)
+            case TOP_N -> Shapes.or(
+                    Block.box(0, 0, 2, 16, 9, 16),      // 下部分 檐 (y=0-9)
+                    Block.box(0, 9, 1, 16, 16, 16));    // 上部分 台面 (y=9-16)
+            case TOP_S -> Shapes.or(
+                    Block.box(0, 0, 0, 16, 9, 14),      // 下部分 檐 (y=0-9)
+                    Block.box(0, 9, 0, 16, 16, 15));    // 上部分 台面 (y=9-16)
+            case TOP_W -> Shapes.or(
+                    Block.box(2, 0, 0, 16, 9, 16),      // 下部分 檐 (y=0-9)
+                    Block.box(1, 9, 0, 16, 16, 16));    // 上部分 台面 (y=9-16)
+            case TOP_E -> Shapes.or(
+                    Block.box(0, 0, 0, 14, 9, 16),      // 下部分 檐 (y=0-9)
+                    Block.box(0, 9, 0, 15, 16, 16));    // 上部分 台面 (y=9-16)
         };
     }
 
@@ -132,5 +194,21 @@ public class GiantDogeAnvil extends GiantAnvilBlock {
             SoundSource.BLOCKS,
             0.55f,
             level.random.nextFloat() * 0.1F + 0.55f);
+    }
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        // 只有中心方块才创建 BlockEntity（避免重复）
+        if (state.getValue(HALF) == Cube3x3PartHalf.TOP_CENTER) {
+            return new GiantDogeAnvilBlockEntity(ModBlockEntities.GIANT_DOGE_ANVIL.get(), pos, state);
+        }
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        return type == ModBlockEntities.GIANT_DOGE_ANVIL.get() ?
+                GiantDogeAnvilBlockEntity::clientTick : null;
     }
 }

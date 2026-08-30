@@ -2,7 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.mixin;
 
 import dev.anvilcraft.gtouming.doge_plus.init.ModDataComponentTypes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
-import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayUtil;
+import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;

@@ -1,12 +1,12 @@
 package dev.anvilcraft.gtouming.doge_plus.mixin;
 
+import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
-import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayUtil;
+import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.dubhe.anvilcraft.api.totem.TotemManager;
 import dev.dubhe.anvilcraft.api.totem.handler.TotemHandler;
 import dev.dubhe.anvilcraft.init.item.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
@@ -60,16 +60,16 @@ public abstract class LivingEntityMixin {
         if (handStack == null) return this.checkTotemDeathProtection(damageSource);
 
         Map<Item, TotemHandler> totemMap = TotemManager.INSTANCE.getTotemMap();
-        Predicate<ResourceLocation> p = null;
+        Predicate<InlayEntry> p = null;
         Item totemItem = null;
         TotemHandler handler = null;
-        for (ResourceLocation id : InlayUtil.getInlays(handStack)) {
-            if (!totemMap.containsKey(BuiltInRegistries.ITEM.get(id))) continue;
-            Item item = BuiltInRegistries.ITEM.get(id);
+        for (InlayEntry entry : InlayUtil.getInlays(handStack)) {
+            if (!totemMap.containsKey(BuiltInRegistries.ITEM.get(entry.id()))) continue;
+            Item item = BuiltInRegistries.ITEM.get(entry.id());
             TotemHandler handler1 = totemMap.get(item);
             if (!handler1.canExecute(damageSource, instance, item.getDefaultInstance())) continue;
             if (!CommonHooks.onLivingUseTotem(instance, damageSource, item.getDefaultInstance(), handStack.equals(main) ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND)) continue;
-            p = (i) -> i == id;
+            p = (i) -> i == entry;
             totemItem = item;
             handler = handler1;
         }
@@ -84,7 +84,7 @@ public abstract class LivingEntityMixin {
             // 共鸣：该材料 50% 概率碎裂；无共鸣时总是碎裂
             if (!InlayUtil.hasProperty(handStack, InlayProperty.RESONANCE)
                     || ((LivingEntity) (Object) this).level().random.nextFloat() < 0.5f) {
-                ArrayList<ResourceLocation> inlayList = InlayUtil.getInlays(handStack);
+                ArrayList<InlayEntry> inlayList = InlayUtil.getInlays(handStack);
                 inlayList.removeIf(p);
                 InlayUtil.setInlays(handStack, inlayList);
             }

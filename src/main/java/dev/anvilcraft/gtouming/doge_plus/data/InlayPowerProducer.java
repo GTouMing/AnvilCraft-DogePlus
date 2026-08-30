@@ -26,6 +26,7 @@ public class InlayPowerProducer implements IPowerProducer {
         this.level = level;
         this.pos = pos.immutable();
         this.shape = new AABB(pos).inflate(RANGE);
+        this.grid = new PowerGrid(level);
     }
 
     @Override

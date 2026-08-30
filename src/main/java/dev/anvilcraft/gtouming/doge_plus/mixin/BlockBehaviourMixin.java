@@ -2,17 +2,14 @@ package dev.anvilcraft.gtouming.doge_plus.mixin;
 
 import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.*;
-import dev.anvilcraft.gtouming.doge_plus.logic.DirectionalSignals;
 import dev.anvilcraft.gtouming.doge_plus.logic.ILogicGate;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
-import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayUtil;
-import dev.anvilcraft.gtouming.doge_plus.util.DirectionsOrder;
+import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.anvilcraft.lib.v2.util.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -20,6 +17,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
@@ -41,7 +39,7 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
         Level level = params.getLevel();
         BlockPos pos = BlockPos.containing(params.getParameter(LootContextParams.ORIGIN));
         BlockInlays bi = BlockInlayManager.get(level, pos);
-        List<ResourceLocation> inlays = bi.inlays();
+        List<InlayEntry> inlays = bi.inlays();
         if (inlays.isEmpty()) return;
         Item item = state.getBlock().asItem();
         List<ItemStack> drops = new ArrayList<>(cir.getReturnValue());
@@ -53,7 +51,6 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
             break;
         }
         cir.setReturnValue(drops);
-        BlockInlayManager.remove(level, pos);
     }
 
     @Inject(method = "getDestroyProgress", at = @At("HEAD"), cancellable = true)
@@ -80,19 +77,18 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
             CallbackInfo ci
     ) {
         if (level.isClientSide()) return;
-        if (state.getBlock() == oldState.getBlock()) return;
+        LogicGateNetworkManager.topologyChanged(level, pos);
+        if (state.getBlock() == oldState.getBlock() || state.getBlock() == Blocks.AIR) return;
 
         BlockPos mainPos = pos;
         if (state.getBlock() instanceof IMultiPartBlock part) mainPos = part.doge_plus$getMainPos(pos, state);
+        //非巨构中心坐标则返回
+        if (!mainPos.equals(pos)) return;
         PowerGridManager manager = PowerGridManager.get(level);
         if (manager == null) return;
 
-        if (BlockInlayManager.hasProperty(level, pos, InlayProperty.GENERATOR)) manager.add(mainPos, new InlayPowerProducer(level, mainPos));
-//        LogicGateManager logicGateManager = LogicGateManager.get(level);
-//        if (logicGateManager == null) return;
-//
-//        if (!logicGateManager.hasLogicGate(mainPos)) return;
-//        logicGateManager.notifyNeighbors(pos);
+        if (BlockInlayManager.hasProperty(level, mainPos, InlayProperty.GENERATOR))
+            manager.add(mainPos, new InlayPowerProducer(level, mainPos));
     }
     /**
      * 方块移除时触发更新。
@@ -108,16 +104,20 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
             BlockState newState,
             boolean movedByPiston,
             CallbackInfo ci) {
-        if (state.getBlock() == newState.getBlock()) return;
+        if (level.isClientSide()) return;
+        LogicGateNetworkManager.topologyChanged(level, pos);
+        if (state.getBlock() == newState.getBlock() || state.getBlock() == Blocks.AIR) return;
 
         BlockPos mainPos = pos;
         if (Util.cast(this) instanceof IMultiPartBlock part) mainPos = part.doge_plus$getMainPos(pos, state);
+        //非巨构中心坐标则返回
+        if (!mainPos.equals(pos)) return;
+        BlockInlayManager.remove(level, pos);
+        PowerGridManager pManager = PowerGridManager.get(level);
+        if (pManager == null) return;
 
-        LogicGateNetworkManager.topologyChanged(level, mainPos);
-        PowerGridManager manager = PowerGridManager.get(level);
-        if (manager == null) return;
-
-        if (!BlockInlayManager.hasProperty(level, mainPos, InlayProperty.GENERATOR)) manager.remove(mainPos);
+        if (pManager.get(pos) != null)
+            pManager.remove(mainPos);
     }
 
     /**
@@ -139,13 +139,6 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
     ) {
         if (level.isClientSide()) return;
         LogicGateNetworkManager.neighborChanged(level, pos, neighborPos);
-
-//        LogicGateManager manager = LogicGateManager.get(level);
-//        if (manager == null) return;
-//
-//        if (!manager.hasLogicGate(pos)) return;
-//
-//        manager.onNeighborChanged(pos);
     }
 
 
@@ -172,16 +165,6 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
         // 若门西面恰好是另一个门，该条件为假 → 取反不生效 → 收不到输出。
         if (LogicGateNetworkManager.isLogicGate(level, pos))
             cir.setReturnValue(LogicGateNetworkManager.getSignal(level, pos, direction.getOpposite()));
-//        LogicGateManager manager = LogicGateManager.get(level);
-//        if (manager == null) return;
-//
-//        if (!manager.hasLogicGate(pos)) return;
-//
-//        // 计算门逻辑输出
-//        int gateSignal = manager.getSignal(pos, direction);
-//        if (gateSignal > 0) {
-//            cir.setReturnValue(gateSignal);
-//        }
     }
 
     /**
@@ -198,41 +181,10 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
         Level level = (Level) getter;
         if (level.isClientSide()) return;
         if (LogicGateNetworkManager.isLogicGate(level, pos)) cir.setReturnValue(0);
-
-//        LogicGateManager manager = LogicGateManager.get(level);
-//        if (manager == null) return;
-//
-//        if (!manager.hasLogicGate(pos)) return;
-//
-//        cir.setReturnValue(0);
     }
 
     @Override
     public LogicGateType doge_plus$getGateType(Level level, BlockPos pos, Direction outputDir) {
         return BlockInlayManager.get(level, pos).getGateType(outputDir);
-    }
-
-//    @Override
-//    public int doge_plus$calculateOutput(Level level, BlockPos pos, Direction outputDir, DirectionalSignals inputs) {
-//        LogicGateType type = doge_plus$getGateType(level, pos, outputDir);
-//        if (type == LogicGateType.NONE || type == LogicGateType.INPUT) return 0;
-//        return type.calculate(inputs.toMap(), outputDir, findInputFaces(level, pos, outputDir));
-//    }
-
-    /**
-     * 从本门槽位序号之后（DirectionsOrder 循环）查找 INPUT 门标记的输入面。
-     * 例：与门在 1 槽，则从 2 槽起找，3 槽非输入面则跳过取 4 槽；无足够输入面则该门输出 0。
-     */
-    private static List<Direction> findInputFaces(Level level, BlockPos pos, Direction outputDir) {
-        List<Direction> order = DirectionsOrder.getOrder();
-        int selfIndex = order.indexOf(outputDir);
-        if (selfIndex == -1) return List.of();
-        BlockInlays inlays = BlockInlayManager.get(level, pos);
-        List<Direction> faces = new ArrayList<>();
-        for (int i = 1; i <= order.size(); i++) {
-            Direction dir = order.get((selfIndex + i) % order.size());
-            if (inlays.getGateType(dir) == LogicGateType.INPUT) faces.add(dir);
-        }
-        return faces;
     }
 }

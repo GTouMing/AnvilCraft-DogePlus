@@ -26,6 +26,7 @@
   "tooltip.anvilcraft_doge_plus.inlay_property.life": "生命：手持或装备时提升 2 点生命上限",
   "tooltip.anvilcraft_doge_plus.inlay_property.attack": "攻击：手持或装备时提升 2 点攻击力",
   "tooltip.anvilcraft_doge_plus.inlay_property.enchant": "附魔：镶嵌时合并附魔，移除时提取附魔",
+  "tooltip.anvilcraft_doge_plus.inlay_property.effect": "效果：手持或装备时提供药水效果",
   "tooltip.anvilcraft_doge_plus.inlay_property.direction": "方向：使镶孔具有方向性，镶孔数为 6 时生效",
   "tooltip.anvilcraft_doge_plus.inlay_property.output": "输出：该面输出红石信号",
   "tooltip.anvilcraft_doge_plus.inlay_property.input": "输入：该面输入红石信号",

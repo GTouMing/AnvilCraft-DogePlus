@@ -26,6 +26,7 @@
   "tooltip.anvilcraft_doge_plus.inlay_property.life": "Life: grants +2 max health when held or equipped",
   "tooltip.anvilcraft_doge_plus.inlay_property.attack": "Attack: grants +2 attack damage when held or equipped",
   "tooltip.anvilcraft_doge_plus.inlay_property.enchant": "Enchant: merges enchantments when inlaid, extracts them when removed",
+  "tooltip.anvilcraft_doge_plus.inlay_property.effect": "Effect： grants potion effect when held or equipped",
   "tooltip.anvilcraft_doge_plus.inlay_property.direction": "Direction: makes sockets directional, active when 6 sockets are present",
   "tooltip.anvilcraft_doge_plus.inlay_property.output": "Output: outputs redstone signals",
   "tooltip.anvilcraft_doge_plus.inlay_property.input": "Input: inputs redstone signals",

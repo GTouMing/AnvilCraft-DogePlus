@@ -2,6 +2,9 @@
   "ingredient": [
     {
       "item": "minecraft:enchanted_book"
+    },
+    {
+      "item": "minecraft:book"
     }
   ],
   "attributes": [

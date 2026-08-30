@@ -47,6 +47,7 @@ public class ModBlocks {
                             .strength(4.0F)
                             .sound(GiantAnvilBlock.SOUND_TYPE)
                             .explosionResistance(1200)
+                            .lightLevel(state -> 9).noOcclusion().emissiveRendering(ModBlocks::always)
                             .isViewBlocking(ModBlocks::never))
                     .item(SimpleMultiPartBlockItem<Cube3x3PartHalf>::new)
                     .properties(properties -> properties.stacksTo(16))
@@ -122,5 +123,8 @@ public class ModBlocks {
      */
     public static boolean never(BlockState state, BlockGetter blockGetter, BlockPos pos) {
         return false;
+    }
+    public static boolean always(BlockState state, BlockGetter blockGetter, BlockPos pos) {
+        return true;
     }
 }

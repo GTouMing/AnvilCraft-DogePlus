@@ -4,10 +4,11 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.init.ModRecipeTypes;
+import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.dubhe.anvilcraft.recipe.anvil.wrap.AbstractProcessRecipe;
 import mezz.jei.api.recipe.IFocusGroup;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
@@ -57,13 +58,13 @@ public class InlayRecipe extends AbstractProcessRecipe<InlayRecipe> {
     /** 按文件名键查询材料定义；未定义返回 null。 */
     @Nullable
     public MaterialManager.InlayMaterial getInlayMaterial() {
-        return MaterialManager.getInlay(inlay);
+        return MaterialManager.getInlayMaterial(inlay);
     }
 
     /** 按文件名键查询基材定义；未定义返回 null。 */
     @Nullable
     public MaterialManager.BaseMaterial getBaseMaterial() {
-        return MaterialManager.getBase(base);
+        return MaterialManager.getBaseMaterial(base);
     }
 
     /**
@@ -81,7 +82,7 @@ public class InlayRecipe extends AbstractProcessRecipe<InlayRecipe> {
         if (!baseMaterial.ingredient().test(baseStack)) return false;
 
         // 未注册的材料没有固定性质，不可镶嵌
-        if (MaterialManager.getInlay(inlayStack) == null) return false;
+        if (MaterialManager.getInlayMaterial(inlayStack) == null) return false;
 
         return MaterialManager.hasSocket(baseStack);
     }
@@ -109,7 +110,7 @@ public class InlayRecipe extends AbstractProcessRecipe<InlayRecipe> {
         for (int i = 0; i < index; i++) {
             int a = i % inlays.size();
             int b = i % bases.size();
-            results.add(InlayUtil.withAddedInlay(bases.get(b), BuiltInRegistries.ITEM.getKey(inlays.get(a).getItem())));
+            results.add(InlayUtil.withAddedInlay(bases.get(b), InlayEntry.fromItemStack(inlays.get(a))));
         }
 
         return results;

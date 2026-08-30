@@ -5,7 +5,7 @@ import dev.anvilcraft.gtouming.doge_plus.init.ModDataComponentTypes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.ClientBlockInlayData;
-import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayUtil;
+import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.anvilcraft.lib.v2.util.Util;
 import dev.dubhe.anvilcraft.entity.MagnetizedNodeEntity;
 import dev.dubhe.anvilcraft.init.item.ModComponents;

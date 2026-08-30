@@ -7,7 +7,6 @@
     "AbstractMultiPartBlockMixin",
     "BlockBehaviourMixin",
     "BlockItemMixin",
-    "BlockMixin",
     "FallingBlockEntityMixin",
     "GiantRingBlockEntityMixin",
     "IBlockExtensionMixin",

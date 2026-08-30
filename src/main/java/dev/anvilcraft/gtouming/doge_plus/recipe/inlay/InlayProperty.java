@@ -81,6 +81,19 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             "tooltip.anvilcraft_doge_plus.inlay_property.enchant",
             0xAA55FF)); // 紫色
 
+    /** 共鸣：增强其他镶孔的部分材料属性。 */
+    public static final InlayProperty RESONANCE = register(new InlayProperty(
+            AnvilCraftDogePlus.of("resonance"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.resonance",
+            0xFF66CC
+    ));
+
+    public static final InlayProperty EFFECT = register(new InlayProperty(
+            AnvilCraftDogePlus.of("effect"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.effect",
+            0x66CCFF
+    ));
+
     // ==================== 方向/红石性质 ====================
 
     /** 方向：使镶孔具有方向性，镶孔数为6时生效。 */
@@ -124,13 +137,6 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             AnvilCraftDogePlus.of("generator"),
             "tooltip.anvilcraft_doge_plus.inlay_property.generator",
             0xFF8800
-    ));
-
-    /** 共鸣：增强其他镶孔的部分材料属性。 */
-    public static final InlayProperty RESONANCE = register(new InlayProperty(
-            AnvilCraftDogePlus.of("resonance"),
-            "tooltip.anvilcraft_doge_plus.inlay_property.resonance",
-            0xFF66CC
     ));
 
     // ==================== 数据 ====================

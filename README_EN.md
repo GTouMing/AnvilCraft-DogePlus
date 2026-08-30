@@ -56,6 +56,25 @@ DDD         ···         DDD
 
 ---
 
+## Inlay System
+
+**Inlay Table**: Place an *inlay material* and a *base* onto the table, then drop an anvil onto it to inlay. The base provides sockets; the material provides properties. When sockets are full, inlaying again replaces the oldest material.
+
+**Data-driven**: `data/<ns>/material/inlay|base/*.json` define material properties and base socket counts; recipes live in `data/<ns>/recipe/inlay/*.json`.
+
+| Property | Effect |
+| --- | --- |
+| Fire-Proof / Magnetic / High Temp / Cold Forged / Eternal / Nirvana | Item & block-level effects: fire immunity, magnet attraction, stacking heat damage, durability repair, indestructible, totem trigger |
+| Defense / Life / Attack | +2 armor / +2 max health / +2 attack when held or equipped |
+| Enchant | Merges enchantments on inlay, extracts on removal |
+| Resonance | Enhances other sockets' materials: doubled attributes, enchantment boost chance, 50% Nirvana shatter, slower heat consumption, faster repair |
+| Direction / Output / Input / NOT / AND / OR | Form a dimension-based directional logic-gate network |
+| Generator | Produces 512 kW power after place, connecting to the AnvilCraft grid |
+
+**Block-level inlay**: An inlaid block retains its properties when placed (magnetic attraction, fire-proof, eternal explosion-proof & unbreakable, high-temp burns walkers, etc.); breaking it drops an item that keeps the inlay.
+
+---
+
 ## License
 
 MIT © GTouMing

@@ -105,7 +105,7 @@ public class InlayTableBlock extends Block implements EntityBlock {
 
     /** 空手取出指定槽位的物品。 */
     private static void retrieve(InlayTableBlockEntity table, Level level, BlockPos pos, Player player, int slot) {
-        ItemStack slotStack = table.getStackInSlot(slot);
+        ItemStack slotStack = table.getItemHandler().getStackInSlot(slot);
         if (slotStack.isEmpty()) return;
         player.getInventory().placeItemBackInInventory(slotStack.copy());
         table.setStackInSlot(slot, ItemStack.EMPTY);
@@ -117,11 +117,11 @@ public class InlayTableBlock extends Block implements EntityBlock {
      * 掉落物统一收集为材料（见 {@code InlayTableBlockEntity#tick}），基材经右键放入。
      */
     private static void placeStack(InlayTableBlockEntity table, Level level, BlockPos pos, Player player, ItemStack stack) {
-        int target = table.getStackInSlot(InlayTableBlockEntity.SLOT_BASE).isEmpty()
+        int target = table.getItemHandler().getStackInSlot(InlayTableBlockEntity.SLOT_BASE).isEmpty()
                 ? InlayTableBlockEntity.SLOT_BASE
                 : InlayTableBlockEntity.SLOT_MATERIAL;
 
-        ItemStack existing = table.getStackInSlot(target);
+        ItemStack existing = table.getItemHandler().getStackInSlot(target);
         ItemStack stored = stack.copy();
         table.setStackInSlot(target, stored);
         if (!player.getAbilities().instabuild) stack.shrink(stored.getCount());
@@ -138,7 +138,7 @@ public class InlayTableBlock extends Block implements EntityBlock {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof InlayTableBlockEntity table) {
                 for (int i = 0; i < InlayTableBlockEntity.SLOT_COUNT; i++) {
-                    ItemStack stack = table.getStackInSlot(i);
+                    ItemStack stack = table.getItemHandler().getStackInSlot(i);
                     if (!stack.isEmpty()) {
                         ItemEntity item = new ItemEntity(
                                 level,

@@ -30,6 +30,6 @@ public class InlayTableEvent {
 
         BlockEntity be = level.getBlockEntity(tablePos);
         if (!(be instanceof InlayTableBlockEntity table)) return;
-        table.processInlay(level);
+        table.processInlay(level, event.getFallDistance());
     }
 }
