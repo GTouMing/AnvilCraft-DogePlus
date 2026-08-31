@@ -4,11 +4,9 @@ import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.init.ModDataComponentTypes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
-import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -20,7 +18,6 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,11 +40,6 @@ public final class InlayUtil {
 
     public static int getInlayCount(ItemStack stack) {
         return getInlays(stack).size();
-    }
-
-    @Nullable
-    public static MaterialManager.InlayMaterial getMaterial(InlayEntry entry) {
-        return MaterialManager.getInlayMaterial(BuiltInRegistries.ITEM.get(entry.id()).getDefaultInstance());
     }
 
     // ==================== 属性查询 ====================

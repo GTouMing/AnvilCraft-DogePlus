@@ -12,7 +12,6 @@
     "IBlockExtensionMixin",
     "ItemEntityMixin",
     "ItemStackMixin",
-    "ItemTooltipMixin",
     "LivingEntityMixin",
     "MagnetizedNodeEntityAccessor",
     "PistonBaseBlockMixin",

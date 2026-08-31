@@ -3,7 +3,6 @@ package dev.anvilcraft.gtouming.doge_plus.data;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType;
 import dev.anvilcraft.gtouming.doge_plus.network.BlockInlaySyncPacket;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
-import dev.anvilcraft.gtouming.doge_plus.util.DirectionsOrder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -289,7 +288,7 @@ public class BlockInlayManager extends SavedData {
      * 从 InlayEntry 列表构建方向映射
      */
     private static Map<Direction, LogicGateType> buildDirectionsFromInlays(List<InlayEntry> inlays) {
-        List<Direction> directionOrder = DirectionsOrder.getOrder();
+        List<Direction> directionOrder = List.of(Direction.values());
         Map<Direction, LogicGateType> directions = new HashMap<>();
 
         // 初始化为 NONE

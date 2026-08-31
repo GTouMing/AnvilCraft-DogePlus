@@ -6,6 +6,9 @@ dependencies {
     implementation(libs.anvilcraft) { transitive = false }
     interfaceInjectionData(libs.anvilcraft) { transitive = false }
 
+    // Ageratum 藿香（手册框架，随 AnvilCraft 内嵌，仅编译期引用其 API）
+    compileOnly(libs.ageratum)
+
     // JEI
     compileOnly(libs.jei)
     runtimeOnly(libs.jei)

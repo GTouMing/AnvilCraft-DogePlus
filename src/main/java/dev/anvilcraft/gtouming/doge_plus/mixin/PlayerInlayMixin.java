@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * 玩家手持镶嵌物品时的性质行为：
  * <ul>
  *   <li>高温：攻击时消耗累加的高温伤害。</li>
- *   <li>涅磐：死亡时触发不死图腾，随后该材料（物品）碎裂销毁。</li>
+ *   <li>涅槃：死亡时触发不死图腾，随后该材料（物品）碎裂销毁。</li>
  * </ul>
  */
 @Mixin(Player.class)

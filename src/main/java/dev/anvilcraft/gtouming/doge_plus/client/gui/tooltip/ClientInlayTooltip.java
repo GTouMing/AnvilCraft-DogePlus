@@ -3,7 +3,6 @@ package dev.anvilcraft.gtouming.doge_plus.client.gui.tooltip;
 import dev.anvilcraft.gtouming.doge_plus.api.tooltip.InlayTooltipComponent;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
-import dev.anvilcraft.gtouming.doge_plus.util.DirectionsOrder;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
@@ -15,7 +14,7 @@ import java.util.List;
 
 /**
  * 镶嵌信息的 tooltip 图像渲染：所有镶孔横向排成一行——已镶嵌画材料图标，空镶孔渲染中括号 {@code []}。
- * 具有「方向」性质时，在每个镶孔正下方渲染该槽对应的方位（{@link DirectionsOrder} 顺序）。
+ * 具有「方向」性质时，在每个镶孔正下方渲染该槽对应的方位。
  */
 public class ClientInlayTooltip implements ClientTooltipComponent {
 
@@ -44,7 +43,7 @@ public class ClientInlayTooltip implements ClientTooltipComponent {
 
     @Override
     public void renderImage(Font font, int x, int y, GuiGraphics guiGraphics) {
-        List<Direction> order = DirectionsOrder.getOrder();
+        List<Direction> order = List.of(Direction.values());
         for (int i = 0; i < this.sockets; i++) {
             int slotX = x + i * SLOT_SIZE;
 

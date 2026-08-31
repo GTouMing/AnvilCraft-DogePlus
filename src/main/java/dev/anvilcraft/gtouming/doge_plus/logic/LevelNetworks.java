@@ -2,7 +2,6 @@ package dev.anvilcraft.gtouming.doge_plus.logic;
 
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
-import dev.anvilcraft.gtouming.doge_plus.util.DirectionsOrder;
 import it.unimi.dsi.fastutil.longs.*;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.core.BlockPos;
@@ -293,7 +292,7 @@ final class LevelNetworks {
             // 仅收集「输入面」（INPUT 门标记的方向）的信号，非输入面不查询邻居。
             // 这样输入信号映射只含输入面，门的计算逻辑无需再过滤非输入面。
             BlockInlays inlays = BlockInlayManager.get(level, blockPos);
-            for (Direction dir : DirectionsOrder.getOrder()) {
+            for (Direction dir : Direction.values()) {
                 if (inlays.getGateType(dir) != LogicGateType.INPUT) continue;
                 BlockPos neighborPos = blockPos.relative(dir);
                 long neighbor = neighborPos.asLong();

@@ -2,7 +2,6 @@ package dev.anvilcraft.gtouming.doge_plus.data;
 
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
-import dev.anvilcraft.gtouming.doge_plus.util.DirectionsOrder;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -42,7 +41,7 @@ public record BlockInlays(Block block, List<InlayEntry> inlays, Map<Direction, L
      */
     public static BlockInlays fromInlays(Block block, List<InlayEntry> inlays) {
         // 方向顺序：东、南、西、上、北、下（对应槽位 0-5）
-        List<Direction> directionOrder = DirectionsOrder.getOrder();
+        List<Direction> directionOrder = List.of(Direction.values());
 
         Map<Direction, LogicGateType> directions = new HashMap<>();
 

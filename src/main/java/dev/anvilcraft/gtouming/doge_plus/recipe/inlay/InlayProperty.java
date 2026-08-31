@@ -55,7 +55,7 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             AnvilCraftDogePlus.of("eternal"),
             "tooltip.anvilcraft_doge_plus.inlay_property.eternal",
             0xAA55FF)); // 紫色
-    /** 涅磐：死亡时触发图腾，然后该材料碎裂。 */
+    /** 涅槃：死亡时触发图腾，然后该材料碎裂。 */
     public static final InlayProperty NIRVANA = register(new InlayProperty(
             AnvilCraftDogePlus.of("nirvana"),
             "tooltip.anvilcraft_doge_plus.inlay_property.nirvana",
