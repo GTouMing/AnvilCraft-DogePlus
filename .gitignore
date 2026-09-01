@@ -121,3 +121,13 @@ runs/
 
 **/.cache/
 .kotlin/
+
+# AI 工具数据
+.commandcode/
+
+# 调试用源码副本
+dev/
+net/
+
+# 服务端运行目录（世界存档、日志、配置）
+server/
