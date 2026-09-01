@@ -122,7 +122,7 @@ public class InlayRecipe extends AbstractProcessRecipe<InlayRecipe> {
 
         List<ItemStack> inlays = Arrays.asList(inlayMaterial.ingredient().getItems());
         List<ItemStack> focused = focuses.getItemStackFocuses().map(f -> f.getTypedValue().getIngredient()).toList();
-        List<ItemStack> filterInlays = inlays.stream().filter(i -> focused.stream().anyMatch(p -> p.is(i.getItem()))).toList();
+        List<ItemStack> filterInlays = inlays.stream().filter(i -> focused.stream().anyMatch(p -> ItemStack.isSameItemSameComponents(p,i))).toList();
         return filterInlays.isEmpty() ? inlays : filterInlays;
 
     }
@@ -133,7 +133,7 @@ public class InlayRecipe extends AbstractProcessRecipe<InlayRecipe> {
 
         List<ItemStack> bases = Arrays.asList(baseMaterial.ingredient().getItems());
         List<ItemStack> focused = focuses.getItemStackFocuses().map(f -> f.getTypedValue().getIngredient()).toList();
-        List<ItemStack> filterBases = bases.stream().filter(i -> focused.stream().anyMatch(p -> p.is(i.getItem()))).toList();
+        List<ItemStack> filterBases = bases.stream().filter(i -> focused.stream().anyMatch(p -> ItemStack.isSameItemSameComponents(p,i))).toList();
         return filterBases.isEmpty()? bases : filterBases;
     }
 

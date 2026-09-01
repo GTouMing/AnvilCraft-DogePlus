@@ -12,6 +12,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
+import java.util.EnumMap;
+import java.util.Map;
 
 import static dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager.*;
 
@@ -34,6 +36,18 @@ final class LevelNetworks {
 
     /** 需要重算信号的网络 */
     private final ObjectOpenHashSet<Network> dirtySignals = new ObjectOpenHashSet<>();
+
+    /** 振荡检测：记录当前更新周期内各非门输出翻转次数（位置 -> 次数） */
+    private final Long2IntOpenHashMap toggleCounts = new Long2IntOpenHashMap();
+
+    /** 记录每个非门最近一次翻转的游戏刻（用于跨刻累计连续振荡） */
+    private final Long2LongOpenHashMap toggleTicks = new Long2LongOpenHashMap();
+
+    /** 本批次内已判定振荡并破坏的方块（避免重复破坏） */
+    private final LongOpenHashSet destroyed = new LongOpenHashSet();
+
+    /** 非门在连续游戏刻内翻转次数达到该值视为振荡，破坏方块 */
+    private static final int OSCILLATION_LIMIT = 16;
 
     /** 防止写回触发重入 */
     boolean applyingTopology = false;
@@ -59,6 +73,11 @@ final class LevelNetworks {
     }
 
     void tick() {
+        // 清理超过一个游戏刻未翻转的计数条目，防止残留导致误判与内存增长。
+        // 连续翻转（同一刻或相邻刻）会保留计数，跨刻累计到阈值判定振荡。
+        long now = level.getGameTime();
+        toggleTicks.long2LongEntrySet().removeIf(e -> now - e.getLongValue() > 1);
+        toggleCounts.keySet().removeIf(pos -> !toggleTicks.containsKey(pos));
         runUpdates();
     }
 
@@ -92,6 +111,7 @@ final class LevelNetworks {
             }
         } finally {
             processingUpdates = false;
+            destroyed.clear();
         }
     }
 
@@ -241,7 +261,7 @@ final class LevelNetworks {
         if (!network.valid || network.overflow) return;
 
         // 收集所有门的输入
-        Long2ObjectOpenHashMap<DirectionalSignals> inputs = collectInputs(network);
+        Long2ObjectOpenHashMap<Map<Direction, Integer>> inputs = collectInputs(network);
 
         // 计算每个门的输出
         boolean changed = false;
@@ -254,15 +274,34 @@ final class LevelNetworks {
             if (!(state.getBlock() instanceof ILogicGate gate)) continue;
 
             // 获取该门所有方向的输入
-            DirectionalSignals inputMap = inputs.getOrDefault(pos, new DirectionalSignals());
+            Map<Direction, Integer> inputMap = inputs.getOrDefault(pos, Map.of());
 
             // 计算各方向输出
             for (Direction outputDir : Direction.values()) {
-                int newSignal = gate.doge_plus$getGateType(level, blockPos, outputDir).calculate(inputMap.toMap());
+                LogicGateType gateType = gate.doge_plus$getGateType(level, blockPos, outputDir);
+                int newSignal = gateType.calculate(outputDir, inputMap);
                 int oldSignal = node.getOutput(outputDir);
                 if (oldSignal != newSignal) {
                     node.setOutput(outputDir, newSignal);
                     changed = true;
+                    // 振荡检测：非门输出翻转计数。
+                    // 计数窗口为「连续游戏刻」而非单次批次：弱信号环路（红石粉即时反馈）
+                    // 在同一刻内翻转多次累计；强信号环路（中继器延迟反馈）每刻翻转一次，
+                    // 通过相邻刻连续翻转跨刻累计。翻转中断（间隔 >1 刻）则重置。
+                    if (gateType == LogicGateType.NOT_GATE && !destroyed.contains(pos)) {
+                        long now = level.getGameTime();
+                        long last = toggleTicks.get(pos);
+                        if (now - last > 1) {
+                            toggleCounts.put(pos, 1);
+                        } else {
+                            toggleCounts.addTo(pos, 1);
+                        }
+                        toggleTicks.put(pos, now);
+                        if (toggleCounts.get(pos) >= OSCILLATION_LIMIT) {
+                            destroyed.add(pos);
+                            breakOscillatingGate(pos);
+                        }
+                    }
                 }
             }
         }
@@ -279,15 +318,30 @@ final class LevelNetworks {
     }
 
     /**
-     * 收集网络中所有门的输入信号
+     * 破坏被判定为振荡的非门方块。
+     *
+     * <p>方块被破坏后其镶嵌数据（含门配置）会随之清除（见 {@code onRemove}），
+     * 本方法额外触发拓扑更新，使网络重新收敛到无振荡的稳定状态。</p>
      */
-    private Long2ObjectOpenHashMap<DirectionalSignals> collectInputs(Network network) {
-        Long2ObjectOpenHashMap<DirectionalSignals> result = new Long2ObjectOpenHashMap<>();
+    private void breakOscillatingGate(long pos) {
+        BlockPos blockPos = BlockPos.of(pos);
+        level.destroyBlock(blockPos, true);
+        BlockInlayManager.remove(level, blockPos);
+        LogicGateNetworkManager.topologyChanged(level, blockPos);
+    }
+
+    /**
+     * 收集网络中所有门的输入信号
+     * <p>只把标记为 {@link LogicGateType#INPUT} 的方向放入 map（值可为 0），
+     * 使 {@link LogicGateType#calculate} 能区分「输入面存在但信号为 0」与「无输入面」。</p>
+     */
+    private Long2ObjectOpenHashMap<Map<Direction, Integer>> collectInputs(Network network) {
+        Long2ObjectOpenHashMap<Map<Direction, Integer>> result = new Long2ObjectOpenHashMap<>();
 
         for (LongIterator it = network.nodes.keySet().iterator(); it.hasNext();) {
             long pos = it.nextLong();
             BlockPos blockPos = BlockPos.of(pos);
-            DirectionalSignals inputs = new DirectionalSignals();
+            Map<Direction, Integer> inputs = new EnumMap<>(Direction.class);
 
             // 仅收集「输入面」（INPUT 门标记的方向）的信号，非输入面不查询邻居。
             // 这样输入信号映射只含输入面，门的计算逻辑无需再过滤非输入面。
@@ -298,16 +352,25 @@ final class LevelNetworks {
                 long neighbor = neighborPos.asLong();
 
                 // 如果邻居在网络中，从网络读取输出
+                int signal;
                 if (network.nodes.containsKey(neighbor)) {
                     GateNode neighborNode = network.nodes.get(neighbor);
-                    inputs.setSignal(dir, neighborNode.getOutput(dir.getOpposite()));
+                    signal = neighborNode.getOutput(dir.getOpposite());
                 } else if (LogicGateNetworkManager.isLogicGate(level, neighborPos)) {
                     // 跨网络的逻辑门：直接读其网络输出（该门朝本门方向的面）。
-                    inputs.setSignal(dir, LogicGateNetworkManager.getSignal(level, neighborPos, dir.getOpposite()));
+                    signal = LogicGateNetworkManager.getSignal(level, neighborPos, dir.getOpposite());
                 } else {
-                    // 外部输入：从世界读取红石信号
-                    inputs.setSignal(dir, level.getSignal(neighborPos, dir.getOpposite()));
+                    // 外部输入：从世界读取红石信号。
+                    // vanilla 约定：getSignal/getDirectSignal 的 direction 参数是
+                    // 「调用者 → 被查询方块」的方向，即本门指向邻居的 dir（而非 dir.getOpposite()）。
+                    // 中继器等方向敏感信号源按此约定输出，传反则读不到（红石粉不分方向所以不暴露）。
+                    // 取弱信号与强信号的最大值：红石粉只提供弱信号（getSignal），
+                    // 而中继器/比较器等只输出强信号（getDirectSignal），两者都需支持。
+                    int weak = level.getSignal(neighborPos, dir);
+                    int strong = level.getDirectSignal(neighborPos, dir);
+                    signal = Math.max(weak, strong);
                 }
+                inputs.put(dir, signal);
             }
 
             result.put(pos, inputs);

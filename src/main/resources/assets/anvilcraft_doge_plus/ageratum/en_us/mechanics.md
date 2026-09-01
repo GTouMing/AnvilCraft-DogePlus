@@ -27,22 +27,24 @@ items:
 
 # Mechanics
 
-The core of AnvilCraft: Doge+ is the **Inlay System** — a brand-new crafting method that embeds materials into items to grant them special attributes. This page explains the system in full.
+The core of AnvilCraft: Doge+ is the **Inlay System**, a brand-new crafting method that embeds materials into items to grant them special attributes. This page explains the system in full.
 
 ## The Inlay System
+
+<recipe id="anvilcraft_doge_plus:inlay/totems_crab_claw"/>
 
 ### How it works
 
 <ref item="anvilcraft_doge_plus:inlay_table"/> has two inputs and two outputs:
 
-- **Base material slot** — the item to be inlaid. How many **sockets** it has decides how many **inlay materials** can be embedded.
-- **Inlay material slot** — the material to embed. It defines the **attribute** granted to the **base material**.
-- **Product slot** — the finished, inlaid item.
-- **Old inlay material slot** — the old inlay material replaced when re-inlaying a base material whose sockets are all full.
+- **Base material slot**: the item to be inlaid. How many **sockets** it has decides how many **inlay materials** can be embedded.
+- **Inlay material slot**: the material to embed. It defines the **attribute** granted to the **base material**.
+- **Product slot**: the finished, inlaid item.
+- **Old inlay material slot**: the old inlay material replaced when re-inlaying a base material whose sockets are all full.
 
 To perform an inlay:
 
-1. Right-click the top of the table to place the **base material** and the **inlay material** in order (or throw items onto the table — dropped items are sucked into the table; or use chutes to automate it).
+1. Right-click the top of the table to place the **base material** and the **inlay material** in order (or throw items onto the table, dropped items are sucked into the table; or use chutes to automate it).
 2. Make an **anvil strike the table** (or use an Anvil Hammer to hit the table).
 3. The anvil hammers the inlay material into the base material, consuming **1 material + 1 base material** and producing **1 inlaid item**.
 4. Right-click the side of the table with an empty hand to take the product or the old inlay material, or right-click the top to take everything.
@@ -64,9 +66,9 @@ With the base material in place and the **material slot empty**, an anvil impact
 
 The whole system is fully data-driven, so modpack authors can extend it freely:
 
-- `data/<namespace>/material/base/*.json` — base material definitions (including socket counts).
-- `data/<namespace>/material/inlay/*.json` — material definitions (including granted attributes).
-- `data/<namespace>/recipe/inlay/*.json` — recipes binding a material to a base material.
+- `data/<namespace>/material/base/*.json`: base material definitions (including socket counts).
+- `data/<namespace>/material/inlay/*.json`: material definitions (including granted attributes).
+- `data/<namespace>/recipe/inlay/*.json`: recipes binding a material to a base material.
 
 ### Base materials and sockets
 
@@ -98,19 +100,19 @@ These affect the item (and block, see below) that carries them:
 
 These turn an inlaid block into a logic gate:
 
-| Attribute     | Source material                            | Effect                                                       |
-|---------------|--------------------------------------------|--------------------------------------------------------------|
-| **Direction** | <ref item="anvilcraft:multiphase_matter"/> | Makes sockets directional — active when there are 6 sockets. |
-| **Output**    | Redstone                                   | Outputs redstone signals from this face.                     |
-| **Input**     | Observer                                   | Inputs redstone signals from this face.                      |
-| **NOT Gate**  | Redstone Torch                             | Outputs the inverted signal of the opposite face.            |
-| **AND Gate**  | Repeater                                   | Outputs the AND of adjacent inputs, in order.                |
-| **OR Gate**   | Comparator                                 | Outputs the OR of adjacent inputs, in order.                 |
-| **Generator** | <ref item="anvilcraft:supercapacitor"/>    | Produces 512 kW of power once placed.                        |
+| Attribute     | Source material                            | Effect                                                      |
+|---------------|--------------------------------------------|-------------------------------------------------------------|
+| **Direction** | <ref item="anvilcraft:multiphase_matter"/> | Makes sockets directional, active when there are 6 sockets. |
+| **Output**    | Redstone                                   | Outputs redstone signals from this face.                    |
+| **Input**     | Observer                                   | Inputs redstone signals from this face.                     |
+| **NOT Gate**  | Redstone Torch                             | Outputs the inverted signal of the opposite face.           |
+| **AND Gate**  | Repeater                                   | Outputs the AND of adjacent inputs, in order.               |
+| **OR Gate**   | Comparator                                 | Outputs the OR of adjacent inputs, in order.                |
+| **Generator** | <ref item="anvilcraft:supercapacitor"/>    | Produces 512 kW of power once placed.                       |
 
 ### Resonance
 
-The **Resonance** attribute does not act on its own — it **enhances other inlays on the same base material**:
+The **Resonance** attribute does not act on its own, it **enhances other inlays on the same base material**:
 
 | Enhanced attribute | Resonance effect                                                                                                    |
 |--------------------|---------------------------------------------------------------------------------------------------------------------|

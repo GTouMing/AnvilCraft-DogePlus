@@ -1,13 +1,16 @@
 package dev.anvilcraft.gtouming.doge_plus.integration.jei;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.AbstractChuteScreen;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
 import dev.anvilcraft.gtouming.doge_plus.init.ModRecipeTypes;
 import dev.anvilcraft.gtouming.doge_plus.integration.jei.category.InlayRecipeCategory;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayRecipe;
+import dev.dubhe.anvilcraft.integration.jei.handlers.GhostIngredientHandler;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
@@ -48,5 +51,13 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addRecipeCatalyst(ModBlocks.INLAY_TABLE.get(), INLAY);
+    }
+
+    @Override
+    public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+        registration.addGhostIngredientHandler(
+            AbstractChuteScreen.class,
+            new GhostIngredientHandler<>()
+        );
     }
 }

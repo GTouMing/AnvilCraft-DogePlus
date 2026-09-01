@@ -42,14 +42,17 @@ public enum LogicGateType implements StringRepresentable {
     /**
      * 计算输出。
      *
-     * @param inputs     输入面输入信号
+     * @param outputDir 输出面方向
+     * @param inputs    输入面输入信号（仅含标记为 {@link #INPUT} 的方向）
      */
-    public int calculate(Map<Direction, Integer> inputs) {
+    public int calculate(Direction outputDir, Map<Direction, Integer> inputs) {
         return switch (this) {
             case NONE, INPUT -> 0;
             case NOT_GATE -> {
-                if (inputs.isEmpty()) yield 0;
-                int input = inputs.values().stream().findFirst().get();
+                // 非门：输出面（outputDir）的输入来自其反面（outputDir.getOpposite()）
+                Direction inputDir = outputDir.getOpposite();
+                if (!inputs.containsKey(inputDir)) yield 0;
+                int input = inputs.get(inputDir);
                 yield input > 0 ? 0 : 15;
             }
             case AND_GATE -> {

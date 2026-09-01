@@ -12,26 +12,26 @@
 
 ### Blocks
 
-| Block                    | Obtaining                                                         | Function                                                                                             |
-|--------------------------|-------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
-| Chute Dispenser          | Chute + Dispenser                                                 | Sucks items in from above and fires them in the facing direction                                    |
-| Chute Dropper            | Chute + Dropper                                                   | Sucks items in from above and drops them in the facing direction                                    |
-| Magnetic Chute Dispenser | Magnetic Chute + Dispenser                                        | Sucks items in from the side opposite the facing direction; supports upward placement               |
-| Magnetic Chute Dropper   | Magnetic Chute + Dropper                                          | Sucks items in from the side opposite the facing direction; supports upward placement               |
-| Doge Anvil               | Doge Steel Ingot + Doge Steel Block                               | Feed raw meat to grow; grows into the Giant Doge Anvil when full; right-click opens the anvil menu   |
-| Giant Doge Anvil         | Multiblock conversion                                             | 3×3×3 giant structure inheriting the Giant Anvil's features (falling, anvil menu, landing shock)     |
-| Doge Steel Block         | 9 Doge Steel Ingots craft / Iron Block + Bone Block super-heating | Stores Doge Steel Ingots; building block of the Giant Doge Anvil                                     |
+| Block                    | Obtaining                                                         | Function                                                                                                       |
+|--------------------------|-------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| Chute Dispenser          | Chute + Dispenser                                                 | Sucks items in from above and fires them in the facing direction                                               |
+| Chute Dropper            | Chute + Dropper                                                   | Sucks items in from above and drops them in the facing direction                                               |
+| Magnetic Chute Dispenser | Magnetic Chute + Dispenser                                        | Sucks items in from the side opposite the facing direction; supports upward placement                          |
+| Magnetic Chute Dropper   | Magnetic Chute + Dropper                                          | Sucks items in from the side opposite the facing direction; supports upward placement                          |
+| Doge Anvil               | Doge Steel Ingot + Doge Steel Block                               | Feed raw meat to grow; grows into the Giant Doge Anvil when full; right-click opens the anvil menu             |
+| Giant Doge Anvil         | Multiblock conversion                                             | 3×3×3 giant structure inheriting the Giant Anvil's features (falling, anvil menu, landing shock)               |
+| Doge Steel Block         | 9 Doge Steel Ingots craft / Iron Block + Bone Block super-heating | Stores Doge Steel Ingots; building block of the Giant Doge Anvil                                               |
 | Inlay Table              | Doge Steel Ingots craft                                           | The workstation of the Inlay System: place a base material and an inlay material, let an anvil strike to inlay |
 
 All chute variants support item filtering, slot disabling, and comparator output, and can fire or drop up to nine times the amount.
 
 ### Items
 
-| Item              | Obtaining                                          | Function                                                                                                   |
-|-------------------|----------------------------------------------------|------------------------------------------------------------------------------------------------------------|
-| Doge Steel Ingot  | Iron Ingot + Bone Meal super-heating               | Material                                                                                                   |
-| Hand Doge Magnet  | Ender Pearl + Redstone + Doge Steel Ingot (shaped) | Magnet tool: store/place/launch anvils (dealing damage on hit), attract items & XP, shift-right-click to place a Doge Node |
-| Mobile Silencer   | Silencer conversion                                | Worn on head to mute selected sounds; supports Curios API (optional dependency); press V by default to open its GUI |
+| Item             | Obtaining                                          | Function                                                                                                                   |
+|------------------|----------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| Doge Steel Ingot | Iron Ingot + Bone Meal super-heating               | Material                                                                                                                   |
+| Hand Doge Magnet | Ender Pearl + Redstone + Doge Steel Ingot (shaped) | Magnet tool: store/place/launch anvils (dealing damage on hit), attract items & XP, shift-right-click to place a Doge Node |
+| Mobile Silencer  | Silencer conversion                                | Worn on head to mute selected sounds; supports Curios API (optional dependency); press V by default to open its GUI        |
 
 ### Mechanics
 
@@ -63,14 +63,14 @@ DDD         ···         DDD
 
 **Data-driven**: `data/<ns>/material/base|inlay/*.json` define base socket counts and material attributes; recipes live in `data/<ns>/recipe/inlay/*.json`.
 
-| Attribute | Effect |
-| --- | --- |
-| Fire-Proof / Magnetic / High Temp / Cold Forged / Eternal / Nirvana | Item & block-level effects: fire immunity, magnet attraction, stacking heat damage, durability repair, indestructible, totem trigger |
-| Defense / Life / Attack | +2 armor / +2 max health / +2 attack when held or equipped |
-| Enchant | Merges enchantments on inlay, extracts on removal |
-| Resonance | Enhances other inlays on the same base: Defense/Life/Attack raised to +4, enchantment boost chance, 50% Nirvana shatter, slower heat consumption, faster repair |
-| Direction / Output / Input / NOT / AND / OR | Turn an inlaid block into a logic gate, forming a dimension-based directional logic-gate network |
-| Generator | Produces 512 kW power after place, connecting to the AnvilCraft grid |
+| Attribute                                                                    | Effect                                                                                                                                                          |
+|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Fire-Proof / Magnetic / High Temp / Cold Forged / Eternal / Nirvana / Effect | Item & block-level effects: fire immunity, magnet attraction, stacking heat damage, durability repair, indestructible, totem trigger, potion effect             |
+| Defense / Life / Attack                                                      | +2 armor / +2 max health / +2 attack when held or equipped                                                                                                      |
+| Enchant                                                                      | Merges enchantments on inlay, extracts on removal                                                                                                               |
+| Resonance                                                                    | Enhances other inlays on the same base: Defense/Life/Attack raised to +4, enchantment boost chance, 50% Nirvana shatter, slower heat consumption, faster repair |
+| Direction / Output / Input / NOT / AND / OR                                  | Turn an inlaid block into a logic gate, forming a dimension-based directional logic-gate network                                                                |
+| Generator                                                                    | Produces 512 kW power after place, connecting to the AnvilCraft grid                                                                                            |
 
 **Block-level inlay**: An inlaid block retains its attributes when placed (magnetic attraction, fire-proof, eternal explosion-proof & unbreakable, high-temp burns walkers, etc.); breaking it drops an item that keeps the inlay.
 

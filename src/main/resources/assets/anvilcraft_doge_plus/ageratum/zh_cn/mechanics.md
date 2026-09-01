@@ -31,14 +31,16 @@ AnvilCraft: Doge+ 的核心是 **镶嵌系统**，一种把材料嵌入物品以
 
 ## 镶嵌系统
 
+<recipe id="anvilcraft_doge_plus:inlay/totems_crab_claw"/>
+
 ### 运作方式
 
 <ref item="anvilcraft_doge_plus:inlay_table"/> 有两个输入与两个输出：
 
-- **基底材料槽** —— 待镶嵌的物品。其拥有多少个 **镶孔** 决定能镶嵌多少个 **镶嵌材料** 。
-- **镶嵌材料槽** —— 要嵌入的材料。其定义将会赋予 **基底材料** 的 **属性**。
-- **产物槽** —— 镶嵌完成的物品。
-- **旧镶嵌材料槽** —— 基底材料的镶孔已满时再次镶嵌，被替换下来的旧镶嵌材料。
+- **基底材料槽**： 待镶嵌的物品。其拥有多少个 **镶孔** 决定能镶嵌多少个 **镶嵌材料** 。
+- **镶嵌材料槽**： 要嵌入的材料。其定义将会赋予 **基底材料** 的 **属性**。
+- **产物槽**： 镶嵌完成的物品。
+- **旧镶嵌材料槽**： 基底材料的镶孔已满时再次镶嵌，被替换下来的旧镶嵌材料。
 
 执行一次镶嵌：
 
@@ -64,9 +66,9 @@ AnvilCraft: Doge+ 的核心是 **镶嵌系统**，一种把材料嵌入物品以
 
 整个系统完全数据驱动，整合包作者可自由扩展：
 
-- `data/<namespace>/material/base/*.json` —— 基底材料定义（含镶孔数）。
-- `data/<namespace>/material/inlay/*.json` —— 材料定义（含赋予的属性）。
-- `data/<namespace>/recipe/inlay/*.json` —— 将材料与基底材料绑定的配方。
+- `data/<namespace>/material/base/*.json`： 基底材料定义（含镶孔数）。
+- `data/<namespace>/material/inlay/*.json`： 材料定义（含赋予的属性）。
+- `data/<namespace>/recipe/inlay/*.json`： 将材料与基底材料绑定的配方。
 
 
 ### 基底材料与镶孔

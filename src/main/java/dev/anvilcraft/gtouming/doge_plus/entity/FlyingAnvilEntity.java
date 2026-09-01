@@ -2,7 +2,6 @@ package dev.anvilcraft.gtouming.doge_plus.entity;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.init.ModEntities;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -98,23 +97,10 @@ public class FlyingAnvilEntity extends ThrowableProjectile {
                         : this.level().damageSources().source(DamageTypes.FALLING_ANVIL);
                 target.hurt(source, damage);
             }
-        } else if (result instanceof BlockHitResult bhr) {
-            // 命中方块：落地放置铁砧
-            this.land(bhr);
         }
-    }
-
-    /** 落地：在命中面外侧放置铁砧方块，否则掉落铁砧物品。 */
-    private void land(BlockHitResult bhr) {
-        if (this.level().isClientSide) return;
-        BlockPos pos = bhr.getBlockPos().relative(bhr.getDirection());
-        BlockState state = this.getAnvilBlockState();
-        if (this.level().getBlockState(pos).canBeReplaced()) {
-            this.level().setBlock(pos, state, 3);
-        } else {
+        else if (result instanceof BlockHitResult) {
             this.dropAnvilItem();
         }
-        this.discard();
     }
 
     /** 掉落铁砧物品。 */

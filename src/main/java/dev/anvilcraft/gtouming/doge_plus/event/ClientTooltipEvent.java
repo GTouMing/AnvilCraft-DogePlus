@@ -62,50 +62,45 @@ public class ClientTooltipEvent {
 
         // 2. 基材/已镶嵌物品：镶孔图像 + 属性文本
         List<InlayEntry> inlays = InlayUtil.getInlays(stack);
-        if (!inlays.isEmpty() || MaterialManager.hasSocket(stack)) {
-            if (isShiftDown()) {
-                List<ItemStack> materialStacks = inlays.stream().map(InlayEntry::toItemStack).toList();
-                int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
-                boolean hasDirection = InlayUtil.hasProperty(stack, InlayProperty.DIRECTION);
+        if (inlays.isEmpty() && !MaterialManager.hasSocket(stack)) return;
+        if (Screen.hasShiftDown()) {
+            List<ItemStack> materialStacks = inlays.stream().map(InlayEntry::toItemStack).toList();
+            int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
+            boolean hasDirection = InlayUtil.hasProperty(stack, InlayProperty.DIRECTION);
 
-                // 2.1 镶孔图像组件（已镶嵌画材料图标、空镶孔画中括号、必要时在下方标注方位）
-                elements.add(Either.right(new InlayTooltipComponent(materialStacks, sockets, hasDirection)));
+            // 2.1 镶孔图像组件（已镶嵌画材料图标、空镶孔画中括号、必要时在下方标注方位）
+            elements.add(Either.right(new InlayTooltipComponent(materialStacks, sockets, hasDirection)));
 
-                // 2.2 属性/提示文本
-                boolean resonance = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE);
-                for (InlayEntry entry : inlays) {
-                    for (ResourceLocation id : entry.attributes()) {
-                        InlayProperty property = InlayProperty.get(id);
-                        if (property == null) continue;
-                        Component component = resonance ? enhancedTooltip(property) : property.getTooltip();
-                        if (elements.contains(Either.left(component))) continue;
-                        elements.add(Either.left(component));
-                    }
+            // 2.2 属性/提示文本
+            boolean resonance = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE);
+            for (InlayEntry entry : inlays) {
+                for (ResourceLocation id : entry.attributes()) {
+                    InlayProperty property = InlayProperty.get(id);
+                    if (property == null) continue;
+                    Component component = resonance ? enhancedTooltip(property) : property.getTooltip();
+                    if (elements.contains(Either.left(component))) continue;
+                    elements.add(Either.left(component));
                 }
-
-                // 高温数值
-                if (InlayUtil.hasProperty(stack, InlayProperty.HIGH_TEMP)) {
-                    int heat = stack.getOrDefault(ModDataComponentTypes.HEAT, 0);
-                    if (heat > 0) {
-                        elements.add(Either.left(Component.translatable(
-                                        "tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount", heat)
-                                .withStyle(ChatFormatting.RED)));
-                    }
-                }
-            } else {
-                elements.add(Either.left(Component.translatable("tooltip.anvilcraft_doge_plus.inlay_details")
-                        .withStyle(ChatFormatting.GRAY)));
             }
+
+            // 高温数值
+            if (InlayUtil.hasProperty(stack, InlayProperty.HIGH_TEMP)) {
+                int heat = stack.getOrDefault(ModDataComponentTypes.HEAT, 0);
+                if (heat > 0) {
+                    elements.add(Either.left(Component.translatable(
+                                    "tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount", heat)
+                            .withStyle(ChatFormatting.RED)));
+                }
+            }
+        } else {
+            elements.add(Either.left(Component.translatable("tooltip.anvilcraft_doge_plus.inlay_details")
+                    .withStyle(ChatFormatting.GRAY)));
         }
     }
 
     // ============================================================
     // 辅助方法
     // ============================================================
-
-    private static boolean isShiftDown() {
-        return Screen.hasShiftDown();
-    }
 
     private static Component enhancedTooltip(InlayProperty property) {
         String key = resonanceKey(property);

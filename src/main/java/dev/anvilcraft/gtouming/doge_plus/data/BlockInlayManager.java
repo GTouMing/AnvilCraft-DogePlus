@@ -189,7 +189,7 @@ public class BlockInlayManager extends SavedData {
 
                 ListTag attributesList = new ListTag();
                 for (ResourceLocation attribute : inlayEntry.attributes()) {
-                    extraList.add(StringTag.valueOf(attribute.toString()));
+                    attributesList.add(StringTag.valueOf(attribute.toString()));
                 }
                 inlayTag.put("attributes", attributesList);
 
