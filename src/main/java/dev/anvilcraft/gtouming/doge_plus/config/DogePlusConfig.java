@@ -38,6 +38,16 @@ public class DogePlusConfig {
     @BoundedDiscrete(max = 72000, min = 20)
     public int flyLifetime = 400;
 
+    /** 磁性镶嵌方块吸引铁砧的最大距离（格）。 */
+    @Comment("磁性镶嵌方块吸引铁砧的最大距离（格）。")
+    @BoundedDiscrete(max = 32, min = 1)
+    public int magnetAttractsDistance = 6;
+
+    /** 磁性镶嵌方块每级磁性为释放铁砧额外计入的落地高度（格）。 */
+    @Comment("磁性镶嵌方块每级磁性为释放铁砧额外计入的落地高度（格）。")
+    @BoundedDiscrete(max = 128, min = 0)
+    public int magnetFallHeight = 1;
+
     @Comment("Doge砧长成巨型Doge砧所需成长值。")
     @BoundedDiscrete(max = 1280, min = 1)
     public int maxGrowth = 128;

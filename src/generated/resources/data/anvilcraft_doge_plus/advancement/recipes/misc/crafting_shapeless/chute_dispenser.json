@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_chute_dispenser": {
+      "conditions": {
+        "items": [
+          {
+            "items": "anvilcraft:chute"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "anvilcraft_doge_plus:crafting_shapeless/chute_dispenser"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_chute_dispenser"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "anvilcraft_doge_plus:crafting_shapeless/chute_dispenser"
+    ]
+  }
+}

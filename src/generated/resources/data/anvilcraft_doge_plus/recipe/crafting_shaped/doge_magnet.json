@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "D": {
+      "item": "anvilcraft_doge_plus:doge_steel_ingot"
+    },
+    "E": {
+      "item": "minecraft:ender_pearl"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "pattern": [
+    " E ",
+    "DRD",
+    " E "
+  ],
+  "result": {
+    "count": 1,
+    "id": "anvilcraft_doge_plus:doge_magnet"
+  }
+}

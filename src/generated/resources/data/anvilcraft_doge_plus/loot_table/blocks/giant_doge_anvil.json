@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "block": "anvilcraft_doge_plus:giant_doge_anvil",
+          "condition": "minecraft:block_state_property",
+          "properties": {
+            "half": "mid_center"
+          }
+        },
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "anvilcraft_doge_plus:giant_doge_anvil"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "anvilcraft_doge_plus:blocks/giant_doge_anvil"
+}

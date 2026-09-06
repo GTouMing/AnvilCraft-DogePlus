@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "direction"
+  ],
+  "ingredient": [
+    {
+      "item": "anvilcraft:multiphase_matter"
+    }
+  ]
+}

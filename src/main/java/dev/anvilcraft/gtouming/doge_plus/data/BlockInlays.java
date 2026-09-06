@@ -54,6 +54,12 @@ public record BlockInlays(Block block, List<InlayEntry> inlays, Map<Direction, L
             InlayEntry entry = inlays.get(i);
             Direction dir = directionOrder.get(i);
 
+            // 空镶孔（取出过的槽位）不携带任何门逻辑
+            if (entry.isEmpty()) {
+                directions.put(dir, LogicGateType.NONE);
+                continue;
+            }
+
             // 获取材料定义
             LogicGateType gateType = detectGateType(entry);
             // 无论 gateType 是否为 NONE，都更新到 Map 中

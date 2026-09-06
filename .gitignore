@@ -34,8 +34,6 @@ atlassian-ide-plugin.xml
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
-*~
-
 # temporary files which can be created if a process still has a handle open of a deleted file
 .fuse_hidden*
 
@@ -124,10 +122,6 @@ runs/
 
 # AI 工具数据
 .commandcode/
-
-# 调试用源码副本
-dev/
-net/
 
 # 服务端运行目录（世界存档、日志、配置）
 server/

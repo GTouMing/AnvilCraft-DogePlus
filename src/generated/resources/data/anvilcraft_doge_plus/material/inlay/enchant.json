@@ -1,0 +1,13 @@
+{
+  "attributes": [
+    "enchant"
+  ],
+  "ingredient": [
+    {
+      "item": "minecraft:enchanted_book"
+    },
+    {
+      "item": "minecraft:book"
+    }
+  ]
+}

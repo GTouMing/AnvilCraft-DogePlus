@@ -300,6 +300,11 @@ public class BlockInlayManager extends SavedData {
         for (int i = 0; i < Math.min(inlays.size(), directionOrder.size()); i++) {
             InlayEntry entry = inlays.get(i);
             Direction dir = directionOrder.get(i);
+            // 空镶孔（取出过的槽位）不携带任何门逻辑
+            if (entry.isEmpty()) {
+                directions.put(dir, LogicGateType.NONE);
+                continue;
+            }
             LogicGateType gateType = detectGateType(entry);
             directions.put(dir, gateType);
         }

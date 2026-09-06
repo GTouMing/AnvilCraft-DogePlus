@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "not_gate"
+  ],
+  "ingredient": [
+    {
+      "item": "minecraft:redstone_torch"
+    }
+  ]
+}

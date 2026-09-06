@@ -6,6 +6,7 @@ import dev.anvilcraft.gtouming.doge_plus.logic.ILogicGate;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
+import dev.anvilcraft.gtouming.doge_plus.util.AnvilMagnetUtil;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.anvilcraft.lib.v2.util.Util;
 import net.minecraft.core.BlockPos;
@@ -84,6 +85,10 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
         if (state.getBlock() instanceof IMultiPartBlock part) mainPos = part.doge_plus$getMainPos(pos, state);
         //非巨构中心坐标则返回
         if (!mainPos.equals(pos)) return;
+
+        /* ===== 磁性镶嵌方块放置：把下方铁砧吸到正下方 ===== */
+        AnvilMagnetUtil.attractAnvilToMagnet(level, mainPos);
+
         PowerGridManager manager = PowerGridManager.get(level);
         if (manager == null) return;
 
@@ -123,6 +128,8 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
     /**
      * 注入 neighborChanged 方法。
      * 只更新当前方块，让传播链自然传播，避免死循环。
+     * 额外：若该方块是带磁性镶嵌方块，则按当前红石信号状态处理铁砧——
+     * 有信号（释放态边沿）→ 放行停靠的铁砧下落；无信号（吸引态边沿）→ 重新吸回下方铁砧。
      */
     @Inject(
             method = "neighborChanged",
@@ -139,6 +146,7 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
     ) {
         if (level.isClientSide()) return;
         LogicGateNetworkManager.neighborChanged(level, pos, neighborPos);
+        AnvilMagnetUtil.onMagnetNeighborChanged(level, pos);
     }
 
 

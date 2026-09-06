@@ -38,10 +38,6 @@ public final class InlayUtil {
         stack.set(ModDataComponentTypes.INLAY, list);
     }
 
-    public static int getInlayCount(ItemStack stack) {
-        return getInlays(stack).size();
-    }
-
     // ==================== 属性查询 ====================
 
     public static boolean hasProperty(ItemStack stack, InlayProperty property) {
@@ -105,7 +101,15 @@ public final class InlayUtil {
     private static ItemStack withInlays(ItemStack base, List<InlayEntry> inlays) {
         ItemStack result = base.copy();
         result.setCount(1);
-        if (inlays.isEmpty()) {
+        // 仅当不再含有效镶嵌（全部为空占位）时移除组件
+        boolean hasValid = false;
+        for (InlayEntry entry : inlays) {
+            if (!entry.isEmpty()) {
+                hasValid = true;
+                break;
+            }
+        }
+        if (!hasValid) {
             result.remove(ModDataComponentTypes.INLAY);
         } else {
             result.set(ModDataComponentTypes.INLAY, inlays);

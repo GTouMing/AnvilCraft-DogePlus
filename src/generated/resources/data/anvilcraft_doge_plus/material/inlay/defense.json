@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "defense"
+  ],
+  "ingredient": [
+    {
+      "item": "minecraft:netherite_ingot"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "type": "anvilcraft_doge_plus:inlay",
+  "base": "topaz_block",
+  "inlay": "or_gate"
+}

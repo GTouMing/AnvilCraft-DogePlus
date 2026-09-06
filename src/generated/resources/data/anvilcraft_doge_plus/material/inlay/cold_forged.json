@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "cold_forged"
+  ],
+  "ingredient": [
+    {
+      "item": "anvilcraft:frost_metal_ingot"
+    }
+  ]
+}

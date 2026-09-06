@@ -17,38 +17,29 @@ import javax.annotation.Nullable;
 
 
 /**
- * 渲染镶嵌台各槽位物品：基材与镶嵌材料平躺居中于平台（基材占满平台、材料缩小至中央孔洞），
- * 产品与旧镶嵌物渲染于平台侧面。
+ * 渲染镶嵌台各槽位物品：基材与镶嵌材料平躺居中于平台（基材占满平台、材料缩小至中央孔洞）。
  */
 public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEntity> {
 
     private static final float[] ITEM_Y = {
             0.75F,   // SLOT_BASE 平台中央
-            0.90F,   // SLOT_MATERIAL 平台中央孔洞
-            0.81F, // SLOT_PRODUCT
-            0.81F  // SLOT_OLD_MATERIAL
+            0.90F    // SLOT_MATERIAL 平台中央孔洞
     };
     private static final float[] BLOCK_Y = {
             0.60F,   // SLOT_BASE 平台中央
-            0.90F,   // SLOT_MATERIAL 平台中央孔洞
-            0.81F, // SLOT_PRODUCT
-            0.81F  // SLOT_OLD_MATERIAL
+            0.90F    // SLOT_MATERIAL 平台中央孔洞
     };
 
     /** 各槽位的缩放（NONE 变换无内置缩放，此处即最终大小）。 */
     private static final float[] BLOCK_SCALE = {
             0.375F,   // SLOT_BASE 占满平台
-            0.25F,  // SLOT_MATERIAL 缩小至中央孔洞
-            0.25F,  // SLOT_PRODUCT
-            0.25F   // SLOT_OLD_MATERIAL
+            0.25F     // SLOT_MATERIAL 缩小至中央孔洞
     };
 
     /** 各槽位的缩放（NONE 变换无内置缩放，此处即最终大小）。 */
     private static final float[] ITEM_SCALE = {
             0.75F,   // SLOT_BASE 占满平台
-            0.25F,  // SLOT_MATERIAL 缩小至中央孔洞
-            0.3F,  // SLOT_PRODUCT
-            0.3F   // SLOT_OLD_MATERIAL
+            0.25F    // SLOT_MATERIAL 缩小至中央孔洞
     };
 
     public InlayTableRenderer(BlockEntityRendererProvider.Context context) {
@@ -77,25 +68,10 @@ public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEn
             float scale = isBlock ? BLOCK_SCALE[slot] * multi :  ITEM_SCALE[slot];
 
             poseStack.pushPose();
-            if (slot <= 1) {
-                poseStack.translate(0.5F, region, 0.5F);
-                poseStack.scale(scale, scale, scale);
-                if (!isBlock && slot == 0) poseStack.mulPose(Axis.XN.rotation((float) (Math.PI / 2)));
-                renderItem(stack, packedLight, packedOverlay, poseStack, bufferSource, blockEntity.getLevel(), (int) blockEntity.getBlockPos().asLong());
-            }
-            else {
-                for (int i = 0; i < 4; i++) {
-                    float[] j = getOffset(i);
-                    poseStack.pushPose();
-                    poseStack.translate(j[0], region, j[1]);
-                    poseStack.scale(scale, scale, scale);
-                    poseStack.mulPose(Axis.YN.rotation((float) (Math.PI / 2) * i));
-                    renderItem(stack, packedLight, packedOverlay, poseStack, bufferSource, blockEntity.getLevel(), (int) blockEntity.getBlockPos().asLong());
-                    poseStack.popPose();
-                }
-            }
-
-
+            poseStack.translate(0.5F, region, 0.5F);
+            poseStack.scale(scale, scale, scale);
+            if (!isBlock && slot == 0) poseStack.mulPose(Axis.XN.rotation((float) (Math.PI / 2)));
+            renderItem(stack, packedLight, packedOverlay, poseStack, bufferSource, blockEntity.getLevel(), (int) blockEntity.getBlockPos().asLong());
             poseStack.popPose();
         }
     }
@@ -111,14 +87,5 @@ public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEn
                 bufferSource,
                 level,
                 seed);
-    }
-
-    private float[] getOffset(int i) {
-        return switch (i) {
-            case 1 -> new float[]{-0.01F, 0.5F};
-            case 2 -> new float[]{0.5F, -0.01F};
-            case 3 -> new float[]{1.01F, 0.5F};
-            default -> new float[]{0.5F, 1.01F};
-        };
     }
 }

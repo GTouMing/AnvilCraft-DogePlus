@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "D": {
+      "item": "anvilcraft_doge_plus:doge_steel_block"
+    },
+    "I": {
+      "item": "anvilcraft_doge_plus:doge_steel_ingot"
+    }
+  },
+  "pattern": [
+    "DDD",
+    " I ",
+    "III"
+  ],
+  "result": {
+    "count": 1,
+    "id": "anvilcraft_doge_plus:doge_anvil"
+  }
+}

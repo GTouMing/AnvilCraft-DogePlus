@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "fire_proof"
+  ],
+  "ingredient": [
+    {
+      "item": "minecraft:netherite_ingot"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "attack"
+  ],
+  "ingredient": [
+    {
+      "item": "anvilcraft:cursed_gold_ingot"
+    }
+  ]
+}

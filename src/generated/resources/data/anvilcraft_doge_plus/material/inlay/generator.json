@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "generator"
+  ],
+  "ingredient": [
+    {
+      "item": "anvilcraft:supercapacitor"
+    }
+  ]
+}

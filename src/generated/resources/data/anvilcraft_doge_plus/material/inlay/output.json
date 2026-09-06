@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "output"
+  ],
+  "ingredient": [
+    {
+      "item": "minecraft:redstone"
+    }
+  ]
+}

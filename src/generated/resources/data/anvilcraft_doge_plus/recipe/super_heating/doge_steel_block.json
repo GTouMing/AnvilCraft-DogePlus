@@ -1,0 +1,16 @@
+{
+  "type": "anvilcraft:super_heating",
+  "ingredients": [
+    {
+      "items": "minecraft:iron_block"
+    },
+    {
+      "items": "minecraft:bone_block"
+    }
+  ],
+  "results": [
+    {
+      "id": "anvilcraft_doge_plus:doge_steel_block"
+    }
+  ]
+}

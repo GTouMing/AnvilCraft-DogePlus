@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus;
 
 import dev.anvilcraft.gtouming.doge_plus.config.DogePlusConfig;
+import dev.anvilcraft.gtouming.doge_plus.datagen.ModDataGen;
 import dev.anvilcraft.gtouming.doge_plus.init.*;
 import dev.anvilcraft.lib.v2.config.ConfigManager;
 import dev.anvilcraft.lib.v2.network.register.NetworkRegistrar;
@@ -32,6 +33,10 @@ public class AnvilCraftDogePlus {
         ModBlockEntities.register();
         ModMenuTypes.register();
         ModRecipeTypes.register(modEventBus);
+
+        // datagen：注册各类数据生成回调（非 datagen 环境下为空操作）
+        ModDataGen.init();
+        modEventBus.addListener(ModDataGen.ModGatherDataEvents::gatherData);
 
         modEventBus.addListener(AnvilCraftDogePlus::registerPayload);
         modEventBus.addListener(ModCurios.ICURIOS::onClientSetup);

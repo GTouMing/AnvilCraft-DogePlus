@@ -37,12 +37,11 @@ import java.util.List;
 import static dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager.hasSocket;
 
 /**
- * 镶嵌台方块实体：4 个槽位（镶嵌物/被镶嵌物/产品/旧镶嵌物）。
+ * 镶嵌台方块实体：2 个槽位（镶嵌物/被镶嵌物）。
  *
  * <p>铁砧砸击时执行镶嵌：查找匹配的 {@link InlayRecipe}，消耗 1 个材料 + 1 个基材，
  * 产出镶嵌后的物品。基材镶孔数（数据驱动）决定可镶嵌次数：
- * 未满时追加镶嵌，满镶时替换最旧镶嵌并将旧材料弹出到旧镶嵌物槽。
- * 支持一次铁砧批量镶嵌。</p>
+ * 未满时追加镶嵌，满镶时替换指定槽位。产物与被替换的旧材料均以掉落物形式生成。</p>
  */
 public class InlayTableBlockEntity extends BlockEntity {
 
@@ -50,9 +49,7 @@ public class InlayTableBlockEntity extends BlockEntity {
 
     public static final int SLOT_BASE = 0;
     public static final int SLOT_MATERIAL = 1;
-    public static final int SLOT_PRODUCT = 2;
-    public static final int SLOT_OLD_MATERIAL = 3;
-    public static final int SLOT_COUNT = 4;
+    public static final int SLOT_COUNT = 2;
 
     private final ItemStack[] slots = new ItemStack[SLOT_COUNT];
 
@@ -67,16 +64,38 @@ public class InlayTableBlockEntity extends BlockEntity {
 
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (!isValidSlot(slot)) return stack.copy();
-            if (slot != SLOT_MATERIAL && slot != SLOT_BASE) return stack.copy();
+            if (!isValidSlot(slot) || stack.isEmpty()) return stack.copy();
             if (slot == SLOT_BASE && !hasSocket(stack)) return stack.copy();
-            return insertStack(slot, stack, simulate);
+
+            ItemStack existing = slots[slot];
+            ItemStack remaining = stack.copy();
+
+            if (existing.isEmpty()) {
+                if (!simulate) {
+                    slots[slot] = remaining;
+                    syncToClient();
+                }
+                return ItemStack.EMPTY;
+            }
+
+            if (!ItemStack.isSameItemSameComponents(existing, stack)) {
+                return remaining;
+            }
+
+            int space = existing.getMaxStackSize() - existing.getCount();
+            int toMove = Math.min(space, stack.getCount());
+            remaining.shrink(toMove);
+
+            if (!simulate) {
+                existing.grow(toMove);
+                syncToClient();
+            }
+            return remaining;
         }
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
             if (!isValidSlot(slot)) return ItemStack.EMPTY;
-            if (slot != SLOT_PRODUCT && slot != SLOT_OLD_MATERIAL) return ItemStack.EMPTY;
 
             ItemStack existing = slots[slot];
             int extracted = Math.min(amount, existing.getCount());
@@ -117,46 +136,10 @@ public class InlayTableBlockEntity extends BlockEntity {
         return slot >= 0 && slot < SLOT_COUNT;
     }
 
-    private ItemStack insertStack(int slot, ItemStack stack, boolean simulate) {
-        if (stack.isEmpty()) return ItemStack.EMPTY;
-
-        ItemStack existing = slots[slot];
-        ItemStack remaining = stack.copy();
-
-        if (existing.isEmpty()) {
-            if (!simulate) {
-                slots[slot] = remaining;
-                syncToClient();
-            }
-            return ItemStack.EMPTY;
-        }
-
-        if (!ItemStack.isSameItemSameComponents(existing, stack)) {
-            return remaining;
-        }
-
-        int space = existing.getMaxStackSize() - existing.getCount();
-        int toMove = Math.min(space, stack.getCount());
-        remaining.shrink(toMove);
-
-        if (!simulate) {
-            existing.grow(toMove);
-            syncToClient();
-        }
-        return remaining;
-    }
-
     public void setStackInSlot(int slot, ItemStack stack) {
         if (!isValidSlot(slot)) return;
         slots[slot] = stack.copy();
         syncToClient();
-    }
-
-    private boolean canAcceptSlot(int slot, ItemStack stack) {
-        ItemStack existing = slots[slot];
-        if (existing.isEmpty()) return true;
-        return ItemStack.isSameItemSameComponents(existing, stack)
-                && existing.getCount() + stack.getCount() <= existing.getMaxStackSize();
     }
 
     // ==================== 客户端同步 ====================
@@ -185,7 +168,11 @@ public class InlayTableBlockEntity extends BlockEntity {
         if (level == null || level.isClientSide) return;
 
         boolean changed = false;
-        AABB box = new AABB(getBlockPos()).setMaxY(getBlockPos().getY() + 1.1);
+        // 仅收集投进顶部凹槽内（水平 2..14/16、高度 10..16 像素）的掉落物；
+        // 产物/旧材料生成在台下（见 dropItem），位于此 AABB 之外，不会被吸回。
+        AABB box = new AABB(
+                getBlockPos().getX() + 0.125, getBlockPos().getY() + 0.625, getBlockPos().getZ() + 0.125,
+                getBlockPos().getX() + 0.875, getBlockPos().getY() + 1.0, getBlockPos().getZ() + 0.875);
 
         for (ItemEntity entity : level.getEntitiesOfClass(ItemEntity.class, box)) {
             if (entity.isRemoved() || entity.getItem().isEmpty()) continue;
@@ -214,11 +201,11 @@ public class InlayTableBlockEntity extends BlockEntity {
      * 铁砧砸击处理：批量执行镶嵌。
      *
      * <p>基材的镶孔数（数据驱动，见 {@link MaterialManager}）决定可镶嵌次数：
-     * 未满时追加镶嵌，满镶时替换最旧镶嵌并将旧材料弹出到旧镶嵌物槽。
-     * 每次消耗 1 个材料 + 1 个基材，产出 1 个镶嵌后的物品。</p>
+     * 未满时追加镶嵌，满镶时替换指定槽位并将旧材料掉落。
+     * 每次消耗 1 个材料 + 1 个基材，产物与旧材料在本次砸击结束后统一生成在台下方。</p>
      *
-     * <p>当材料槽为空时：依次取下已镶嵌的材料（从最旧到最新），
-     * 每次砸击取下最旧的一个镶嵌物，放入旧镶嵌物槽。</p>
+     * <p>当材料槽为空时：取下已镶嵌的材料，取下的镶嵌物与取下后的基材均以掉落物生成。
+     * 砸击高度定位到的槽位若是空占位（已取走过），直接中止本次操作，不顺延到其它槽。</p>
      *
      * @return 是否至少完成了一次镶嵌或取下操作
      */
@@ -227,19 +214,17 @@ public class InlayTableBlockEntity extends BlockEntity {
 
         ItemStack material = slots[SLOT_MATERIAL];
         ItemStack base = slots[SLOT_BASE];
-        int processed = 0;
 
-        // ========== 模式 1：材料槽有材料 → 执行镶嵌 ==========
-        if (!material.isEmpty() && !base.isEmpty()) {
+        int processed;
+        if (base.isEmpty()) return false;
+        if (!material.isEmpty()) {
+            // 材料槽有材料 → 执行镶嵌
             processed = processAddInlay(material, base, fallDistance);
-        }
-
-        // ========== 模式 2：材料槽为空 → 取下已镶嵌材料 ==========
-        if (processed == 0 && material.isEmpty() && !base.isEmpty()) {
+        } else {
+            // 材料槽为空 → 取下已镶嵌材料
             processed = processRemoveInlay(base, fallDistance);
         }
 
-        // ========== 完成处理 ==========
         if (processed > 0) {
             syncToClient();
             playEffects(level);
@@ -248,104 +233,120 @@ public class InlayTableBlockEntity extends BlockEntity {
     }
 
     private int processAddInlay(ItemStack inlay, ItemStack base, float fallDistance) {
-        int processed = 0;
-        ItemStack currentBase = base;
+        InlayRecipe recipe = findRecipe(inlay, base);
+        if (recipe == null) return 0;
 
-        while (processed < 64 && !inlay.isEmpty() && !currentBase.isEmpty()) {
-            InlayRecipe recipe = findRecipe(inlay, currentBase);
-            if (recipe == null) break;
+        // 一次砸击耗尽整叠：消耗 min(材料,基材) 份，产物为整叠基材统一更新一次组件。
+        int count = Math.min(inlay.getCount(), base.getCount());
 
-            InlayEntry entry = InlayEntry.fromItemStack(inlay);
-            int sockets = MaterialManager.getSocketCount(currentBase);
-            int inlayCount = InlayUtil.getInlayCount(currentBase);
-            boolean full = inlayCount >= sockets;
+        InlayEntry entry = InlayEntry.fromItemStack(inlay);
+        int sockets = MaterialManager.getSocketCount(base);
 
-            // 满镶时准备旧材料
-            ItemStack oldStack = ItemStack.EMPTY;
-            int slotToReplace = -1;
+        // 槽位列表：取出过的槽位为空占位，列表长度即物理槽位数
+        List<InlayEntry> existing = InlayUtil.getInlays(base);
+        boolean full = !hasEmptySlot(existing) && existing.size() >= sockets;
 
-            if (full) {
-                // ===== 根据下落高度计算要替换的槽位 =====
-                // fallDistance 0→0, 1→0, 2→1, 3→2, 4→3 ... 限制在 0 ~ (inlayCount-1)
-                slotToReplace = Math.min((int) Math.floor(fallDistance), inlayCount - 1);
-                if (slotToReplace < 0) break;
+        // 满镶时准备旧材料（整叠基材同一槽位换下同一种旧材料）
+        ItemStack oldStack = ItemStack.EMPTY;
+        ItemStack result;
+        if (full) {
+            // 仅满镶时按下落高度定位替换槽位；未满（含全新基材，列表为空）不进入此处，
+            // 避免 existing.size() - 1 为负而误中止追加镶嵌
+            int slotToReplace = Math.min((int) Math.floor(fallDistance), existing.size() - 1);
+            if (slotToReplace < 0) return 0;
 
-                InlayEntry oldEntry = InlayUtil.getInlayAt(currentBase, slotToReplace);
-                if (oldEntry.isEmpty()) break;
+            InlayEntry oldEntry = InlayUtil.getInlayAt(base, slotToReplace);
+            // 命中已取走的空占位：直接中止本次操作，不消耗、不顺延到其它槽
+            if (oldEntry.isEmpty()) return 0;
 
-                oldStack = oldEntry.toItemStack();
-                if (oldEntry.containsAttributes(InlayProperty.ENCHANT)) {
-                    oldStack = InlayUtil.extractFirstEnchantment(currentBase, oldStack);
-                }
-
-                if (!canAcceptSlot(SLOT_OLD_MATERIAL, oldStack)) break;
+            oldStack = oldEntry.toItemStack();
+            if (oldEntry.containsAttributes(InlayProperty.ENCHANT)) {
+                oldStack = InlayUtil.extractFirstEnchantment(base, oldStack);
             }
+            result = InlayUtil.withReplacedAt(base, slotToReplace, entry);
+        } else {
+            // 未满：追加到空占位或列表末尾
+            result = InlayUtil.withAddedInlay(base, entry);
+        }
+        if (result.isEmpty()) return 0;
 
-            // 执行镶嵌
-            ItemStack result = full
-                    ? InlayUtil.withReplacedAt(currentBase, slotToReplace, entry)
-                    : InlayUtil.withAddedInlay(currentBase, entry);
-
-            if (entry.containsAttributes(InlayProperty.ENCHANT)) {
-                InlayUtil.transferEnchantments(result, inlay);
-            }
-
-            if (!canAcceptSlot(SLOT_PRODUCT, result)) break;
-
-            // 提交
-            inlay.shrink(1);
-            currentBase.shrink(1);
-            if (!oldStack.isEmpty()) insertStack(SLOT_OLD_MATERIAL, oldStack, false);
-            insertStack(SLOT_PRODUCT, result, false);
-            processed++;
-
-            currentBase = slots[SLOT_BASE];
+        if (entry.containsAttributes(InlayProperty.ENCHANT)) {
+            InlayUtil.transferEnchantments(result, inlay);
         }
 
-        return processed;
+        inlay.shrink(count);
+        base.setCount(0);
+
+        dropItem(result, count);
+        dropItem(oldStack, count);
+        return count;
     }
 
     private int processRemoveInlay(ItemStack base, float fallDistance) {
-        // 如果高度 < 0，不移除
         if (fallDistance < 0) return 0;
 
-        int processed = 0;
-        ItemStack currentBase = base;
+        List<InlayEntry> inlays = InlayUtil.getInlays(base);
+        if (inlays.isEmpty()) return 0;
 
-        while (processed < 64 && !currentBase.isEmpty()) {
-            int inlayCount = InlayUtil.getInlayCount(currentBase);
-            if (inlayCount <= 0) break;
+        int slotIndex = Math.min((int) Math.floor(fallDistance), inlays.size() - 1);
+        if (slotIndex < 0) return 0;
 
-            // ===== 根据下落高度计算目标槽位 =====
-            // fallDistance 0→0, 1→0, 2→1, 3→2 ... 限制在 0 ~ (inlayCount-1)
-            int slot = Math.min((int) Math.floor(fallDistance), inlayCount - 1);
-            if (slot < 0) break;
+        // 命中已取走的空占位：直接中止本次操作，不消耗、不顺延到其它槽
+        InlayEntry targetEntry = inlays.get(slotIndex);
+        if (targetEntry.isEmpty()) return 0;
 
-            InlayEntry targetEntry = InlayUtil.getInlayAt(currentBase, slot);
-            if (targetEntry.isEmpty()) break;
-
-            ItemStack removedStack = targetEntry.toItemStack();
-
-            if (targetEntry.containsAttributes(InlayProperty.ENCHANT)) {
-                removedStack = InlayUtil.extractFirstEnchantment(currentBase, removedStack);
-            }
-
-            if (!canAcceptSlot(SLOT_OLD_MATERIAL, removedStack)) break;
-
-            ItemStack result = InlayUtil.withRemovedAt(currentBase, slot);
-            if (result.isEmpty()) break;
-
-            if (!canAcceptSlot(SLOT_PRODUCT, result)) break;
-
-            currentBase.shrink(1);
-            insertStack(SLOT_OLD_MATERIAL, removedStack, false);
-            insertStack(SLOT_PRODUCT, result, false);
-            processed++;
-
-            currentBase = slots[SLOT_BASE];
+        ItemStack removedInlay = targetEntry.toItemStack();
+        if (targetEntry.containsAttributes(InlayProperty.ENCHANT)) {
+            removedInlay = InlayUtil.extractFirstEnchantment(base, removedInlay);
         }
 
-        return processed;
+        // 取下：基材上的该镶嵌物掉落，基材本身(去掉该镶嵌)以掉落物生成。
+        // 整叠基材统一去掉该槽位镶嵌，按总份数生成。
+        ItemStack result = InlayUtil.withRemovedAt(base, slotIndex);
+        if (result.isEmpty()) return 0;
+
+        int count = base.getCount();
+        base.setCount(0);
+
+        dropItem(result, count);
+        dropItem(removedInlay, count);
+        return count;
+    }
+
+    /** 槽位列表中是否存在空占位（取出过的物理槽位）。 */
+    private static boolean hasEmptySlot(List<InlayEntry> inlays) {
+        for (InlayEntry e : inlays) {
+            if (e.isEmpty()) return true;
+        }
+        return false;
+    }
+
+    /** 在镶嵌台正下方生成若干份掉落物；超出单堆上限时按堆叠上限分堆。 */
+    private void dropItem(ItemStack stack, int count) {
+        if (level == null || level.isClientSide || stack.isEmpty() || count <= 0) return;
+        int max = stack.getMaxStackSize();
+        while (count > 0) {
+            int batch = Math.min(count, max);
+            dropItem(stack.copyWithCount(batch));
+            count -= batch;
+        }
+    }
+
+    /** 在镶嵌台下方生成一个掉落物实体（位于收集 AABB 外，不会被自身 tick 吸回）。 */
+    private void dropItem(ItemStack stack) {
+        if (level == null || level.isClientSide || stack.isEmpty()) return;
+        BlockPos pos = getBlockPos();
+        // 显式 0 初速：5 参构造会用随机数生成初始冲量导致产物乱飞；
+        // 生成点取台体正下方无碰撞处，避免被方块碰撞推出。
+        ItemEntity item = new ItemEntity(
+                level,
+                pos.getX() + 0.5,
+                pos.getY(),
+                pos.getZ() + 0.5,
+                stack,
+                0.0, 0.0, 0.0);
+        item.setDefaultPickUpDelay();
+        level.addFreshEntity(item);
     }
 
     // ==================== 辅助方法 ====================
