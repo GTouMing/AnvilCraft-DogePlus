@@ -3,6 +3,7 @@ package dev.anvilcraft.gtouming.doge_plus.event;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.MobileSilencerScreen;
 import dev.anvilcraft.gtouming.doge_plus.client.renderer.blockentity.GiantDogeAnvilRenderer;
+import dev.anvilcraft.gtouming.doge_plus.client.renderer.blockentity.InlayCraftingTableRenderer;
 import dev.anvilcraft.gtouming.doge_plus.client.renderer.blockentity.InlayTableRenderer;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
 import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
@@ -46,6 +47,7 @@ public class ClientEventHandler {
     @SubscribeEvent
     public static void registerBlockEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.INLAY_TABLE.get(), InlayTableRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.INLAY_CRAFTING_TABLE.get(), InlayCraftingTableRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.GIANT_DOGE_ANVIL.get(), GiantDogeAnvilRenderer::new);
     }
 }

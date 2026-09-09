@@ -7,10 +7,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import org.jetbrains.annotations.Nullable;
 
 public class MagneticChuteDropperBlock extends AbstractChuteDropperBlock {
     public static final MapCodec<MagneticChuteDropperBlock> CODEC = simpleCodec(MagneticChuteDropperBlock::new);
+    /** 磁力变体允许朝上，使用完整六向属性。 */
+    public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
     public MagneticChuteDropperBlock(Properties properties) {
         super(properties);
@@ -19,6 +23,11 @@ public class MagneticChuteDropperBlock extends AbstractChuteDropperBlock {
     @Override
     protected boolean canFaceUp() {
         return true;
+    }
+
+    @Override
+    protected DirectionProperty facingProperty() {
+        return FACING;
     }
 
     @Override

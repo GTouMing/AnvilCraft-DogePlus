@@ -1,11 +1,12 @@
 {
   "variants": {
     "facing=down": {
-      "model": "anvilcraft_doge_plus:block/magnetic_chute_dropper_vertical"
+      "model": "anvilcraft_doge_plus:block/magnetic_chute_dropper_vertical",
+      "x": 90
     },
     "facing=up": {
       "model": "anvilcraft_doge_plus:block/magnetic_chute_dropper_vertical",
-      "x": 180
+      "x": 270
     },
     "facing=east": {
       "model": "anvilcraft_doge_plus:block/magnetic_chute_dropper",

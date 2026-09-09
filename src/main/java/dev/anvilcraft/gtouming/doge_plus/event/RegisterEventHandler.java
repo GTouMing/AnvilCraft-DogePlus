@@ -36,10 +36,15 @@ public class RegisterEventHandler {
                 )
         );
 
-        // ===== 镶嵌台 =====
+        // ===== 镶嵌台 / 镶合台 =====
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
                 ModBlockEntities.INLAY_TABLE.get(),
+                (be, side) -> be.getItemHandler()
+        );
+        event.registerBlockEntity(
+                Capabilities.ItemHandler.BLOCK,
+                ModBlockEntities.INLAY_CRAFTING_TABLE.get(),
                 (be, side) -> be.getItemHandler()
         );
     }

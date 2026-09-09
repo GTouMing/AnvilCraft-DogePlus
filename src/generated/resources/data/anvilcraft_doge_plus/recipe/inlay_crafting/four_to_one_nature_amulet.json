@@ -1,0 +1,22 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:four_to_one_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:frost_metal_block"
+    },
+    {
+      "item": "anvilcraft:silence_amulet"
+    },
+    {
+      "item": "anvilcraft:feather_amulet"
+    },
+    {
+      "item": "anvilcraft:cat_amulet"
+    },
+    {
+      "item": "anvilcraft:dog_amulet"
+    }
+  ],
+  "result": "anvilcraft:nature_amulet"
+}

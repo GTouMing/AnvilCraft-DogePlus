@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.entity;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.api.entity.IAnvilTarget;
 import dev.anvilcraft.gtouming.doge_plus.init.ModEntities;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -91,7 +92,8 @@ public class FlyingAnvilEntity extends ThrowableProjectile {
             if (ehr.getEntity() instanceof LivingEntity target && this.hitEntities.add(target.getId())) {
                 Player owner = this.ownerUuid != null ? this.level().getPlayerByUUID(this.ownerUuid) : null;
                 if (target == owner) return;
-                int damage = CONFIG.baseDamage;
+                int targetMarks = target instanceof IAnvilTarget at ? at.doge_plus$getMarks() : 0;
+                int damage = CONFIG.baseDamage + targetMarks * CONFIG.perMark;
                 DamageSource source = owner != null
                         ? owner.damageSources().source(DamageTypes.FALLING_ANVIL)
                         : this.level().damageSources().source(DamageTypes.FALLING_ANVIL);
@@ -100,6 +102,7 @@ public class FlyingAnvilEntity extends ThrowableProjectile {
         }
         else if (result instanceof BlockHitResult) {
             this.dropAnvilItem();
+            this.discard();
         }
     }
 

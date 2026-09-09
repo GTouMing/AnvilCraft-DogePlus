@@ -1,6 +1,9 @@
 package dev.anvilcraft.gtouming.doge_plus.datagen.material;
 
 import com.google.gson.JsonObject;
+import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ItemLike;
 
 /**
  * effect 系列镶嵌材料的药水匹配条件生成。
@@ -36,17 +39,17 @@ final class PotionKinds {
     /**
      * 生成「药水类」镶嵌材料：{@code <name>} 为文件键，物品为 {@code minecraft:<itemId>}。
      *
-     * @param name   文件键（不含 {@code .json}）
-     * @param itemId 药水物品 id 后缀，如 {@code potion} / {@code splash_potion} / {@code lingering_potion}
+     * @param name 文件键（不含 {@code .json}）
+     * @param item 药水物品（{@link Items#POTION} / {@link Items#SPLASH_POTION} / {@link Items#LINGERING_POTION}）
      */
-    static InlayMaterialData potionInlay(String name, String itemId) {
-        MaterialBuilder builder = MaterialBuilder.builder().name(name).attributes("effect");
+    static InlayMaterialData potionInlay(String name, ItemLike item) {
+        MaterialBuilder builder = MaterialBuilder.builder().name(name).attributes(InlayProperty.EFFECT);
         for (String potion : POTIONS) {
             JsonObject contents = new JsonObject();
             JsonObject potionContents = new JsonObject();
             potionContents.addProperty("potion", potion);
             contents.add("minecraft:potion_contents", potionContents);
-            builder.dataComponent("minecraft:" + itemId, contents);
+            builder.dataComponent(item, contents);
         }
         return builder.buildInlay();
     }

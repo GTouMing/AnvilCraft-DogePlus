@@ -1,0 +1,13 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:ember_metal_upgrade_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:ember_metal_block"
+    },
+    {
+      "item": "anvilcraft:royal_dragon_rod"
+    }
+  ],
+  "result": "anvilcraft:ember_dragon_rod"
+}

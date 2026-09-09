@@ -35,7 +35,7 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             AnvilCraftDogePlus.of("fire_proof"),
             "tooltip.anvilcraft_doge_plus.inlay_property.fire_proof",
             0xFFAA00)); // 金色
-    /** 磁性：携带此性质的物品会被磁铁吸附。 */
+    /** 磁性：携带此性质的物品/方块具有引力，激活时具有斥力。 */
     public static final InlayProperty MAGNETIC = register(new InlayProperty(
             AnvilCraftDogePlus.of("magnetic"),
             "tooltip.anvilcraft_doge_plus.inlay_property.magnetic",
@@ -88,6 +88,7 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             0xFF66CC
     ));
 
+    /** 效果：手持、装备或放置时提供药水效果。 */
     public static final InlayProperty EFFECT = register(new InlayProperty(
             AnvilCraftDogePlus.of("effect"),
             "tooltip.anvilcraft_doge_plus.inlay_property.effect",
@@ -150,11 +151,6 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
     /** 获取颜色值。 */
     public int getColor() {
         return color;
-    }
-
-    /** 获取 TextColor 对象。 */
-    public TextColor getTextColor() {
-        return TextColor.fromRgb(color);
     }
 
     // ==================== 注册表（参考 AbstractRegistrum 模式） ====================

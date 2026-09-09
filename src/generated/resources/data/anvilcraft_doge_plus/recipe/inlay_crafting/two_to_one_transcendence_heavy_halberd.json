@@ -1,0 +1,16 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:two_to_one_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:multiphase_transcendium"
+    },
+    {
+      "item": "anvilcraft:ember_metal_heavy_halberd"
+    },
+    {
+      "item": "anvilcraft:frost_metal_heavy_halberd"
+    }
+  ],
+  "result": "anvilcraft:transcendence_heavy_halberd"
+}

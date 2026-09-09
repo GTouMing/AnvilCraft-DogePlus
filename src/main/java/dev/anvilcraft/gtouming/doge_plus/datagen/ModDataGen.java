@@ -4,6 +4,7 @@ import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.datagen.lang.EnUsLangHandler;
 import dev.anvilcraft.gtouming.doge_plus.datagen.lang.ZhCnLanguageProvider;
 import dev.anvilcraft.gtouming.doge_plus.datagen.material.MaterialJsonProvider;
+import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.InlayCraftingRecipeProvider;
 import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.InlayRecipeProvider;
 import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.ModAnvilRecipeHandler;
 import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.ModRecipeHandler;
@@ -62,6 +63,9 @@ public class ModDataGen {
 
             // inlay（镶嵌）配方 —— 本 mod 自有配方类型，自写 provider 输出
             generator.addProvider(event.includeServer(), new InlayRecipeProvider(packOutput));
+
+            // inlay_crafting（镶合）配方 —— 同上，路径 recipe/inlay_crafting/
+            generator.addProvider(event.includeServer(), new InlayCraftingRecipeProvider(packOutput));
         }
     }
 }

@@ -1,11 +1,9 @@
 package dev.anvilcraft.gtouming.doge_plus.util;
 
 import dev.anvilcraft.gtouming.doge_plus.entity.DogeNodeEntity;
-import dev.dubhe.anvilcraft.entity.MagnetizedNodeEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
@@ -15,8 +13,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 放置 Doge 节点：复制 AnvilCraft {@code MagnetUtil.placeMagnetizedNode} 的逻辑，
- * 但生成 {@link DogeNodeEntity}，并用 {@code getEntitiesOfClass(MagnetizedNodeEntity.class, ...)} 兼容子类节点。
+ * 放置 Doge 节点：生成 {@link DogeNodeEntity}。
  */
 public class DogeNodeUtil {
 
@@ -30,17 +27,16 @@ public class DogeNodeUtil {
         BlockState blockState = level.getBlockState(pos);
         if (blockState.isAir()) return InteractionResult.PASS;
         double maxY = blockState.getCollisionShape(level, pos).max(Direction.Axis.Y, 0.5, 0.5);
-        // 点击处无碰撞面（如空气/无碰撞方块）则不放置
-        if (maxY == 0) return InteractionResult.PASS;
+        // 点击处无碰撞面（空气/无碰撞方块/打开的活板门等空形状 → maxY 为 -Infinity）则不放置
+        if (maxY <= 0) return InteractionResult.PASS;
 
-        // 移除该位置已有的（Doge/磁化）节点
-        for (MagnetizedNodeEntity entity : level.getEntitiesOfClass(
-            MagnetizedNodeEntity.class,
-            new AABB(pos).setMaxY(pos.getY() + 1.1),
-            EntitySelector.NO_SPECTATORS
+        // 移除该位置已有的 Doge 节点
+        for (DogeNodeEntity entity : level.getEntitiesOfClass(
+            DogeNodeEntity.class,
+            new AABB(pos).setMaxY(pos.getY() + 1.1)
         )) {
             if (entity.blockPos.equals(pos)) {
-                entity.discard();
+                entity.removeNodeAndRelease();
                 player.getCooldowns().addCooldown(item, 5);
                 return InteractionResult.sidedSuccess(level.isClientSide());
             }

@@ -35,24 +35,22 @@ The core of AnvilCraft: Doge+ is the **Inlay System**, a brand-new crafting meth
 
 ### How it works
 
-<ref item="anvilcraft_doge_plus:inlay_table"/> has two inputs and two outputs:
+<ref item="anvilcraft_doge_plus:inlay_table"/> has two slots, a **base material slot** and an **inlay material slot**:
 
 - **Base material slot**: the item to be inlaid. How many **sockets** it has decides how many **inlay materials** can be embedded.
 - **Inlay material slot**: the material to embed. It defines the **attribute** granted to the **base material**.
-- **Product slot**: the finished, inlaid item.
-- **Old inlay material slot**: the old inlay material replaced when re-inlaying a base material whose sockets are all full.
 
 To perform an inlay:
 
-1. Right-click the top of the table to place the **base material** and the **inlay material** in order (or throw items onto the table, dropped items are sucked into the table; or use chutes to automate it).
+1. Right-click the top of the table to place the **base material** first, then the **inlay material** (or throw items onto the table, dropped items are sucked into the table; or use chutes to automate it).
 2. Make an **anvil strike the table** (or use an Anvil Hammer to hit the table).
-3. The anvil hammers the inlay material into the base material, consuming **1 material + 1 base material** and producing **1 inlaid item**.
-4. Right-click the side of the table with an empty hand to take the product or the old inlay material, or right-click the top to take everything.
+3. The anvil hammers the inlay material into the base material, consuming **1 material + 1 base material** and producing **1 inlaid item**, which drops below the table (together with any replaced old material).
+4. Right-click with an empty hand to take the base material and the inlay material back, or right-click to put items in.
 
 ### Filling and replacing
 
 - As long as the base material has **free sockets**, each impact adds one more inlay.
-- When the base material is **full**, the next inlay **replaces the inlay material in the socket corresponding to the anvil's fall height**, and the old inlay material is ejected into the old inlay material slot.
+- When the base material is **full**, the next inlay **replaces the inlay material in the socket corresponding to the anvil's fall height**, and the old inlay material drops below the table.
 - If the replaced material carried the **Enchant** attribute, its enchantments are extracted back onto the old inlay material.
 
 ### Removing inlays
@@ -60,7 +58,7 @@ To perform an inlay:
 With the base material in place and the **material slot empty**, an anvil impact **removes** one inlay instead:
 
 - The anvil's **fall distance** decides which socket the inlay is taken from: (0,1] corresponds to slot 1, (1,2] to slot 2, and so on.
-- The removed material goes into the old inlay material slot, and the base material loses one inlay material.
+- The removed inlay material and the base material (minus that inlay) both drop below the table.
 
 ### Data-driven design
 
@@ -85,7 +83,7 @@ These affect the item (and block, see below) that carries them:
 | Attribute       | Source material                             | Effect                                                                                                       |
 |-----------------|---------------------------------------------|--------------------------------------------------------------------------------------------------------------|
 | **Fire-proof**  | Netherite Ingot                             | Cannot be burned.                                                                                            |
-| **Magnetic**    | <ref item="anvilcraft:magnet_ingot"/>       | Attracted by magnets.                                                                                        |
+| **Magnetic**    | <ref item="anvilcraft:magnet_ingot"/>       | Has attraction; repels when activated.                                                                          |
 | **High Temp**   | <ref item="anvilcraft:ember_metal_ingot"/>  | The longer it stays in lava or fire, the more damage accumulates; attacking consumes the accumulated damage. |
 | **Cold Forged** | <ref item="anvilcraft:frost_metal_ingot"/>  | Slowly repairs durability while in water or powder snow.                                                     |
 | **Eternal**     | <ref item="anvilcraft:transcendium_ingot"/> | Indestructible: immune to fire, explosion, cactus, time, and the void.                                       |
@@ -94,7 +92,7 @@ These affect the item (and block, see below) that carries them:
 | **Life**        | <ref item="anvilcraft:royal_steel_ingot"/>  | Grants +2 max health when held or equipped.                                                                  |
 | **Attack**      | <ref item="anvilcraft:cursed_gold_ingot"/>  | Grants +2 attack damage when held or equipped.                                                               |
 | **Enchant**     | Enchanted Book / Book                       | Merges enchantments on inlay, extracts them on removal.                                                      |
-| **Effect**      | Potion                                      | Grants potion effects when held or equipped.                                                                 |
+| **Effect**      | Potion                                      | Grants potion effects when held, equipped or placed.                                                           |
 
 ### Logic-gate attributes
 
@@ -128,10 +126,10 @@ The **Resonance** attribute does not act on its own, it **enhances other inlays 
 
 Inlays are **not lost when a block is placed**. An inlaid block item keeps its attributes in the world:
 
-- **Magnetic** blocks attract nearby items.
+- **Magnetic** blocks have attraction; they repel when activated.
 - **Fire-proof** blocks cannot burn.
 - **Eternal** blocks resist explosions and cannot be mined.
-- **High Temp** blocks burn entities that step on them.
+- **Effect** blocks grant potion effects to entities that step on them.
 - Breaking the block returns an item that keeps all its inlays.
 
 ## Logic gate blocks

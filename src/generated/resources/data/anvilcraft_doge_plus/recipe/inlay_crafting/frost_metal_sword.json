@@ -1,0 +1,13 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:frost_metal_upgrade_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:frost_metal_ingot"
+    },
+    {
+      "tag": "anvilcraft:frost_metal_sword_base"
+    }
+  ],
+  "result": "anvilcraft:frost_metal_sword"
+}

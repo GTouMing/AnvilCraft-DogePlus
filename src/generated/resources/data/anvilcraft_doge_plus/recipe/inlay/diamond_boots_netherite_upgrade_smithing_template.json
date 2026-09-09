@@ -1,0 +1,5 @@
+{
+  "type": "anvilcraft_doge_plus:inlay",
+  "base": "netherite_upgrade_smithing_template",
+  "inlay": "diamond_boots"
+}

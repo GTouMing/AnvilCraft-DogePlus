@@ -17,5 +17,5 @@ items:
 <recipe id="anvilcraft_doge_plus:crafting_shapeless/magnetic_chute_dropper"/>
 
 ::: info
-所有溜槽变体均支持物品过滤、槽位禁用与比较器输出——与本体溜槽一致，并且具有最多九倍发射投掷数量。
+所有溜槽变体均支持物品过滤、槽位禁用与比较器输出：与本体溜槽一致，并且具有最多九倍发射投掷数量。
 :::

@@ -1,13 +1,13 @@
 package dev.anvilcraft.gtouming.doge_plus.mixin;
 
 import dev.anvilcraft.gtouming.doge_plus.api.entity.ICaptured;
-import dev.anvilcraft.gtouming.doge_plus.init.ModDataComponentTypes;
-import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.ClientBlockInlayData;
+import dev.anvilcraft.gtouming.doge_plus.entity.DogeNodeEntity;
+import dev.anvilcraft.gtouming.doge_plus.init.ModDataComponentTypes;
+import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.anvilcraft.lib.v2.util.Util;
-import dev.dubhe.anvilcraft.entity.MagnetizedNodeEntity;
 import dev.dubhe.anvilcraft.init.item.ModComponents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -118,7 +118,7 @@ public abstract class ItemEntityMixin extends Entity implements ICaptured {
     private void onTickRemove(CallbackInfo ci) {
         if (this.level().isClientSide) return;
         if (!this.doge_plus$isCaptured()) return;
-        if (this.level().getEntitiesOfClass(MagnetizedNodeEntity.class,
+        if (this.level().getEntitiesOfClass(DogeNodeEntity.class,
                 new AABB(this.position(), this.position()).inflate(0.6)).isEmpty()) {
             this.doge_plus$setCaptured(false);
             ((ItemEntity) Util.cast(this)).setNoPickUpDelay();

@@ -25,10 +25,11 @@ public class EnUsLangHandler {
 
         // ===== GUI =====
         provider.add("gui.anvilcraft_doge_plus.jei.inlay", "Inlay");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting", "Inlay Crafting");
 
         // ===== Tooltips =====
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.fire_proof", "Fire-proof: cannot be burned");
-        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.magnetic", "Magnetic: attracted by magnets");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.magnetic", "Magnetic: has attraction, repels when activated");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.high_temp", "High Temp: the longer it stays in lava or fire, the more accumulated damage; attacking consumes the accumulated damage");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount", "High Temp: current accumulated damage %s");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.cold_forged", "Cold Forged: slowly repairs durability in water or powder snow");
@@ -38,7 +39,7 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.life", "Life: grants +2 max health when held or equipped");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.attack", "Attack: grants +2 attack damage when held or equipped");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.enchant", "Enchant: merges enchantments when inlaid, extracts them when removed");
-        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.effect", "Effect: grants potion effects when held or equipped");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.effect", "Effect: grants potion effects when held, equipped or placed");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.direction", "Direction: makes sockets directional, active when there are 6 sockets");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.output", "Output: outputs redstone signals from this face");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.input", "Input: inputs redstone signals from this face");

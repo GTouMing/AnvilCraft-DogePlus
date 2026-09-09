@@ -1,0 +1,5 @@
+{
+  "type": "anvilcraft_doge_plus:inlay",
+  "base": "bolt_armor_trim_smithing_template",
+  "inlay": "trim_material"
+}

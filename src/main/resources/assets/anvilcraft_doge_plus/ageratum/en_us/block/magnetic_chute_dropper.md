@@ -17,5 +17,5 @@ A hybrid of <ref item="anvilcraft:magnetic_chute"/> and a dropper: sucks items i
 <recipe id="anvilcraft_doge_plus:crafting_shapeless/magnetic_chute_dropper"/>
 
 ::: info
-All chute variants support item filtering, slot disabling, and comparator output — same as the base mod's chutes, and they can fire or drop up to nine times the amount.
+All chute variants support item filtering, slot disabling, and comparator output: same as the base mod's chutes, and they can fire or drop up to nine times the amount.
 :::

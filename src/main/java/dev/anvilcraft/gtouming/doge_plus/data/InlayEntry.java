@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionContents;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -48,15 +49,23 @@ public record InlayEntry(ResourceLocation id, List<ResourceLocation> extra, List
     // ==================== 工厂方法 ====================
 
     /**
-     * 从 ItemStack 创建 InlayEntry
+     * 从 ItemStack 创建 InlayEntry（属性取自第一个匹配该物品的材料定义）。
      */
     public static InlayEntry fromItemStack(ItemStack stack) {
-        if (stack.isEmpty()) {
+        return fromItemStack(stack, MaterialManager.getInlayMaterial(stack));
+    }
+
+    /**
+     * 从 ItemStack 创建 InlayEntry，属性显式取自指定的材料定义。
+     *
+     * <p>同一物品可能匹配多个材料定义（如下界合金锭同时匹配 defense/fire_proof 等），
+     * 镶嵌时应以实际命中的配方所引用的材料定义为准，保证「无属性锻造材料」的定义
+     * 不会被其它定义的属性污染。</p>
+     */
+    public static InlayEntry fromItemStack(ItemStack stack, @Nullable MaterialManager.InlayMaterial material) {
+        if (stack.isEmpty() || material == null) {
             return nulls();
         }
-
-        MaterialManager.InlayMaterial material = MaterialManager.getInlayMaterial(stack);
-        if (material == null) return nulls();
 
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         List<ResourceLocation> extra = new ArrayList<>();

@@ -1,0 +1,5 @@
+{
+  "type": "anvilcraft_doge_plus:inlay",
+  "base": "doge_steel_block",
+  "inlay": "magnetic"
+}

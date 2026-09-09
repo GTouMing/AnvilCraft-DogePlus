@@ -1,8 +1,10 @@
 package dev.anvilcraft.gtouming.doge_plus.mixin;
 
 import dev.anvilcraft.gtouming.doge_plus.api.sound.DogePlusSoundHelper;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundEngine;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -13,7 +15,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class SoundEngineMixin {
     @Inject(method = "play", at = @At(value = "HEAD"), cancellable = true)
     private void doge_plus$onPlay(SoundInstance sound, CallbackInfo ci) {
+        Level level = Minecraft.getInstance().level;
+        if (level == null) return;
         if (DogePlusSoundHelper.INSTANCE.shouldMute(
+                level,
                 sound.getLocation(),
                 new Vec3(sound.getX(), sound.getY(), sound.getZ())
         )) {

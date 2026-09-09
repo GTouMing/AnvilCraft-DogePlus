@@ -4,8 +4,10 @@ import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.AbstractChuteScreen;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
 import dev.anvilcraft.gtouming.doge_plus.init.ModRecipeTypes;
+import dev.anvilcraft.gtouming.doge_plus.integration.jei.category.InlayCraftingRecipeCategory;
 import dev.anvilcraft.gtouming.doge_plus.integration.jei.category.InlayRecipeCategory;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayRecipe;
+import dev.anvilcraft.gtouming.doge_plus.recipe.inlay_crafting.InlayCraftingRecipe;
 import dev.dubhe.anvilcraft.integration.jei.handlers.GhostIngredientHandler;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
@@ -28,6 +30,8 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
 
     public static final RecipeType<RecipeHolder<InlayRecipe>> INLAY =
             RecipeType.createRecipeHolderType(AnvilCraftDogePlus.of("inlay"));
+    public static final RecipeType<RecipeHolder<InlayCraftingRecipe>> INLAY_CRAFTING =
+            RecipeType.createRecipeHolderType(AnvilCraftDogePlus.of("inlay_crafting"));
 
     @Override
     public ResourceLocation getPluginUid() {
@@ -37,7 +41,8 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
         registration.addRecipeCategories(
-                new InlayRecipeCategory(registration.getJeiHelpers().getGuiHelper()));
+                new InlayRecipeCategory(registration.getJeiHelpers().getGuiHelper()),
+                new InlayCraftingRecipeCategory(registration.getJeiHelpers().getGuiHelper()));
     }
 
     @Override
@@ -46,11 +51,16 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
         if (level == null) return;
         registration.addRecipes(INLAY, level.getRecipeManager()
                 .getAllRecipesFor(ModRecipeTypes.INLAY_TYPE.get()));
+        registration.addRecipes(INLAY_CRAFTING, level.getRecipeManager()
+                .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get()));
     }
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addRecipeCatalyst(ModBlocks.INLAY_TABLE.get(), INLAY);
+        // 镶合配方需要先在镶嵌台镶满基材，再放入镶合台砸砧
+        registration.addRecipeCatalyst(ModBlocks.INLAY_TABLE.get(), INLAY_CRAFTING);
+        registration.addRecipeCatalyst(ModBlocks.INLAY_CRAFTING_TABLE.get(), INLAY_CRAFTING);
     }
 
     @Override

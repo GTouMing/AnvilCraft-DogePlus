@@ -38,6 +38,11 @@ public final class InlayUtil {
         stack.set(ModDataComponentTypes.INLAY, list);
     }
 
+    /** 返回去掉全部镶嵌（含属性修饰器）的基材副本；无有效镶嵌时一并移除组件。 */
+    public static ItemStack withInlaysRemoved(ItemStack base) {
+        return withInlays(base, List.of());
+    }
+
     // ==================== 属性查询 ====================
 
     public static boolean hasProperty(ItemStack stack, InlayProperty property) {

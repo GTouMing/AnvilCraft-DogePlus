@@ -12,9 +12,11 @@ import dev.dubhe.anvilcraft.integration.jei.drawable.DrawableBlockStateIcon;
 import dev.dubhe.anvilcraft.integration.jei.util.JeiRenderHelper;
 import dev.dubhe.anvilcraft.integration.jei.util.JeiSlotUtil;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
+import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -30,8 +32,8 @@ import java.util.List;
  * 镶嵌配方 JEI 界面：继承 {@link AbstractProgressCategory} 使用铁砧工艺通用布局，
  * 参考物品冲压（Stamping）安排界面。
  *
- * <p>一个数据包配方一页：材料/基材为标签时，匹配物品在槽位中循环展示；
- * 输出为所有「材料 × 基材」组合，合并到一个输出槽循环展示。</p>
+ * <p>一个数据包配方一页：材料/基材为标签时，匹配物品在两个输入槽中循环展示；
+ * 输出逐帧跟随「当前展示的材料 × 基材」现算（display override），与镶合/锻造页同机制。</p>
  */
 public class InlayRecipeCategory extends AbstractProgressCategory<InlayRecipe> {
 
@@ -63,6 +65,49 @@ public class InlayRecipeCategory extends AbstractProgressCategory<InlayRecipe> {
                 .addItemStacks( getResults(focuses, recipe));
     }
     
+    /**
+     * 输出逐帧跟随：按「当前展示的材料 × 基材」现算镶嵌结果并覆盖输出槽，
+     * 聚焦输出时从输出物品反推基材（同锻造/镶合页机制）。
+     */
+    @Override
+    public void onDisplayedIngredientsUpdate(
+            RecipeHolder<InlayRecipe> recipeHolder,
+            List<IRecipeSlotDrawable> recipeSlots,
+            IFocusGroup focuses) {
+        if (recipeSlots.size() < 3) return;
+        InlayRecipe recipe = recipeHolder.value();
+
+        IRecipeSlotDrawable inlaySlot = recipeSlots.get(0);
+        IRecipeSlotDrawable baseSlot = recipeSlots.get(1);
+        IRecipeSlotDrawable outputSlot = recipeSlots.get(2);
+
+        ItemStack inlay = inlaySlot.getDisplayedItemStack().orElse(ItemStack.EMPTY);
+        ItemStack base = baseSlot.getDisplayedItemStack().orElse(ItemStack.EMPTY);
+
+        // 聚焦输出：以输出物品作为基材展示，保证页面稳定
+        if (focuses.getFocuses(RecipeIngredientRole.OUTPUT).findAny().isPresent()) {
+            ItemStack displayed = outputSlot.getDisplayedItemStack().orElse(ItemStack.EMPTY);
+            if (displayed.isEmpty()) return;
+            base = new ItemStack(displayed.getItem());
+            baseSlot.createDisplayOverrides().addItemStack(base);
+        }
+        if (inlay.isEmpty() || base.isEmpty()) return;
+
+        ItemStack output = inlayResult(recipe, inlay, base);
+        if (output.isEmpty()) return;
+        outputSlot.createDisplayOverrides().addItemStack(output);
+    }
+
+    /** 现算「基材 + 材料 → 基材追加该镶嵌」，属性取自配方引用的材料定义。 */
+    private static ItemStack inlayResult(InlayRecipe recipe, ItemStack inlay, ItemStack base) {
+        MaterialManager.InlayMaterial def = recipe.getInlayMaterial();
+        InlayEntry entry = def != null
+                ? InlayEntry.fromItemStack(inlay, def)
+                : InlayEntry.fromItemStack(inlay);
+        if (entry.isEmpty()) return ItemStack.EMPTY;
+        return InlayUtil.withAddedInlay(base, entry);
+    }
+
     public List<ItemStack> getResults(IFocusGroup focuses, InlayRecipe recipe) {
         MaterialManager.InlayMaterial inlayMaterial = recipe.getInlayMaterial();
         MaterialManager.BaseMaterial baseMaterial = recipe.getBaseMaterial();

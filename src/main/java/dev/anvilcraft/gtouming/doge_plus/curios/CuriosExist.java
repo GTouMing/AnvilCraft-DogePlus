@@ -1,29 +1,27 @@
 package dev.anvilcraft.gtouming.doge_plus.curios;
 
-import dev.anvilcraft.gtouming.doge_plus.util.SoundTransformer;
 import dev.anvilcraft.gtouming.doge_plus.api.curios.ICurios;
-import dev.anvilcraft.gtouming.doge_plus.api.sound.DogePlusSoundHelper;
 import dev.anvilcraft.gtouming.doge_plus.client.renderer.CuriosRenderer;
 import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotResult;
 import top.theillusivec4.curios.api.client.CuriosRendererRegistry;
-import top.theillusivec4.curios.api.event.CurioChangeEvent;
 
+/**
+ * 有 Curios 环境下的移动式消音器实现：优先从 curios 槽查找，其次头部装备槽。
+ *
+ * <p>消音判定为无状态查询（{@code DogePlusSoundHelper} 直接扫 Level），
+ * 无需在登录/换装时向任何监听列表注册 ItemStack。</p>
+ */
 public class CuriosExist implements ICurios {
+
     @Override
     public void register() {
-        var bus = NeoForge.EVENT_BUS;
-
-        bus.addListener(this::onPlayerLogin);
-        bus.addListener(this::onCurioChange);
-
+        // 纯查询式消音，无事件需要注册
     }
 
     @Override
@@ -35,36 +33,9 @@ public class CuriosExist implements ICurios {
         return found.map(SlotResult::stack).orElse(player.getItemBySlot(EquipmentSlot.HEAD));
     }
 
+    @Override
     public void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(
                 () -> CuriosRendererRegistry.register(ModItems.MOBILE_SILENCER.get(), CuriosRenderer::new));
-    }
-
-    public void onCurioChange(CurioChangeEvent event) {
-        if (!"head".equals(event.getIdentifier())) return;
-        if (!(event.getEntity() instanceof Player)) return;
-        ItemStack from = event.getFrom();
-        ItemStack to = event.getTo();
-
-        if (from.is(ModItems.MOBILE_SILENCER)) {
-            DogePlusSoundHelper.INSTANCE.unregister(SoundTransformer.asSoundListener(from));
-        }
-        if (to.is(ModItems.MOBILE_SILENCER)) {
-            DogePlusSoundHelper.INSTANCE.register(SoundTransformer.asSoundListener(to));
-        }
-    }
-
-
-    /**
-     * 玩家登录事件。
-     * 处理玩家已在 Curios 槽中装备 MobileSilencer 加入世界的情况，
-     * 确保其注册到 {@link DogePlusSoundHelper}。
-     */
-    public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-
-        var stack = findMobileSilencer(event.getEntity());
-        if (!(stack.is(ModItems.MOBILE_SILENCER))) return;
-
-        DogePlusSoundHelper.INSTANCE.register(SoundTransformer.asSoundListener(stack));
     }
 }

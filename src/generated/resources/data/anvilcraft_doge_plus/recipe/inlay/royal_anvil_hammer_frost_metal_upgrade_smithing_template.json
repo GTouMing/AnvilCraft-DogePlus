@@ -1,0 +1,5 @@
+{
+  "type": "anvilcraft_doge_plus:inlay",
+  "base": "frost_metal_upgrade_smithing_template",
+  "inlay": "royal_anvil_hammer"
+}

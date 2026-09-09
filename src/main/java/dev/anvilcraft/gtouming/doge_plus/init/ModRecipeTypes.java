@@ -2,6 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.init;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayRecipe;
+import dev.anvilcraft.gtouming.doge_plus.recipe.inlay_crafting.InlayCraftingRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -30,6 +31,19 @@ public class ModRecipeTypes {
             );
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<InlayRecipe>> INLAY_SERIALIZER =
             RECIPE_SERIALIZERS.register("inlay", InlayRecipe.Serializer::new);
+
+    /** 镶合配方类型：基材全部镶孔按序匹配 → 产物 + 空镶嵌基材。 */
+    public static final DeferredHolder<RecipeType<?>, RecipeType<InlayCraftingRecipe>> INLAY_CRAFTING_TYPE =
+            RECIPE_TYPES.register(
+                    "inlay_crafting", () -> new RecipeType<>() {
+                        @Override
+                        public String toString() {
+                            return AnvilCraftDogePlus.of("inlay_crafting").toString();
+                        }
+                    }
+            );
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<InlayCraftingRecipe>> INLAY_CRAFTING_SERIALIZER =
+            RECIPE_SERIALIZERS.register("inlay_crafting", InlayCraftingRecipe.Serializer::new);
 
     public static void register(IEventBus bus) {
         RECIPE_TYPES.register(bus);

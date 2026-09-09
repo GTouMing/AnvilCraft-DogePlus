@@ -125,3 +125,4 @@ runs/
 
 # 服务端运行目录（世界存档、日志、配置）
 server/
+/src/main/resources/assets/.assets/

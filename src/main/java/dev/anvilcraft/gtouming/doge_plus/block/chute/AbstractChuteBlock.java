@@ -2,6 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.block.chute;
 
 import com.mojang.serialization.MapCodec;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.AbstractChuteBlockEntity;
+import dev.dubhe.anvilcraft.api.hammer.HammerRotateBehavior;
 import dev.dubhe.anvilcraft.api.hammer.IHammerRemovable;
 import dev.dubhe.anvilcraft.api.itemhandler.FilteredItemStackHandler;
 import dev.dubhe.anvilcraft.block.better.BetterBaseEntityBlock;
@@ -21,6 +22,7 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -31,6 +33,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -39,12 +42,27 @@ import org.jetbrains.annotations.Nullable;
 import static dev.dubhe.anvilcraft.block.ChuteBlock.getFacing;
 import static dev.dubhe.anvilcraft.block.ChuteBlock.isChuteBlock;
 
-public abstract class AbstractChuteBlock extends BetterBaseEntityBlock implements IHammerRemovable {
-    public static final DirectionProperty FACING = BlockStateProperties.FACING;
+public abstract class AbstractChuteBlock extends BetterBaseEntityBlock
+        implements IHammerRemovable, HammerRotateBehavior {
+
+    /** 非磁力变体：锤子旋转只在下 + 四个水平方向间循环。 */
+    private static final Direction[] NO_UP_CYCLE = {
+            Direction.DOWN, Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST
+    };
+    /** 磁力变体：允许额外朝上，与 anvilcraft 默认六向旋转顺序一致。 */
+    private static final Direction[] FULL_CYCLE = {
+            Direction.DOWN, Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.UP
+    };
 
     public AbstractChuteBlock(Properties properties) {
         super(properties);
     }
+
+    /**
+     * 变体自身的朝向属性：磁力变体为六向 {@link BlockStateProperties#FACING}，
+     * 非磁力变体为不含朝上的 {@link BlockStateProperties#FACING_HOPPER}（与 anvilcraft 原版溜槽一致）。
+     */
+    protected abstract DirectionProperty facingProperty();
 
     /**
      * 磁力变体允许朝上放置（输出朝上），非磁力变体强制朝下。
@@ -70,7 +88,7 @@ public abstract class AbstractChuteBlock extends BetterBaseEntityBlock implement
     @Nullable
     BlockState getState(Level level, BlockPos pos, Direction facing) {
         BlockState result = this.defaultBlockState()
-                .setValue(FACING, facing);
+                .setValue(facingProperty(), facing);
         for (Direction dir : Direction.values()) {
             BlockPos neighborPos = pos.relative(dir);
             BlockState neighborState = level.getBlockState(neighborPos);
@@ -93,6 +111,29 @@ public abstract class AbstractChuteBlock extends BetterBaseEntityBlock implement
             }
         }
         return result;
+    }
+
+    @Override
+    public boolean change(Player player, BlockPos pos, Level level, ItemStack anvilHammer) {
+        BlockState state = level.getBlockState(pos);
+        if (!state.is(this)) return false;
+        Direction current = state.getValue(facingProperty());
+        Direction[] cycle = canFaceUp() ? FULL_CYCLE : NO_UP_CYCLE;
+        Direction target = cycle[0];
+        for (int i = 0; i < cycle.length; i++) {
+            if (cycle[i] == current) {
+                target = cycle[(i + 1) % cycle.length];
+                break;
+            }
+        }
+        if (target == current) return false;
+        level.setBlockAndUpdate(pos, state.setValue(facingProperty(), target));
+        return true;
+    }
+
+    @Override
+    public Property<?> getChangeableProperty(BlockState blockState) {
+        return facingProperty();
     }
 
     @Override

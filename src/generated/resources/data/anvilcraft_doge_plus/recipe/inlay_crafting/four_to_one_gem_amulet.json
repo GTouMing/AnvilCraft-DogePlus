@@ -1,0 +1,22 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:four_to_one_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:frost_metal_block"
+    },
+    {
+      "item": "anvilcraft:sapphire_amulet"
+    },
+    {
+      "item": "anvilcraft:ruby_amulet"
+    },
+    {
+      "item": "anvilcraft:topaz_amulet"
+    },
+    {
+      "item": "anvilcraft:emerald_amulet"
+    }
+  ],
+  "result": "anvilcraft:gem_amulet"
+}

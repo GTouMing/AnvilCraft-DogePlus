@@ -1,0 +1,34 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:eight_to_one_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:multiphase_matter"
+    },
+    {
+      "item": "minecraft:shears"
+    },
+    {
+      "item": "minecraft:flint_and_steel"
+    },
+    {
+      "item": "minecraft:brush"
+    },
+    {
+      "item": "minecraft:spyglass"
+    },
+    {
+      "item": "anvilcraft:magnet"
+    },
+    {
+      "item": "minecraft:fishing_rod"
+    },
+    {
+      "item": "minecraft:carrot_on_a_stick"
+    },
+    {
+      "item": "minecraft:warped_fungus_on_a_stick"
+    }
+  ],
+  "result": "anvilcraft:multitool"
+}

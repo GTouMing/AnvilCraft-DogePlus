@@ -21,13 +21,13 @@ public abstract class AbstractChuteDropperBlock extends AbstractChuteBlock {
     public AbstractChuteDropperBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(FACING, Direction.DOWN)
+                .setValue(facingProperty(), Direction.DOWN)
                 .setValue(TRIGGERED, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, TRIGGERED);
+        builder.add(facingProperty(), TRIGGERED);
     }
 
     @Override
@@ -52,7 +52,7 @@ public abstract class AbstractChuteDropperBlock extends AbstractChuteBlock {
         if (!(be instanceof AbstractChuteBlockEntity chute)) return;
 
         IItemHandler itemHandler = chute.getItemHandler();
-        Direction facing = state.getValue(FACING);
+        Direction facing = state.getValue(facingProperty());
         boolean anyDispensed = false;
 
         for (int slot = 0; slot < itemHandler.getSlots(); slot++) {

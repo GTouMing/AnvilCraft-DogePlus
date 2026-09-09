@@ -1,0 +1,237 @@
+{
+  "type": "anvilcraft:multiblock_conversion",
+  "inputPattern": {
+    "layers": [
+      [
+        "DDD",
+        "DDD",
+        "DDD"
+      ],
+      [
+        "   ",
+        " D ",
+        "   "
+      ],
+      [
+        "DDD",
+        "DDD",
+        "DDD"
+      ]
+    ],
+    "symbols": {
+      "D": {
+        "block": "anvilcraft_doge_plus:doge_steel_block"
+      }
+    }
+  },
+  "outputPattern": {
+    "layers": [
+      [
+        "ABC",
+        "DEF",
+        "GHI"
+      ],
+      [
+        "JKL",
+        "MNO",
+        "PQR"
+      ],
+      [
+        "STU",
+        "VWX",
+        "YZ["
+      ]
+    ],
+    "symbols": {
+      "A": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "bottom_wn"
+        }
+      },
+      "B": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "bottom_n"
+        }
+      },
+      "C": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "bottom_en"
+        }
+      },
+      "D": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "bottom_w"
+        }
+      },
+      "E": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "bottom_center"
+        }
+      },
+      "F": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "bottom_e"
+        }
+      },
+      "G": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "bottom_ws"
+        }
+      },
+      "H": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "bottom_s"
+        }
+      },
+      "I": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "bottom_es"
+        }
+      },
+      "J": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "mid_wn"
+        }
+      },
+      "K": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "mid_n"
+        }
+      },
+      "L": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "mid_en"
+        }
+      },
+      "M": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "mid_w"
+        }
+      },
+      "N": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "center",
+          "half": "mid_center"
+        }
+      },
+      "O": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "mid_e"
+        }
+      },
+      "P": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "mid_ws"
+        }
+      },
+      "Q": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "mid_s"
+        }
+      },
+      "R": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "mid_es"
+        }
+      },
+      "S": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "top_wn"
+        }
+      },
+      "T": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "top_n"
+        }
+      },
+      "U": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "top_en"
+        }
+      },
+      "V": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "top_w"
+        }
+      },
+      "W": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "top_center"
+        }
+      },
+      "X": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "top_e"
+        }
+      },
+      "Y": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "top_ws"
+        }
+      },
+      "Z": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "top_s"
+        }
+      },
+      "[": {
+        "block": "anvilcraft_doge_plus:giant_doge_anvil",
+        "properties": {
+          "cube": "corner",
+          "half": "top_es"
+        }
+      }
+    }
+  }
+}

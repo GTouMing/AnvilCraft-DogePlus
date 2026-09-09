@@ -1,0 +1,22 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:four_to_one_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:heavy_halberd_core"
+    },
+    {
+      "item": "anvilcraft:frost_metal_sword"
+    },
+    {
+      "item": "anvilcraft:frost_metal_axe"
+    },
+    {
+      "item": "minecraft:trident"
+    },
+    {
+      "tag": "c:tools/mace"
+    }
+  ],
+  "result": "anvilcraft:frost_metal_heavy_halberd"
+}

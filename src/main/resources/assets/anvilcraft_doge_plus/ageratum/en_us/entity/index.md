@@ -8,5 +8,5 @@ navigation:
 
 Entities added by this mod:
 
-- [Doge Node](doge_node.md) — a special magnetized node placed with the Hand Doge Magnet.
-- [Flying Anvil](flying_anvil.md) — the anvil launched by the Doge Magnet.
+- [Doge Node](doge_node.md): a special magnetized node placed with the Hand Doge Magnet.
+- [Flying Anvil](flying_anvil.md): the anvil launched by the Doge Magnet.

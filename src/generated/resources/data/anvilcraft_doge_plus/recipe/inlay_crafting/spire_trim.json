@@ -1,0 +1,12 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "minecraft:spire_armor_trim_smithing_template",
+  "inlays": [
+    {
+      "tag": "minecraft:trimmable_armor"
+    },
+    {
+      "tag": "minecraft:trim_materials"
+    }
+  ]
+}

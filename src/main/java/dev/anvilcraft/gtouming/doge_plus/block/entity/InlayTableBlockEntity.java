@@ -239,7 +239,10 @@ public class InlayTableBlockEntity extends BlockEntity {
         // 一次砸击耗尽整叠：消耗 min(材料,基材) 份，产物为整叠基材统一更新一次组件。
         int count = Math.min(inlay.getCount(), base.getCount());
 
-        InlayEntry entry = InlayEntry.fromItemStack(inlay);
+        // 属性以配方引用的材料定义为准（同一物品可匹配多个定义，避免无属性材料被其它定义污染）
+        MaterialManager.InlayMaterial inlayMaterial = recipe.getInlayMaterial();
+        if (inlayMaterial == null) return 0;
+        InlayEntry entry = InlayEntry.fromItemStack(inlay, inlayMaterial);
         int sockets = MaterialManager.getSocketCount(base);
 
         // 槽位列表：取出过的槽位为空占位，列表长度即物理槽位数

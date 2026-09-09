@@ -25,6 +25,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("block.anvilcraft_doge_plus.doge_anvil", "Doge 砧");
         add("block.anvilcraft_doge_plus.giant_doge_anvil", "巨型 Doge 砧");
         add("block.anvilcraft_doge_plus.inlay_table", "镶嵌台");
+        add("block.anvilcraft_doge_plus.inlay_crafting_table", "镶合台");
         add("block.anvilcraft_doge_plus.doge_steel_block", "Doge 钢块");
 
         // ===== 容器标题 =====
@@ -35,10 +36,11 @@ public class ZhCnLanguageProvider extends LanguageProvider {
 
         // ===== GUI =====
         add("gui.anvilcraft_doge_plus.jei.inlay", "镶嵌");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting", "镶合");
 
         // ===== Tooltips =====
         add("tooltip.anvilcraft_doge_plus.inlay_property.fire_proof", "耐火：不会被烧毁");
-        add("tooltip.anvilcraft_doge_plus.inlay_property.magnetic", "磁性：会被磁铁吸附");
+        add("tooltip.anvilcraft_doge_plus.inlay_property.magnetic", "磁性：具有引力，激活时具有斥力");
         add("tooltip.anvilcraft_doge_plus.inlay_property.high_temp", "高温：在熔岩或火中越久，累加伤害越高；攻击时消耗累加伤害");
         add("tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount", "高温：当前累加伤害 %s");
         add("tooltip.anvilcraft_doge_plus.inlay_property.cold_forged", "冷锻：在水中或细雪中缓慢回复耐久");
@@ -48,7 +50,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inlay_property.life", "生命：手持或装备时提升 2 点生命上限");
         add("tooltip.anvilcraft_doge_plus.inlay_property.attack", "攻击：手持或装备时提升 2 点攻击力");
         add("tooltip.anvilcraft_doge_plus.inlay_property.enchant", "附魔：镶嵌时合并附魔，移除时提取附魔");
-        add("tooltip.anvilcraft_doge_plus.inlay_property.effect", "效果：手持或装备时提供药水效果");
+        add("tooltip.anvilcraft_doge_plus.inlay_property.effect", "效果：手持、装备或放置时提供药水效果");
         add("tooltip.anvilcraft_doge_plus.inlay_property.direction", "方向：使镶孔具有方向性，镶孔数为 6 时生效");
         add("tooltip.anvilcraft_doge_plus.inlay_property.output", "输出：该面输出红石信号");
         add("tooltip.anvilcraft_doge_plus.inlay_property.input", "输入：该面输入红石信号");

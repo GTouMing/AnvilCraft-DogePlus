@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.mixin;
 
+import dev.anvilcraft.gtouming.doge_plus.api.entity.IAnvilTarget;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
@@ -29,7 +30,20 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 @Mixin(LivingEntity.class)
-public abstract class LivingEntityMixin {
+public abstract class LivingEntityMixin implements IAnvilTarget {
+
+    @Unique
+    private int doge_plus$marks;
+
+    @Override
+    public int doge_plus$getMarks() {
+        return this.doge_plus$marks;
+    }
+
+    @Override
+    public void doge_plus$setMarks(int marks) {
+        this.doge_plus$marks = marks;
+    }
 
     @Unique
     private boolean doge_plus$raged = false;

@@ -6,6 +6,7 @@ import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -37,7 +38,7 @@ public class DogeNodeEvent {
         DogeNodeEntity node = nodes.getFirst();
         ItemStack item = player.getItemInHand(InteractionHand.MAIN_HAND);
 
-        // 手持 doge钢 + shift：先移除节点
+        // 手持 doge 磁铁 + shift：移除节点
         if (item.is(ModItems.DOGE_MAGNET.get()) && player.isShiftKeyDown()) {
             event.setCanceled(true);
             node.removeNodeAndRelease();
@@ -47,6 +48,18 @@ public class DogeNodeEvent {
         if (item.isEmpty()) {
             event.setCanceled(true);
             node.releaseToPlayer(player);
+            return;
+        }
+        // shift + 右键非磁铁物品：投喂 1 个到节点（物品实体落在节点处，随后被吸附/捕获）
+        if (player.isShiftKeyDown()) {
+            event.setCanceled(true);
+            ItemStack feed = item.copy();
+            feed.setCount(1);
+            if (!player.getAbilities().instabuild) item.shrink(1);
+            ItemEntity itemEntity = new ItemEntity(level, node.getX(), node.getY(), node.getZ(), feed);
+            itemEntity.setDeltaMovement(0, 0, 0);
+            itemEntity.setPickUpDelay(60);
+            level.addFreshEntity(itemEntity);
         }
     }
 }
