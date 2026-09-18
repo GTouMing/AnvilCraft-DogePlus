@@ -40,12 +40,14 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.attack", "Attack: grants +2 attack damage when held or equipped");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.enchant", "Enchant: merges enchantments when inlaid, extracts them when removed");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.effect", "Effect: grants potion effects when held, equipped or placed");
-        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.direction", "Direction: makes sockets directional, active when there are 6 sockets");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.output", "Output: outputs redstone signals from this face");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.input", "Input: inputs redstone signals from this face");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.not_gate", "NOT Gate: outputs the inverted signal of the opposite face from this face");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.and_gate", "AND Gate: outputs the AND of adjacent inputs from this face (in order)");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.or_gate", "OR Gate: outputs the OR of adjacent inputs from this face (in order)");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.counter_gate", "Counter Gate: counts input pulses and outputs a 1-tick redstone signal at the set count");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.latch_gate", "Latch Gate: records and outputs the received signal; a second input clears it");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.delay_gate", "Delay Gate: outputs the received signal for the set number of ticks");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "Generator: produces 512 kW of power once placed");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance", "Resonance: enhances some properties of materials in other sockets");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.cold_forged", "✦ Cold Forged: repairs durability faster in water or powder snow (durable items only)");
@@ -58,6 +60,36 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_details", "Hold [Shift] for inlay info");
         provider.add("tooltip.anvilcraft_doge_plus.material_attributes", "Inlay attributes:");
 
+        // ===== Anvil-hammer inspection HUD =====
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.sockets", "Sockets: %1$s/%2$s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.empty", "No inlays");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.face_empty", "%1$s: empty");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.line_material", "%1$s: %2$s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.line_gate", "%1$s: %2$s (%3$s)");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.signal", "Signal: %s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.value", "Value: %s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.counted", "Counted: %s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.elapsed", "Elapsed: %s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.tally", "%1$s ×%2$s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.more", "…and %s more");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.phase", "Phase: %s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.phase.alpha", "α");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.phase.beta", "β");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.not_gate", "NOT");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.and_gate", "AND");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.or_gate", "OR");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.output", "Output");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.input", "Input");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.counter_gate", "Counter");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.latch_gate", "Latch");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.delay_gate", "Delay");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.down", "Down");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.up", "Up");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.north", "North");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.south", "South");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.west", "West");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.east", "East");
+
         // ===== Messages =====
         provider.add("message.anvilcraft_doge_plus.doge_anvil.growth", "Growth %1$s/%2$s");
         provider.add("message.anvilcraft_doge_plus.doge_anvil.no_space", "Not enough space to grow into a Giant Doge Anvil");
@@ -65,5 +97,6 @@ public class EnUsLangHandler {
         // ===== Key mappings =====
         provider.add("key.categories.anvilcraft_doge_plus", "AnvilCraft: Doge+");
         provider.add("key.anvilcraft_doge_plus.open_silencer", "Open Silencer");
+        provider.add("key.anvilcraft_doge_plus.toggle_carrier_phase", "Toggle Carrier Phase");
     }
 }

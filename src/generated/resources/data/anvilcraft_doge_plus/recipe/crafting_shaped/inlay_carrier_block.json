@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": {
+      "item": "anvilcraft_doge_plus:doge_steel_ingot"
+    },
+    "R": {
+      "item": "anvilcraft:redstone_wire"
+    }
+  },
+  "pattern": [
+    " R ",
+    "RIR",
+    " R "
+  ],
+  "result": {
+    "count": 1,
+    "id": "anvilcraft_doge_plus:inlay_carrier_block"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "type": "anvilcraft_doge_plus:inlay",
+  "base": "transcendium_inlay_carrier_block",
+  "inlay": "output"
+}

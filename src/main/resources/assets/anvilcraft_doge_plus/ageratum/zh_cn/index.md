@@ -34,6 +34,8 @@ navigation:
 | <ref item="anvilcraft_doge_plus:doge_anvil"/>             | 喂食生肉成长，最终长成巨型 Doge 砧。     |
 | <ref item="anvilcraft_doge_plus:giant_doge_anvil"/>       | 3×3×3 多方块结构，继承巨型铁砧的全部功能。  |
 | <ref item="anvilcraft_doge_plus:inlay_table"/>            | 镶嵌系统的工作方块。                |
+| <ref item="anvilcraft_doge_plus:inlay_crafting_table"/>   | 镶合配方的工作方块，与镶嵌台可相互合成。      |
+| <ref item="anvilcraft_doge_plus:inlay_carrier_block"/>    | 6 方向性镶孔的基底材料与逻辑门方块。       |
 | <ref item="anvilcraft_doge_plus:doge_steel_block"/>       | Doge 钢锭的九合一产物。            |
 | <ref item="anvilcraft_doge_plus:doge_steel_ingot"/>       | 模组的核心材料。                  |
 | <ref item="anvilcraft_doge_plus:doge_magnet"/>            | 收纳/发射/放置铁砧。               |

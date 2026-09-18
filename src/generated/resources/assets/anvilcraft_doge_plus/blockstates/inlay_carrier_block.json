@@ -1,0 +1,118 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_core"
+      },
+      "when": {
+        "hub": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire",
+        "x": 90
+      },
+      "when": {
+        "down": "unpowered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire_powered",
+        "x": 90
+      },
+      "when": {
+        "down": "powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire",
+        "x": 270
+      },
+      "when": {
+        "up": "unpowered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire_powered",
+        "x": 270
+      },
+      "when": {
+        "up": "powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire"
+      },
+      "when": {
+        "north": "unpowered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire_powered"
+      },
+      "when": {
+        "north": "powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire",
+        "y": 180
+      },
+      "when": {
+        "south": "unpowered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire_powered",
+        "y": 180
+      },
+      "when": {
+        "south": "powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire",
+        "y": 270
+      },
+      "when": {
+        "west": "unpowered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire_powered",
+        "y": 270
+      },
+      "when": {
+        "west": "powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire",
+        "y": 90
+      },
+      "when": {
+        "east": "unpowered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/inlay_carrier_wire_powered",
+        "y": 90
+      },
+      "when": {
+        "east": "powered"
+      }
+    }
+  ]
+}

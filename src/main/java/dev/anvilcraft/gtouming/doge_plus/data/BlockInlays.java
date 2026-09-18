@@ -16,7 +16,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public record BlockInlays(Block block, List<InlayEntry> inlays, Map<Direction, LogicGateType> directions) {
+/**
+ * 方块级镶嵌数据：材料列表 + 各面门类型 + 各面逻辑门设定值。
+ *
+ * @param values 各面逻辑门的设定值（仅输入门 / 输出门有意义）；缺省即 {@link #DEFAULT_VALUE}
+ */
+public record BlockInlays(
+        Block block,
+        List<InlayEntry> inlays,
+        Map<Direction, LogicGateType> directions,
+        Map<Direction, Integer> values) {
+
+    /** 逻辑门设定值的默认值（也是上限）。 */
+    public static final int DEFAULT_VALUE = 15;
+
     public static final StreamCodec<ByteBuf, BlockInlays> STREAM_CODEC = StreamCodec.composite(
             ResourceLocation.STREAM_CODEC.map(
                     BuiltInRegistries.BLOCK::get,
@@ -28,11 +41,16 @@ public record BlockInlays(Block block, List<InlayEntry> inlays, Map<Direction, L
                     Direction.STREAM_CODEC,
                     LogicGateType.STREAM_CODEC
             ), BlockInlays::directions,
+            ByteBufCodecs.map(
+                    HashMap::new,
+                    Direction.STREAM_CODEC,
+                    ByteBufCodecs.VAR_INT
+            ), BlockInlays::values,
             BlockInlays::new
     );
 
     public static BlockInlays nulls() {
-        return new BlockInlays(Blocks.AIR, List.of(), Map.of());
+        return new BlockInlays(Blocks.AIR, List.of(), Map.of(), Map.of());
     }
 
     /**
@@ -66,7 +84,7 @@ public record BlockInlays(Block block, List<InlayEntry> inlays, Map<Direction, L
             directions.put(dir, gateType);
         }
 
-        return new BlockInlays(block, inlays, directions);
+        return new BlockInlays(block, inlays, directions, Map.of());
     }
 
     /**
@@ -83,6 +101,15 @@ public record BlockInlays(Block block, List<InlayEntry> inlays, Map<Direction, L
         if (entry.containsAttributes(InlayProperty.OR_GATE)) {
             return LogicGateType.OR_GATE;
         }
+        if (entry.containsAttributes(InlayProperty.COUNTER_GATE)) {
+            return LogicGateType.COUNTER_GATE;
+        }
+        if (entry.containsAttributes(InlayProperty.LATCH_GATE)) {
+            return LogicGateType.LATCH_GATE;
+        }
+        if (entry.containsAttributes(InlayProperty.DELAY_GATE)) {
+            return LogicGateType.DELAY_GATE;
+        }
         if (entry.containsAttributes(InlayProperty.OUTPUT)) {
             return LogicGateType.OUTPUT;
         }
@@ -97,5 +124,26 @@ public record BlockInlays(Block block, List<InlayEntry> inlays, Map<Direction, L
      */
     public LogicGateType getGateType(Direction direction) {
         return directions.getOrDefault(direction, LogicGateType.NONE);
+    }
+
+    /** 指定面逻辑门的设定值；未设定时为 {@link #DEFAULT_VALUE}。 */
+    public int getValue(Direction direction) {
+        return values.getOrDefault(direction, DEFAULT_VALUE);
+    }
+
+    /** 返回把指定面设定值改为 {@code value} 的新实例；等于默认值时移除该键。 */
+    public BlockInlays withValue(Direction direction, int value) {
+        Map<Direction, Integer> updated = new HashMap<>(values);
+        if (value == DEFAULT_VALUE) {
+            updated.remove(direction);
+        } else {
+            updated.put(direction, value);
+        }
+        return withValues(updated);
+    }
+
+    /** 返回把各面设定值整体替换为 {@code newValues}（缺省的面走默认值）的新实例。 */
+    public BlockInlays withValues(Map<Direction, Integer> newValues) {
+        return new BlockInlays(block, inlays, directions, Map.copyOf(newValues));
     }
 }

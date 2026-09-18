@@ -7,6 +7,8 @@
     "anvilcraft_doge_plus:magnetic_chute_dropper",
     "anvilcraft_doge_plus:magnetic_chute_dispenser",
     "anvilcraft_doge_plus:inlay_table",
-    "anvilcraft_doge_plus:inlay_crafting_table"
+    "anvilcraft_doge_plus:inlay_crafting_table",
+    "anvilcraft_doge_plus:inlay_carrier_block",
+    "anvilcraft_doge_plus:transcendium_inlay_carrier_block"
   ]
 }

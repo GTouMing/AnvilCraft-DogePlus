@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.init;
 
 import com.mojang.serialization.Codec;
+import dev.anvilcraft.gtouming.doge_plus.data.CarrierPhase;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -43,6 +44,16 @@ public class ModDataComponentTypes {
                     () -> DataComponentType.<List<InlayEntry>>builder()
                             .persistent(InlayEntry.CODEC.listOf())
                             .networkSynchronized(InlayEntry.STREAM_CODEC.apply(ByteBufCodecs.list()))
+                            .build()
+            );
+
+    /** 超限镶嵌载体相位：α / β。 */
+    public static final DeferredHolder<DataComponentType<?>,DataComponentType<CarrierPhase>> CARRIER_PHASE =
+            COMPONENTS.register(
+                    "carrier_phase",
+                    () -> DataComponentType.<CarrierPhase>builder()
+                            .persistent(CarrierPhase.CODEC)
+                            .networkSynchronized(CarrierPhase.STREAM_CODEC)
                             .build()
             );
 

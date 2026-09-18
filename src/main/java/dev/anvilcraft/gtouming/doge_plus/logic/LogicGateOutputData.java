@@ -76,7 +76,9 @@ public class LogicGateOutputData extends SavedData {
             CompoundTag entry = list.getCompound(i);
             long pos = entry.getLong("P");
             DirectionalSignals signals = new DirectionalSignals();
-            signals.setPacked(tag.getInt("Packed"));
+            // 保存时 Packed 写在嵌套的 "S" 里（见 save）；此前误从根 tag 读取，
+            // 导致重载后所有门的输出都被读成 0。
+            signals.setPacked(entry.getCompound("S").getInt("Packed"));
             data.signals.put(pos, signals);
         }
         return data;

@@ -207,6 +207,16 @@ public class BlockInlayManager extends SavedData {
             }
             entryTag.put("D", dirList);
 
+            // 保存各面逻辑门设定值
+            ListTag valueList = new ListTag();
+            for (Map.Entry<Direction, Integer> valueEntry : inlays.values().entrySet()) {
+                CompoundTag valueTag = new CompoundTag();
+                valueTag.putString("dir", valueEntry.getKey().getName());
+                valueTag.putInt("value", valueEntry.getValue());
+                valueList.add(valueTag);
+            }
+            entryTag.put("V", valueList);
+
             list.add(entryTag);
         }
 
@@ -276,8 +286,19 @@ public class BlockInlayManager extends SavedData {
                 directions = buildDirectionsFromInlays(inlayEntries);
             }
 
+            // 读取各面逻辑门设定值（旧数据无此 tag → 全部走默认值）
+            Map<Direction, Integer> values = new HashMap<>();
+            ListTag valueList = entryTag.getList("V", Tag.TAG_COMPOUND);
+            for (int j = 0; j < valueList.size(); j++) {
+                CompoundTag valueTag = valueList.getCompound(j);
+                Direction dir = Direction.byName(valueTag.getString("dir"));
+                if (dir != null) {
+                    values.put(dir, valueTag.getInt("value"));
+                }
+            }
+
             // 构建 BlockInlays 并存入
-            BlockInlays inlays = new BlockInlays(block, inlayEntries, directions);
+            BlockInlays inlays = new BlockInlays(block, inlayEntries, directions, values);
             data.INLAID_BLOCKS.put(pos, inlays);
         }
 
@@ -334,6 +355,15 @@ public class BlockInlayManager extends SavedData {
                 }
                 case "input" -> {
                     return LogicGateType.INPUT;
+                }
+                case "counter_gate" -> {
+                    return LogicGateType.COUNTER_GATE;
+                }
+                case "latch_gate" -> {
+                    return LogicGateType.LATCH_GATE;
+                }
+                case "delay_gate" -> {
+                    return LogicGateType.DELAY_GATE;
                 }
             }
         }

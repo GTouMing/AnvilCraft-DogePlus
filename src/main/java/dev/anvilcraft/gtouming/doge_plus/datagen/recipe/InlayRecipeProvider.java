@@ -7,6 +7,7 @@ import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -20,15 +21,17 @@ import java.util.concurrent.CompletableFuture;
 public class InlayRecipeProvider implements DataProvider {
 
     private final PackOutput packOutput;
+    private final List<InlayRecipeData> recipes;
 
-    public InlayRecipeProvider(PackOutput packOutput) {
+    public InlayRecipeProvider(PackOutput packOutput, List<InlayRecipeData> recipes) {
         this.packOutput = packOutput;
+        this.recipes = recipes;
     }
 
     @Override
     public CompletableFuture<?> run(CachedOutput cache) {
         Path dataPath = packOutput.getOutputFolder(PackOutput.Target.DATA_PACK);
-        return CompletableFuture.allOf(InlayRecipeData.ALL.stream().map(entry -> {
+        return CompletableFuture.allOf(this.recipes.stream().map(entry -> {
             Path target = dataPath.resolve("anvilcraft_doge_plus/recipe/inlay/" + entry.fileName() + ".json");
             JsonObject json = new JsonObject();
             json.addProperty("type", AnvilCraftDogePlus.MOD_ID + ":inlay");

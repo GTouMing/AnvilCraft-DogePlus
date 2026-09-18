@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "counter_gate"
+  ],
+  "ingredient": [
+    {
+      "tag": "minecraft:buttons"
+    }
+  ]
+}

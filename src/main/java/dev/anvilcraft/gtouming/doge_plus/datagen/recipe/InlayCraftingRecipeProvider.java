@@ -9,9 +9,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -24,15 +26,17 @@ import java.util.concurrent.CompletableFuture;
 public class InlayCraftingRecipeProvider implements DataProvider {
 
     private final PackOutput packOutput;
+    private final List<InlayCraftingData> recipes;
 
-    public InlayCraftingRecipeProvider(PackOutput packOutput) {
+    public InlayCraftingRecipeProvider(PackOutput packOutput, List<InlayCraftingData> recipes) {
         this.packOutput = packOutput;
+        this.recipes = recipes;
     }
 
     @Override
     public CompletableFuture<?> run(CachedOutput cache) {
         Path dataPath = packOutput.getOutputFolder(PackOutput.Target.DATA_PACK);
-        return CompletableFuture.allOf(InlayCraftingData.ALL.stream().map(entry -> {
+        return CompletableFuture.allOf(this.recipes.stream().map(entry -> {
             Path target = dataPath.resolve(
                     "anvilcraft_doge_plus/recipe/inlay_crafting/" + entry.id() + ".json");
             return DataProvider.saveStable(cache, toJson(entry), target);
@@ -49,9 +53,19 @@ public class InlayCraftingRecipeProvider implements DataProvider {
             inlays.add(element);
         }
         json.add("inlays", inlays);
-        // result 缺省表示产物在加工时按输入推导（如盔甲纹饰）
-        if (entry.result() != null) {
-            json.addProperty("result", BuiltInRegistries.ITEM.getKey(entry.result()).toString());
+        // result 缺省表示产物在加工时按输入推导（如盔甲纹饰）；
+        // 多数量产物按原版写法写出 {"id": ..., "count": n}，单数量时写物品 id 字符串
+        ItemStack result = entry.result();
+        if (result != null) {
+            if (result.getCount() > 1) {
+                json.add("result", ItemStack.CODEC.encodeStart(JsonOps.INSTANCE, result).getOrThrow());
+            } else {
+                json.addProperty("result", BuiltInRegistries.ITEM.getKey(result.getItem()).toString());
+            }
+        }
+        // 缺省表示产物不带诅咒；珠宝复制的复制品带消失诅咒
+        if (entry.curseOfVanishing()) {
+            json.addProperty("curse_of_vanishing", true);
         }
         return json;
     }

@@ -133,10 +133,10 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
 
     /** 配方主产物：固定 result，或（纹饰类）模板推导的示例装备。 */
     private static ItemStack primaryOutput(InlayCraftingRecipe recipe) {
-        if (!recipe.derivesResult()) {
-            return new ItemStack(recipe.getResultItem());
-        }
         var level = Minecraft.getInstance().level;
+        if (!recipe.derivesResult()) {
+            return level == null ? recipe.getResultStack() : recipe.getResultItem(level.registryAccess());
+        }
         if (level == null) return new ItemStack(recipe.getBaseItem());
         var access = level.registryAccess();
 

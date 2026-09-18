@@ -2,12 +2,15 @@ package dev.anvilcraft.gtouming.doge_plus.init;
 
 import dev.anvilcraft.gtouming.doge_plus.block.DogeAnvil;
 import dev.anvilcraft.gtouming.doge_plus.block.GiantDogeAnvil;
+import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCraftingTableBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayTableBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.TranscendiumInlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.ChuteDispenserBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.ChuteDropperBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.MagneticChuteDispenserBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.MagneticChuteDropperBlock;
+import dev.anvilcraft.gtouming.doge_plus.datagen.blockstate.InlayCarrierBlockStateGenerator;
 import dev.anvilcraft.lib.v2.registrum.providers.loot.RegistrumBlockLootTables;
 import dev.anvilcraft.lib.v2.registrum.util.entry.BlockEntry;
 import dev.dubhe.anvilcraft.block.GiantAnvilBlock;
@@ -66,7 +69,7 @@ public class ModBlocks {
                     .build()
                     .blockstate(DataGenUtil::noExtraModelOrState)
                     .loot(ModBlocks::giantDogeAnvilLoot)
-                    .tag(BlockTags.ANVIL, ModBlockTags.GIANT_ANVIL, BlockTags.MINEABLE_WITH_PICKAXE,
+                    .tag(ModBlockTags.GIANT_ANVIL, BlockTags.MINEABLE_WITH_PICKAXE,
                             ModBlockTags.NON_MAGNETIC, ModBlockTags.CANT_BROKEN_ANVIL)
                     .register();
 
@@ -89,6 +92,7 @@ public class ModBlocks {
                     .item()
                     .build()
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .tag(ModBlockTags.HAMMER_REMOVABLE)
                     .register();
 
     public static final BlockEntry<ChuteDropperBlock> CHUTE_DROPPER =
@@ -100,6 +104,7 @@ public class ModBlocks {
                     .item()
                     .build()
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .tag(ModBlockTags.HAMMER_REMOVABLE)
                     .register();
 
     public static final BlockEntry<MagneticChuteDropperBlock> MAGNETIC_CHUTE_DROPPER =
@@ -111,6 +116,7 @@ public class ModBlocks {
                     .item()
                     .build()
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .tag(ModBlockTags.HAMMER_REMOVABLE)
                     .register();
 
     public static final BlockEntry<MagneticChuteDispenserBlock> MAGNETIC_CHUTE_DISPENSER =
@@ -122,6 +128,7 @@ public class ModBlocks {
                     .item()
                     .build()
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .tag(ModBlockTags.HAMMER_REMOVABLE)
                     .register();
 
     public static final BlockEntry<InlayTableBlock> INLAY_TABLE =
@@ -133,6 +140,7 @@ public class ModBlocks {
                     .item()
                     .build()
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .tag(ModBlockTags.HAMMER_REMOVABLE)
                     .register();
 
     public static final BlockEntry<InlayCraftingTableBlock> INLAY_CRAFTING_TABLE =
@@ -144,6 +152,31 @@ public class ModBlocks {
                     .item()
                     .build()
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .tag(ModBlockTags.HAMMER_REMOVABLE)
+                    .register();
+
+    public static final BlockEntry<InlayCarrierBlock> INLAY_CARRIER =
+            REGISTRUM.block("inlay_carrier_block", InlayCarrierBlock::new)
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
+                    .blockstate(InlayCarrierBlockStateGenerator::generate)
+                    .loot(ModBlocks::dropSelfLoot)
+                    .item()
+                    .build()
+                    .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .tag(ModBlockTags.HAMMER_REMOVABLE)
+                    .register();
+
+    public static final BlockEntry<TranscendiumInlayCarrierBlock> TRANSCENDIUM_INLAY_CARRIER =
+            REGISTRUM.block("transcendium_inlay_carrier_block", TranscendiumInlayCarrierBlock::new)
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
+                    .blockstate(DataGenUtil::noExtraModelOrState)
+                    .loot(ModBlocks::copyComponentsLoot)
+                    .item()
+                    .build()
+                    .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .tag(ModBlockTags.HAMMER_REMOVABLE)
                     .register();
 
     public static void register() {

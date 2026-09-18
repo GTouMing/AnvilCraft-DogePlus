@@ -1,0 +1,14 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "minecraft:trial_key",
+  "curse_of_vanishing": true,
+  "inlays": [
+    {
+      "item": "minecraft:polished_tuff"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    }
+  ],
+  "result": "minecraft:trial_key"
+}

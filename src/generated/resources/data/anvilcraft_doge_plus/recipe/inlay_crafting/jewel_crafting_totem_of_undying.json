@@ -1,0 +1,20 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "minecraft:totem_of_undying",
+  "curse_of_vanishing": true,
+  "inlays": [
+    {
+      "tag": "c:storage_blocks/gold"
+    },
+    {
+      "item": "minecraft:emerald"
+    },
+    {
+      "item": "minecraft:emerald"
+    },
+    {
+      "item": "anvilcraft:royal_steel_ingot"
+    }
+  ],
+  "result": "minecraft:totem_of_undying"
+}

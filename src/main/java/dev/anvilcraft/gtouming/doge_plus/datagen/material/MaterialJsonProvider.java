@@ -21,9 +21,16 @@ import java.util.concurrent.CompletableFuture;
 public class MaterialJsonProvider implements DataProvider {
 
     private final PackOutput packOutput;
+    private final List<BaseMaterialData> baseMaterials;
+    private final List<InlayMaterialData> inlayMaterials;
 
-    public MaterialJsonProvider(PackOutput packOutput) {
+    public MaterialJsonProvider(
+            PackOutput packOutput,
+            List<BaseMaterialData> baseMaterials,
+            List<InlayMaterialData> inlayMaterials) {
         this.packOutput = packOutput;
+        this.baseMaterials = baseMaterials;
+        this.inlayMaterials = inlayMaterials;
     }
 
     @Override
@@ -32,14 +39,14 @@ public class MaterialJsonProvider implements DataProvider {
         String dir = AnvilCraftDogePlus.MOD_ID + "/material/";
         List<CompletableFuture<?>> futures = new ArrayList<>();
 
-        for (BaseMaterialData base : BaseMaterialData.ALL) {
+        for (BaseMaterialData base : this.baseMaterials) {
             JsonObject root = new JsonObject();
             root.add("ingredient", base.ingredient());
             root.addProperty("sockets", base.sockets());
             futures.add(DataProvider.saveStable(cache, root, dataPath.resolve(dir + "base/" + base.name() + ".json")));
         }
 
-        for (InlayMaterialData inlay : InlayMaterialData.ALL) {
+        for (InlayMaterialData inlay : this.inlayMaterials) {
             JsonObject root = new JsonObject();
             root.add("ingredient", inlay.ingredient());
             JsonArray attributes = new JsonArray();

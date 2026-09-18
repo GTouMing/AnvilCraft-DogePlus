@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "anvilcraft_doge_plus:inlay_crafting_table"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "anvilcraft_doge_plus:inlay_table"
+  }
+}

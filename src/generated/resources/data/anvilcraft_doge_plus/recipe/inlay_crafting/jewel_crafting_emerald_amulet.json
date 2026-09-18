@@ -1,0 +1,14 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:emerald_amulet",
+  "curse_of_vanishing": true,
+  "inlays": [
+    {
+      "item": "anvilcraft:silver_ingot"
+    },
+    {
+      "item": "minecraft:emerald_block"
+    }
+  ],
+  "result": "anvilcraft:emerald_amulet"
+}

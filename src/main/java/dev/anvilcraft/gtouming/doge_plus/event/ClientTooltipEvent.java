@@ -52,7 +52,7 @@ public class ClientTooltipEvent {
 
         // 1. 材料物品：性质描述行（追加为普通文本行）
         MaterialManager.InlayMaterial material = MaterialManager.getInlayMaterial(stack);
-        if (material != null) {
+        if (material != null && !material.properties().isEmpty()) {
             elements.add(Either.left(Component.translatable("tooltip.anvilcraft_doge_plus.material_attributes")
                     .withStyle(ChatFormatting.GRAY)));
             for (InlayProperty property : material.properties()) {
@@ -66,10 +66,9 @@ public class ClientTooltipEvent {
         if (Screen.hasShiftDown()) {
             List<ItemStack> materialStacks = inlays.stream().map(InlayEntry::toItemStack).toList();
             int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
-            boolean hasDirection = InlayUtil.hasProperty(stack, InlayProperty.DIRECTION);
 
-            // 2.1 镶孔图像组件（已镶嵌画材料图标、空镶孔画中括号、必要时在下方标注方位）
-            elements.add(Either.right(new InlayTooltipComponent(materialStacks, sockets, hasDirection)));
+            // 2.1 镶孔图像组件（已镶嵌画材料图标、空镶孔画中括号）
+            elements.add(Either.right(new InlayTooltipComponent(materialStacks, sockets)));
 
             // 2.2 属性/提示文本
             boolean resonance = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE);

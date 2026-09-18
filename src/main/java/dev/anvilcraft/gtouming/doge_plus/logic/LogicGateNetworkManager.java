@@ -25,6 +25,14 @@ public final class LogicGateNetworkManager {
     /** 维度隔离缓存 */
     private static final Map<ServerLevel, LevelNetworks> LEVELS = new IdentityHashMap<>();
 
+    /**
+     * 抑制拓扑更新的开关。
+     *
+     * <p>仅用于外观（powered）刷新：载体的 powered 状态随信号变化，但门拓扑并未改变，
+     * 若此时仍触发 {@link #topologyChanged} 会导致信号每次翻转都重建整个网络。</p>
+     */
+    private static boolean suppressTopologyChange = false;
+
     private LogicGateNetworkManager() {}
 
     // ==================== 公共 API ====================
@@ -33,8 +41,20 @@ public final class LogicGateNetworkManager {
      * 标记某个位置的逻辑门发生变化（放置/破坏/配置变更）
      */
     public static void topologyChanged(Level level, BlockPos pos) {
+        if (suppressTopologyChange) return;
         if (level instanceof ServerLevel serverLevel) {
             state(serverLevel).requestTopologyUpdate(pos.asLong());
+        }
+    }
+
+    /** 在抑制拓扑更新的状态下执行动作（用于只改变外观的刷新）。 */
+    public static void runSuppressedTopologyChange(Runnable action) {
+        boolean previous = suppressTopologyChange;
+        suppressTopologyChange = true;
+        try {
+            action.run();
+        } finally {
+            suppressTopologyChange = previous;
         }
     }
 
@@ -100,6 +120,40 @@ public final class LogicGateNetworkManager {
             return 0;
         }
         return network.getOutputSignal(pos.asLong(), direction);
+    }
+
+    /**
+     * 读取某面逻辑门当前的输出信号（只读，不触发网络构建）。
+     *
+     * <p>输出直接取自持久化存储：网络重算时逐节点 {@code setOutput} 会同步写入该存储。</p>
+     */
+    public static int peekOutput(Level level, BlockPos pos, Direction direction) {
+        LogicGateOutputData data = LogicGateOutputData.get(level);
+        return data == null ? 0 : data.getSignal(pos, direction);
+    }
+
+    /**
+     * 读取某面输入门当前收到的信号（只读，不触发网络构建）。
+     *
+     * <p>输入门自身输出恒为 0，因此这里按 {@code collectInputs} 同一套规则即时求值：
+     * 邻居是已建网络中的门则取其朝向本面的输出，否则读世界红石弱/强信号。</p>
+     */
+    public static int peekInput(Level level, BlockPos pos, Direction direction) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return 0;
+        }
+        BlockPos neighborPos = pos.relative(direction);
+        Network network = state(serverLevel).byGate.get(neighborPos.asLong());
+        if (network != null && network.valid) {
+            return network.getOutputSignal(neighborPos.asLong(), direction.getOpposite());
+        }
+        // 邻居是尚未建网的门：直接读其持久化输出，避免触发建网副作用。
+        if (isLogicGate(level, neighborPos)) {
+            return peekOutput(level, neighborPos, direction.getOpposite());
+        }
+        int weak = level.getSignal(neighborPos, direction);
+        int strong = level.getDirectSignal(neighborPos, direction);
+        return Math.max(weak, strong);
     }
 
     /**

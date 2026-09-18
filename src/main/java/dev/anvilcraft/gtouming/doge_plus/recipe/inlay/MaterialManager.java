@@ -8,6 +8,8 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.TranscendiumInlayCarrierBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.RegistryOps;
@@ -88,20 +90,25 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
 
     /**
      * 查询物品堆是否属于镶嵌材料；非材料返回 null。
-     * 匹配规则：优先匹配物品，然后匹配标签
+     * 匹配规则：优先匹配物品，然后匹配标签。
+     *
+     * <p>同一物品可能命中多个定义。此处优先返回**真正带性质**的定义，避免行为随
+     * {@link java.util.HashMap} 的迭代顺序摇摆（否则镶嵌材料可能被解析成无属性版本）。</p>
      */
     @Nullable
     public static InlayMaterial getInlayMaterial(ItemStack stack) {
+        InlayMaterial fallback = null;
         for (InlayMaterial material : INLAYS.values()) {
-            if (material.ingredient().test(stack)) {
-                return material;
-            }
+            if (!material.ingredient().test(stack)) continue;
+            if (!material.properties().isEmpty()) return material;
+            if (fallback == null) fallback = material;
         }
-        return null;
+        return fallback;
     }
 
     /** 基材是否定义了镶孔数据（用于 tooltip 显示空镶孔）。 */
     public static boolean hasSocket(ItemStack baseStack) {
+        if (isTranscendiumCarrier(baseStack)) return true;
         for (BaseMaterial base : BASES.values()) {
             if (base.ingredient().test(baseStack)) {
                 return true;
@@ -110,8 +117,24 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
         return false;
     }
 
+    /** 超限镶嵌载体物品 id：其镶孔数由代码写死，不读取任何数据包定义。 */
+    private static final ResourceLocation TRANSCENDIUM_CARRIER_ID =
+            AnvilCraftDogePlus.of("transcendium_inlay_carrier_block");
+
+    /** 是否为超限镶嵌载体（按物品注册 id 判定，避免类加载顺序依赖）。 */
+    private static boolean isTranscendiumCarrier(ItemStack stack) {
+        return !stack.isEmpty() && BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(TRANSCENDIUM_CARRIER_ID);
+    }
+
     /** 查询基材的镶孔数；无定义时返回 {@link #DEFAULT_SOCKETS}。 */
     public static int getSocketCount(ItemStack baseStack) {
+        // 超限镶嵌载体：镶孔数写死为「已镶嵌数量 + 1」（上限 MAX_SOCKETS），
+        // 数据包中的 sockets 定义对其无效
+        if (isTranscendiumCarrier(baseStack)) {
+            return Math.min(
+                    InlayUtil.getInlays(baseStack).size() + 1,
+                    TranscendiumInlayCarrierBlockEntity.MAX_SOCKETS);
+        }
         for (BaseMaterial base : BASES.values()) {
             if (base.ingredient().test(baseStack)) {
                 return base.sockets();

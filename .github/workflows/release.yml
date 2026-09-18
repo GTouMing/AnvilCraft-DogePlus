@@ -1,0 +1,96 @@
+name: Publish Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: release
+      VERSION_TYPE: ${{ github.event.release.prerelease && 'beta' || 'release' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read gradle.properties
+        id: properties
+        uses: christian-draeger/read-properties@1.1.1
+        with:
+          path: gradle.properties
+          properties: 'mod_id mod_name java_version minecraft_version modrinth_id curseforge_id'
+
+      - name: Set up Java ${{ steps.properties.outputs.java_version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: ${{ steps.properties.outputs.java_version }}
+
+      - name: Make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew build --console=plain
+
+      - name: Locate artifacts
+        id: artifacts
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          JAR=$(ls -t build/libs/*.jar | grep -v -- '-sources\.jar$' | head -n 1)
+          SOURCES=$(ls -t build/libs/*-sources.jar | head -n 1)
+          {
+            echo "version=$VERSION"
+            echo "jar=$JAR"
+            echo "sources=$SOURCES"
+          } >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+          echo "Jar: $JAR"
+          echo "Sources: $SOURCES"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ steps.properties.outputs.mod_name }}-${{ steps.artifacts.outputs.version }}"
+          path: |
+            ${{ steps.artifacts.outputs.jar }}
+            ${{ steps.artifacts.outputs.sources }}
+
+      - name: Attach files to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.artifacts.outputs.jar }}
+            ${{ steps.artifacts.outputs.sources }}
+
+      - name: Publish to Modrinth & CurseForge
+        uses: Kir-Antipov/mc-publish@v3.3
+        continue-on-error: true
+        with:
+          name: "${{ steps.properties.outputs.mod_name }} ${{ steps.artifacts.outputs.version }}"
+          version: ${{ steps.artifacts.outputs.version }}
+          version-type: ${{ env.VERSION_TYPE }}
+          changelog: ${{ github.event.release.body }}
+          game-versions: ${{ steps.properties.outputs.minecraft_version }}
+          loaders: neoforge
+          java: ${{ steps.properties.outputs.java_version }}
+          fail-mode: skip
+          dependencies: |
+            anvilcraft(required){modrinth:vuISAWPc}{curseforge:986251}
+
+          modrinth-id: ${{ steps.properties.outputs.modrinth_id }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-featured: true
+
+          curseforge-id: ${{ steps.properties.outputs.curseforge_id }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+          files: |
+            ${{ steps.artifacts.outputs.jar }}
+            ${{ steps.artifacts.outputs.sources }}

@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "latch_gate"
+  ],
+  "ingredient": [
+    {
+      "item": "minecraft:lever"
+    }
+  ]
+}

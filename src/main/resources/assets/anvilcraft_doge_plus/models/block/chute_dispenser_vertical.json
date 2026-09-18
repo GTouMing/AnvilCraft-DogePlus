@@ -1,7 +1,7 @@
 {
 	"format_version": "1.9.0",
 	"credit": "Made with Blockbench",
-	"parent": "minecraft:block",
+	"parent": "minecraft:block/block",
 	"textures": {
 		"5": "anvilcraft_doge_plus:block/machine_side",
 		"particle": "block/dispenser_front_vertical",

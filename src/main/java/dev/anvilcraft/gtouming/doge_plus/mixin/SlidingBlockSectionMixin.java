@@ -28,6 +28,6 @@ public class SlidingBlockSectionMixin {
             Level level, BlockPos center, Entity entity, CallbackInfo ci, @Local(name = "pos") BlockPos pos, @Local(name = "state")BlockState state
             ) {
         BlockInlayManager.restoreInlayForMove(level, pos, state.getBlock());
-        AnvilCraftDogePlus.LOGGER.debug(pos.toShortString());
+        //AnvilCraftDogePlus.LOGGER.debug(pos.toShortString());
     }
 }

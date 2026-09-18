@@ -33,6 +33,8 @@ Welcome to share your feedback and suggestions for [AnvilCraft: Doge+](https://g
 | <ref item="anvilcraft_doge_plus:doge_anvil"/>       | Feeds on raw meat and grows into a Giant Doge Anvil.                             |
 | <ref item="anvilcraft_doge_plus:giant_doge_anvil"/> | A 3×3×3 multiblock with all the power of the Giant Anvil.                        |
 | <ref item="anvilcraft_doge_plus:inlay_table"/>      | The workstation of the Inlay System: hammer materials into bases with an anvil. |
+| <ref item="anvilcraft_doge_plus:inlay_crafting_table"/> | The workstation of the Inlay Crafting recipes, freely convertible with the Inlay Table. |
+| <ref item="anvilcraft_doge_plus:inlay_carrier_block"/>  | A 6-socket directional base material that becomes a logic gate.                 |
 | <ref item="anvilcraft_doge_plus:doge_steel_block"/> | Compact storage of Doge Steel Ingots.                                            |
 | <ref item="anvilcraft_doge_plus:doge_steel_ingot"/> | The core material of the addon.                                                  |
 | <ref item="anvilcraft_doge_plus:doge_magnet"/>      | Stores, throws, and places anvils; attracts items and XP.                        |

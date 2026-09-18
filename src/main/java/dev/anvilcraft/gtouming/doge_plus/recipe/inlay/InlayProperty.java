@@ -95,13 +95,7 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             0x66CCFF
     ));
 
-    // ==================== 方向/红石性质 ====================
-
-    /** 方向：使镶孔具有方向性，镶孔数为6时生效。 */
-    public static final InlayProperty DIRECTION = register(new InlayProperty(
-            AnvilCraftDogePlus.of("direction"),
-            "tooltip.anvilcraft_doge_plus.inlay_property.direction",
-            0x00CCFF)); // 天蓝色
+    // ==================== 红石性质 ====================
 
     /** 输出：该面输出红石信号。 */
     public static final InlayProperty OUTPUT = register(new InlayProperty(
@@ -132,6 +126,24 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             AnvilCraftDogePlus.of("or_gate"),
             "tooltip.anvilcraft_doge_plus.inlay_property.or_gate",
             0x44FF00)); // 黄绿色
+
+    /** 计数门：累计输入脉冲次数，达到设定次数时输出 1 tick 的 15。 */
+    public static final InlayProperty COUNTER_GATE = register(new InlayProperty(
+            AnvilCraftDogePlus.of("counter_gate"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.counter_gate",
+            0x00CCFF)); // 青色
+
+    /** 锁存门：收到输入则记录并输出该信号，再收到则清除。 */
+    public static final InlayProperty LATCH_GATE = register(new InlayProperty(
+            AnvilCraftDogePlus.of("latch_gate"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.latch_gate",
+            0xFF00CC)); // 品红
+
+    /** 延时门：收到输入起输出该信号，持续设定 tick 数后停止。 */
+    public static final InlayProperty DELAY_GATE = register(new InlayProperty(
+            AnvilCraftDogePlus.of("delay_gate"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.delay_gate",
+            0xCCCC00)); // 黄色
 
     /** 发电：放置后产生 512 kW 电力*/
     public static final InlayProperty GENERATOR = register(new InlayProperty(

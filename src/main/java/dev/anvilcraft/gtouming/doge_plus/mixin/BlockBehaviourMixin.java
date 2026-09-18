@@ -4,6 +4,7 @@ import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.*;
 import dev.anvilcraft.gtouming.doge_plus.logic.ILogicGate;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
+import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateStateData;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.util.AnvilMagnetUtil;
@@ -118,6 +119,9 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
         //非巨构中心坐标则返回
         if (!mainPos.equals(pos)) return;
         BlockInlayManager.remove(level, pos);
+        // 有状态门的运行状态随方块移除一并清除，避免位置被复用时残留。
+        LogicGateStateData stateData = LogicGateStateData.get(level);
+        if (stateData != null) stateData.clear(pos);
         PowerGridManager pManager = PowerGridManager.get(level);
         if (pManager == null) return;
 
@@ -194,5 +198,10 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
     @Override
     public LogicGateType doge_plus$getGateType(Level level, BlockPos pos, Direction outputDir) {
         return BlockInlayManager.get(level, pos).getGateType(outputDir);
+    }
+
+    @Override
+    public int doge_plus$getValue(Level level, BlockPos pos, Direction outputDir) {
+        return BlockInlayManager.get(level, pos).getValue(outputDir);
     }
 }

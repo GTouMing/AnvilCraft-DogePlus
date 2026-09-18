@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": {
+      "item": "anvilcraft_doge_plus:inlay_carrier_block"
+    },
+    "I": {
+      "item": "anvilcraft_doge_plus:doge_steel_ingot"
+    },
+    "T": {
+      "item": "anvilcraft:transcendium_ingot"
+    }
+  },
+  "pattern": [
+    " T ",
+    "ICI",
+    " T "
+  ],
+  "result": {
+    "count": 1,
+    "id": "anvilcraft_doge_plus:transcendium_inlay_carrier_block"
+  }
+}

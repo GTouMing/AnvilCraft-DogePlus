@@ -200,6 +200,7 @@ public class InlayCraftingTableBlockEntity extends BlockEntity {
     /**
      * 铁砧砸击处理：单槽基材匹配 {@link InlayCraftingRecipe} 后一次耗尽整叠，
      * 按份数在台体下方生成产物与空镶嵌基材（同镶嵌台整叠加工语义）。
+     * 配方产物可为多数量（如 n 个铁锭 → n 个磁铁锭），此时总产出再乘产物数量。
      *
      * @return 是否完成了一次批量合成
      */
@@ -212,15 +213,19 @@ public class InlayCraftingTableBlockEntity extends BlockEntity {
         InlayCraftingRecipe recipe = findRecipe(base);
         if (recipe == null) return false;
 
-        ItemStack result = recipe.derivesResult() ? deriveResult(base) : new ItemStack(recipe.getResultItem());
+        ItemStack result = recipe.derivesResult()
+                ? deriveResult(base)
+                : recipe.getResultItem(level.registryAccess());
         if (result.isEmpty()) return false;
 
-        int count = base.getCount();
+        int crafts = base.getCount();
+        // 配方产物可为多数量（如 n 个铁锭 → n 个磁铁锭），按份数放大总产出
+        int produced = crafts * result.getCount();
         ItemStack consumed = base.copy();
         slots[SLOT_BASE] = ItemStack.EMPTY;
 
-        dropItem(result, count);
-        dropItem(recipe.emptyBaseOf(consumed), count);
+        dropItem(result.copyWithCount(1), produced);
+        dropItem(recipe.emptyBaseOf(consumed), crafts);
 
         syncToClient();
         playEffects(level);

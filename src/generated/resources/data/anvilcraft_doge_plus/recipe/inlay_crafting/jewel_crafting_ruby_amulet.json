@@ -1,0 +1,14 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:ruby_amulet",
+  "curse_of_vanishing": true,
+  "inlays": [
+    {
+      "item": "anvilcraft:silver_ingot"
+    },
+    {
+      "item": "anvilcraft:ruby_block"
+    }
+  ],
+  "result": "anvilcraft:ruby_amulet"
+}

@@ -55,4 +55,12 @@ public class DogePlusConfig {
     @Comment("每个生肉提供的成长值。")
     @BoundedDiscrete(max = 128, min = 1)
     public int growthPerMeat = 1;
+
+    @Comment("计数门可设定的最大次数。")
+    @BoundedDiscrete(max = 64, min = 1)
+    public int counterMaxCount = 16;
+
+    @Comment("延时门可设定的最大 tick 数。")
+    @BoundedDiscrete(max = 200, min = 1)
+    public int delayMaxTicks = 20;
 }

@@ -1,0 +1,5 @@
+{
+  "type": "anvilcraft_doge_plus:inlay",
+  "base": "hollow_magnet_block",
+  "inlay": "iron_ingot"
+}

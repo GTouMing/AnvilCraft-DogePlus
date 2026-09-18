@@ -1,5 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.recipe.inlay_crafting;
 
+import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
@@ -7,6 +9,7 @@ import dev.anvilcraft.gtouming.doge_plus.init.ModRecipeTypes;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -19,6 +22,8 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
@@ -51,14 +56,20 @@ import java.util.Optional;
  * {@code #minecraft:trimmable_armor}）。{@code result} 可缺省：缺省表示产物为
  * 「模具基材自身 + 施加纹饰组件的镶孔装备」这类需在加工时按实际输入推导的结果。</p>
  *
- * @param base   基材物品 ID（充当模具的物品）
- * @param inlays 期望的镶孔内容集合（顺序无关）
- * @param result 合成产物物品 ID；为 {@code null} 时产物在加工时按基材/镶孔推导（如纹饰）
+ * <p>{@code curse_of_vanishing} 为真时产物附加 1 级消失诅咒（前置珠宝合成台的复制语义：
+ * 复制品带诅咒，模具不受影响）。{@code result} 支持原版多产物写法
+ * （{@code {"id": ..., "count": n}}），单产物时也可直接写物品 id。</p>
+ *
+ * @param base              基材物品 ID（充当模具的物品）
+ * @param inlays            期望的镶孔内容集合（顺序无关）
+ * @param result            合成产物（含数量）；为 {@code null} 时产物在加工时按基材/镶孔推导（如纹饰）
+ * @param curseOfVanishing  产物是否附加 1 级消失诅咒
  */
 public record InlayCraftingRecipe(
         ResourceLocation base,
         List<Ingredient> inlays,
-        @Nullable ResourceLocation result
+        @Nullable ItemStack result,
+        boolean curseOfVanishing
 ) implements Recipe<InlayCraftingRecipe.Input> {
 
     public InlayCraftingRecipe {
@@ -119,9 +130,9 @@ public record InlayCraftingRecipe(
         return BuiltInRegistries.ITEM.get(base);
     }
 
-    /** 解析产物物品；未声明产物（纹饰类）返回空气。 */
-    public Item getResultItem() {
-        return result == null ? Items.AIR : BuiltInRegistries.ITEM.get(result);
+    /** 配方声明的产物（含数量）；无固定产物（纹饰类）返回空。 */
+    public ItemStack getResultStack() {
+        return result == null ? ItemStack.EMPTY : result.copy();
     }
 
     /** 按镶孔条目重建用于匹配的物品（只比较物品本身，不携带药水/附魔等额外数据）。 */
@@ -144,8 +155,15 @@ public record InlayCraftingRecipe(
 
     @Override
     public ItemStack getResultItem(HolderLookup.Provider registries) {
-        Item item = getResultItem();
-        return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+        ItemStack stack = getResultStack();
+        if (stack.isEmpty()) return ItemStack.EMPTY;
+
+        if (curseOfVanishing) {
+            ItemEnchantments.Mutable enchantments = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+            enchantments.set(registries.holderOrThrow(Enchantments.VANISHING_CURSE), 1);
+            stack.set(DataComponents.ENCHANTMENTS, enchantments.toImmutable());
+        }
+        return stack;
     }
 
     @Override
@@ -187,12 +205,28 @@ public record InlayCraftingRecipe(
 
     public static class Serializer implements RecipeSerializer<InlayCraftingRecipe> {
 
+        /**
+         * 产物编解码：兼容 {@code "result": "minecraft:xxx"}（单产物简写）与
+         * {@code "result": {"id": "minecraft:xxx", "count": n}}（原版多产物写法）。
+         */
+        private static final Codec<ItemStack> RESULT_CODEC = Codec.either(
+                ResourceLocation.CODEC,
+                ItemStack.CODEC
+        ).xmap(
+                either -> either.map(id -> new ItemStack(BuiltInRegistries.ITEM.get(id)), stack -> stack),
+                stack -> stack.getCount() > 1
+                        ? Either.right(stack)
+                        : Either.left(BuiltInRegistries.ITEM.getKey(stack.getItem()))
+        );
+
         public static final MapCodec<InlayCraftingRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
                 ResourceLocation.CODEC.fieldOf("base").forGetter(InlayCraftingRecipe::base),
                 Ingredient.CODEC.listOf().fieldOf("inlays").forGetter(InlayCraftingRecipe::inlays),
-                ResourceLocation.CODEC.optionalFieldOf("result").forGetter(r -> Optional.ofNullable(r.result()))
-        ).apply(instance, (base, inlays, result) ->
-                new InlayCraftingRecipe(base, inlays, result.orElse(null))));
+                RESULT_CODEC.optionalFieldOf("result").forGetter(r -> Optional.ofNullable(r.result())),
+                Codec.BOOL.optionalFieldOf("curse_of_vanishing", false)
+                        .forGetter(InlayCraftingRecipe::curseOfVanishing)
+        ).apply(instance, (base, inlays, result, curseOfVanishing) ->
+                new InlayCraftingRecipe(base, inlays, result.orElse(null), curseOfVanishing)));
 
         public static final StreamCodec<RegistryFriendlyByteBuf, InlayCraftingRecipe> STREAM_CODEC =
                 StreamCodec.of(Serializer::toNetwork, Serializer::fromNetwork);
@@ -203,10 +237,9 @@ public record InlayCraftingRecipe(
             for (Ingredient ingredient : recipe.inlays()) {
                 Ingredient.CONTENTS_STREAM_CODEC.encode(buffer, ingredient);
             }
-            buffer.writeBoolean(recipe.result() != null);
-            if (recipe.result() != null) {
-                ResourceLocation.STREAM_CODEC.encode(buffer, recipe.result());
-            }
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(
+                    buffer, recipe.result() == null ? ItemStack.EMPTY : recipe.result());
+            buffer.writeBoolean(recipe.curseOfVanishing());
         }
 
         private static InlayCraftingRecipe fromNetwork(RegistryFriendlyByteBuf buffer) {
@@ -216,10 +249,9 @@ public record InlayCraftingRecipe(
             for (int i = 0; i < size; i++) {
                 inlays.add(Ingredient.CONTENTS_STREAM_CODEC.decode(buffer));
             }
-            ResourceLocation result = buffer.readBoolean()
-                    ? ResourceLocation.STREAM_CODEC.decode(buffer)
-                    : null;
-            return new InlayCraftingRecipe(base, inlays, result);
+            ItemStack result = ItemStack.OPTIONAL_STREAM_CODEC.decode(buffer);
+            boolean curseOfVanishing = buffer.readBoolean();
+            return new InlayCraftingRecipe(base, inlays, result.isEmpty() ? null : result, curseOfVanishing);
         }
 
         @Override

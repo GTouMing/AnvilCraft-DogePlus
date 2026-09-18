@@ -1,0 +1,22 @@
+{
+  "attributes": [
+    "delay_gate"
+  ],
+  "ingredient": [
+    {
+      "tag": "minecraft:wooden_pressure_plates"
+    },
+    {
+      "item": "minecraft:stone_pressure_plate"
+    },
+    {
+      "item": "minecraft:polished_blackstone_pressure_plate"
+    },
+    {
+      "item": "minecraft:light_weighted_pressure_plate"
+    },
+    {
+      "item": "minecraft:heavy_weighted_pressure_plate"
+    }
+  ]
+}

@@ -29,6 +29,6 @@ public interface SlidingRailMixin {
     ) {
         if (level.isClientSide()) return;
         BlockInlayManager.stashInlayForMove(level, toPushPos);
-        AnvilCraftDogePlus.LOGGER.debug(toPushPos.toShortString());
+        //AnvilCraftDogePlus.LOGGER.debug(toPushPos.toShortString());
     }
 }

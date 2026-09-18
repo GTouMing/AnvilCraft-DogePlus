@@ -2,8 +2,10 @@ package dev.anvilcraft.gtouming.doge_plus.init;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.GiantDogeAnvilBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCraftingTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayTableBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.TranscendiumInlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDispenserBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDropperBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.MagneticChuteDispenserBlockEntity;
@@ -40,6 +42,18 @@ public class ModBlockEntities {
     public static final BlockEntityEntry<GiantDogeAnvilBlockEntity> GIANT_DOGE_ANVIL = AnvilCraftDogePlus.REGISTRUM.blockEntity(
             "giant_doge_anvil",
             GiantDogeAnvilBlockEntity::new).validBlock(ModBlocks.GIANT_DOGE_ANVIL).register();
+
+    public static final BlockEntityEntry<InlayCarrierBlockEntity> INLAY_CARRIER =
+            AnvilCraftDogePlus.REGISTRUM.blockEntity(
+                    "inlay_carrier_block",
+                    InlayCarrierBlockEntity::new)
+                    .validBlock(ModBlocks.INLAY_CARRIER).register();
+
+    public static final BlockEntityEntry<TranscendiumInlayCarrierBlockEntity> TRANSCENDIUM_INLAY_CARRIER =
+            AnvilCraftDogePlus.REGISTRUM.blockEntity(
+                    "transcendium_inlay_carrier_block",
+                    TranscendiumInlayCarrierBlockEntity::new)
+                    .validBlock(ModBlocks.TRANSCENDIUM_INLAY_CARRIER).register();
 
     public static void register() {
     }

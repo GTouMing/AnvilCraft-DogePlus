@@ -1,18 +1,24 @@
 package dev.anvilcraft.gtouming.doge_plus.datagen.material;
 
 import com.google.gson.JsonArray;
-import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.AnvilcraftSmithingCompat;
+import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.AnvilcraftSmithingRecipes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
+import dev.dubhe.anvilcraft.init.block.ModBlocks;
 import dev.dubhe.anvilcraft.init.item.ModItemTags;
 import dev.dubhe.anvilcraft.init.item.ModItems;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static dev.anvilcraft.gtouming.doge_plus.datagen.material.MaterialBuilder.builder;
 
@@ -35,8 +41,9 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     public static final String AND_GATE = "and_gate";
     public static final String ATTACK = "attack";
     public static final String COLD_FORGED = "cold_forged";
+    public static final String COUNTER_GATE = "counter_gate";
     public static final String DEFENSE = "defense";
-    public static final String DIRECTION = "direction";
+    public static final String DELAY_GATE = "delay_gate";
     public static final String EFFECT = "effect";
     public static final String EFFECT1 = "effect1";
     public static final String EFFECT2 = "effect2";
@@ -46,6 +53,7 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     public static final String FIRE_PROOF = "fire_proof";
     public static final String GENERATOR = "generator";
     public static final String INPUT = "input";
+    public static final String LATCH_GATE = "latch_gate";
     public static final String LIFE = "life";
     public static final String MAGNETIC = "magnetic";
     public static final String NOT_GATE = "not_gate";
@@ -65,6 +73,9 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     public static final String DIAMOND_CHESTPLATE = "diamond_chestplate";
     public static final String DIAMOND_LEGGINGS = "diamond_leggings";
     public static final String DIAMOND_BOOTS = "diamond_boots";
+
+    // ===== 空心磁铁块镶合（无属性材料）=====
+    public static final String IRON_INGOT = "iron_ingot";
 
     /** 下界合金升级可镶入模板的全部材料文件键（锻造材料 + 可被升级的钻石装备）。 */
     public static final List<String> NETHERITE_UPGRADE_INLAYS = List.of(
@@ -94,9 +105,10 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     /** 纹饰镶入模板的材料文件键（装备 + 纹饰材料）。 */
     public static final List<String> TRIM_INLAYS = List.of(TRIM_ARMOR, TRIM_MATERIAL);
 
-    public static final List<InlayMaterialData> ALL = new ArrayList<>();
+    /** 本 mod 内置镶嵌材料（含属性）。 */
+    private static final List<InlayMaterialData> MANUAL = new ArrayList<>();
     static {
-        ALL.addAll(List.of(
+        MANUAL.addAll(List.of(
             builder().name(AND_GATE)
                     .item(Items.REPEATER)
                     .attributes(InlayProperty.AND_GATE).buildInlay(),
@@ -106,12 +118,19 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
             builder().name(COLD_FORGED)
                     .item(ModItems.FROST_METAL_INGOT)
                     .attributes(InlayProperty.COLD_FORGED).buildInlay(),
+            builder().name(COUNTER_GATE)
+                    .tag(ItemTags.BUTTONS)
+                    .attributes(InlayProperty.COUNTER_GATE).buildInlay(),
+            builder().name(DELAY_GATE)
+                    .tag(ItemTags.WOODEN_PRESSURE_PLATES)
+                    .item(Items.STONE_PRESSURE_PLATE)
+                    .item(Items.POLISHED_BLACKSTONE_PRESSURE_PLATE)
+                    .item(Items.LIGHT_WEIGHTED_PRESSURE_PLATE)
+                    .item(Items.HEAVY_WEIGHTED_PRESSURE_PLATE)
+                    .attributes(InlayProperty.DELAY_GATE).buildInlay(),
             builder().name(DEFENSE)
                     .item(Items.NETHERITE_INGOT)
                     .attributes(InlayProperty.DEFENSE).buildInlay(),
-            builder().name(DIRECTION)
-                    .item(ModItems.MULTIPHASE_MATTER)
-                    .attributes(InlayProperty.DIRECTION).buildInlay(),
             builder().name(EMBER_METAL_INGOT)
                     .item(ModItems.EMBER_METAL_INGOT)
                     .attributes(InlayProperty.FIRE_PROOF, InlayProperty.HIGH_TEMP).buildInlay(),
@@ -129,8 +148,11 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
                     .item(ModItems.SUPER_CAPACITOR)
                     .attributes(InlayProperty.GENERATOR).buildInlay(),
             builder().name(INPUT)
-                    .item(Items.OBSERVER)
+                    .item(ModBlocks.REDSTONE_WIRE)
                     .attributes(InlayProperty.INPUT).buildInlay(),
+            builder().name(LATCH_GATE)
+                    .item(Items.LEVER)
+                    .attributes(InlayProperty.LATCH_GATE).buildInlay(),
             builder().name(LIFE)
                     .item(ModItems.ROYAL_STEEL_INGOT)
                     .attributes(InlayProperty.LIFE).buildInlay(),
@@ -168,11 +190,46 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
             builder().name(DIAMOND_LEGGINGS).item(Items.DIAMOND_LEGGINGS).buildInlay(),
             builder().name(DIAMOND_BOOTS).item(Items.DIAMOND_BOOTS).buildInlay(),
 
+            // ===== 空心磁铁块镶合：铁锭（无属性材料）=====
+            builder().name(IRON_INGOT).item(Items.IRON_INGOT).buildInlay(),
+
             // ===== 原版盔甲纹饰兼容：按标签匹配的无属性材料 =====
             builder().name(TRIM_ARMOR).tag(TRIM_ARMOR_TAG).buildInlay(),
             builder().name(TRIM_MATERIAL).tag(TRIM_MATERIAL_TAG).buildInlay()
         ));
-        // ===== 前置（AnvilCraft）锻造兼容：模板镶入成分 =====
-        ALL.addAll(AnvilcraftSmithingCompat.inlayMaterials());
+    }
+
+    /**
+     * 全部镶嵌材料定义：内置 + 前置（AnvilCraft）锻造成分 + 前置珠宝复制配方的材料。
+     *
+     * <p>成分由 {@link AnvilcraftSmithingRecipes.Entry} 派生；已内置定义（含属性）的同名材料
+     * 不重复生成，避免无属性定义覆盖内置属性。珠宝复制材料同样只需被镶入参与合成、
+     * 不需要赋予任何性质，故写出 {@code "attributes": []}。</p>
+     *
+     * @param smithing 前置锻造配方
+     * @param jewel    前置珠宝复制配方（材料数已由读取器筛选）
+     */
+    public static List<InlayMaterialData> all(
+            List<AnvilcraftSmithingRecipes.Entry> smithing,
+            List<AnvilcraftSmithingRecipes.Entry> jewel) {
+        List<InlayMaterialData> list = new ArrayList<>(MANUAL);
+        Set<String> defined = new HashSet<>();
+        for (InlayMaterialData material : MANUAL) {
+            defined.add(material.name());
+        }
+        Map<String, AnvilcraftSmithingRecipes.Spec> derived = new LinkedHashMap<>();
+        List<AnvilcraftSmithingRecipes.Entry> entries = new ArrayList<>(smithing);
+        entries.addAll(jewel);
+        for (AnvilcraftSmithingRecipes.Entry entry : entries) {
+            for (AnvilcraftSmithingRecipes.Spec spec : entry.ingredients()) {
+                if (!defined.contains(spec.name())) derived.putIfAbsent(spec.name(), spec);
+            }
+        }
+        for (AnvilcraftSmithingRecipes.Spec spec : derived.values()) {
+            list.add(spec.item() != null
+                    ? builder().name(spec.name()).item(spec.item()).buildInlay()
+                    : builder().name(spec.name()).tag(spec.tag()).buildInlay());
+        }
+        return list;
     }
 }
