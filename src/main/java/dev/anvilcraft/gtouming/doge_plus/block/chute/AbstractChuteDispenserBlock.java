@@ -12,6 +12,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,7 +27,7 @@ public abstract class AbstractChuteDispenserBlock extends AbstractChuteBlock {
     public AbstractChuteDispenserBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(facingProperty(), Direction.DOWN)
+                .setValue(facingProperty(), Direction.NORTH)
                 .setValue(TRIGGERED, false));
     }
 
@@ -58,6 +59,10 @@ public abstract class AbstractChuteDispenserBlock extends AbstractChuteBlock {
 
         IItemHandler itemHandler = ((AbstractChuteBlockEntity) be).getItemHandler();
         Direction facing = state.getValue(facingProperty());
+        // 原版与 AnvilCraft 的发射器行为都会从 BlockSource 的状态中读取六向 DispenserBlock.FACING，
+        // 本方块的非磁力变体使用五向 FACING_HOPPER，直接传入自身状态会抛 IllegalArgumentException，
+        // 因此这里用真正的发射器状态承载朝向。
+        BlockState dispenserState = Blocks.DISPENSER.defaultBlockState().setValue(DispenserBlock.FACING, facing);
         boolean anyDispensed = false;
 
         for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
@@ -69,7 +74,7 @@ public abstract class AbstractChuteDispenserBlock extends AbstractChuteBlock {
 
             DispenseItemBehavior behavior = DispenserBlock.DISPENSER_REGISTRY.get(stack.getItem());
             if (behavior != null) {
-                BlockSource blockSource = new BlockSource(level, pos, state, null);
+                BlockSource blockSource = new BlockSource(level, pos, dispenserState, null);
                 ItemStack result = behavior.dispense(blockSource, stack);
                 if (!result.isEmpty()) {
                     result = itemHandler.insertItem(slot, result, false);

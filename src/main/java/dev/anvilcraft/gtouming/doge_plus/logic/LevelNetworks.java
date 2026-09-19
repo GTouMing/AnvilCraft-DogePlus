@@ -329,6 +329,15 @@ final class LevelNetworks {
                 }
             }
         } finally {
+            // 未能在预算内收敛的网络：本轮持续翻转的非门记一次振荡事件（真正的即时反馈环）。
+            // 收敛前的中间翻转已在 countToggledNotGates 中排除，故这里只剩持续振荡。
+            long now = level.getGameTime();
+            for (Network network : dirtySignals) {
+                for (LongIterator it = network.churningNotGates.iterator(); it.hasNext();) {
+                    recordNotGateToggle(it.nextLong(), now);
+                }
+                network.churningNotGates.clear();
+            }
             processingUpdates = false;
             destroyed.clear();
         }
@@ -517,8 +526,8 @@ final class LevelNetworks {
             network.baseline = snapshotOutputs(network);
             resetOutputs(network);
             network.needsReset = false;
-            // 标记紧随其后的一次结算为「复位首轮」：该轮非门的 0→真实值 是清零造成的，不能算翻转。
-            network.postReset = true;
+            // 新一轮结算开始，清空上一轮遗留的未收敛候选。
+            network.churningNotGates.clear();
         }
 
         boolean passChanged = settlePass(network);
@@ -530,7 +539,13 @@ final class LevelNetworks {
             return;
         }
 
-        // 已收敛：刷新载体外观（powered 模型）。即使门输出未变，输入门「收到信号」也可能变化。
+        // 已收敛：此刻的输出才是「真实输出」，据此做振荡判定。
+        // 结算途中「清零 → 逐跳恢复」的中间值一律不计入：否则两个非门顺序相接时，
+        // 下游非门每轮结算都会经历 0→15→0 的假翻转，累计到阈值被误破坏。
+        countToggledNotGates(network);
+        network.churningNotGates.clear();
+
+        // 刷新载体外观（powered 模型）。即使门输出未变，输入门「收到信号」也可能变化。
         refreshCarrierVisuals(network);
 
         // 只有最终输出相对结算前真正变化时才同步 / 通知。
@@ -570,10 +585,6 @@ final class LevelNetworks {
             // 获取该门所有方向的输入
             Map<Direction, Integer> inputMap = inputs.getOrDefault(pos, Map.of());
 
-            // 复位首轮里输出刚被清零，须用复位前的真实输出判断是否翻转，否则 0→真实值 会被误判。
-            int[] baseline = network.postReset && network.baseline != null
-                    ? network.baseline.get(pos) : null;
-
             // 计算各方向输出
             for (Direction outputDir : Direction.values()) {
                 LogicGateType gateType = gate.doge_plus$getGateType(level, blockPos, outputDir);
@@ -585,34 +596,62 @@ final class LevelNetworks {
                 if (oldSignal != newSignal) {
                     node.setOutput(outputDir, newSignal);
                     changed = true;
-                    // 振荡检测：非门输出翻转计数。
-                    // 计数窗口为「连续游戏刻」而非单次批次：弱信号环路（红石粉即时反馈）
-                    // 在同一刻内翻转多次累计；强信号环路（中继器延迟反馈）每刻翻转一次，
-                    // 通过相邻刻连续翻转跨刻累计。翻转中断（间隔 >1 刻）则重置。
-                    if (gateType == LogicGateType.NOT_GATE && !destroyed.contains(pos)) {
-                        // 必须与上一次「真实输出」比较：复位首轮用复位前的值，其余轮次用上一轮计算值。
-                        // 否则每次红石粉 / 导线刷新都会因「清零再恢复」累积一次假翻转，最终误破坏非门。
-                        int previous = baseline != null ? baseline[outputDir.ordinal()] : oldSignal;
-                        if (previous != newSignal) {
-                            long now = level.getGameTime();
-                            long last = toggleTicks.get(pos);
-                            if (now - last > 1) {
-                                toggleCounts.put(pos, 1);
-                            } else {
-                                toggleCounts.addTo(pos, 1);
-                            }
-                            toggleTicks.put(pos, now);
-                            if (toggleCounts.get(pos) >= OSCILLATION_LIMIT) {
-                                destroyed.add(pos);
-                                breakOscillatingGate(pos);
-                            }
-                        }
+                    // 结算途中的翻转只记为「未收敛」候选，不代表真实输出变化：
+                    // 只有网络最终无法收敛（真正的即时反馈环）才会据其判定振荡（见 runUpdates）。
+                    if (gateType == LogicGateType.NOT_GATE) {
+                        network.churningNotGates.add(pos);
                     }
                 }
             }
         }
-        network.postReset = false;
         return changed;
+    }
+
+    /**
+     * 已收敛的一轮结算结束后，按「真实输出」相对结算前的翻转对非门计数。
+     *
+     * <p>一次结算只记一次翻转（同一方块多面非门也只记一次），
+     * 连续游戏刻内累计到 {@link #OSCILLATION_LIMIT} 才判定为振荡。</p>
+     */
+    private void countToggledNotGates(Network network) {
+        if (network.baseline == null) return;
+        long now = level.getGameTime();
+        for (Long2ObjectMap.Entry<GateNode> entry : network.nodes.long2ObjectEntrySet()) {
+            long pos = entry.getLongKey();
+            if (destroyed.contains(pos)) continue;
+            int[] before = network.baseline.get(pos);
+            if (before == null) continue;
+            GateNode node = entry.getValue();
+            BlockPos blockPos = BlockPos.of(pos);
+            BlockState state = level.getBlockState(blockPos);
+            if (!(state.getBlock() instanceof ILogicGate gate)) continue;
+            for (Direction dir : Direction.values()) {
+                if (gate.doge_plus$getGateType(level, blockPos, dir) != LogicGateType.NOT_GATE) continue;
+                if (node.getOutput(dir) != before[dir.ordinal()]) {
+                    recordNotGateToggle(pos, now);
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * 记一次非门翻转；连续游戏刻内累计到 {@link #OSCILLATION_LIMIT} 即判定振荡并破坏方块。
+     *
+     * <p>翻转中断（间隔超过一个游戏刻）会重新计数，因此只有持续振荡才会触发破坏。</p>
+     */
+    private void recordNotGateToggle(long pos, long now) {
+        if (destroyed.contains(pos)) return;
+        if (now - toggleTicks.get(pos) > 1) {
+            toggleCounts.put(pos, 1);
+        } else {
+            toggleCounts.addTo(pos, 1);
+        }
+        toggleTicks.put(pos, now);
+        if (toggleCounts.get(pos) >= OSCILLATION_LIMIT) {
+            destroyed.add(pos);
+            breakOscillatingGate(pos);
+        }
     }
 
     /** 快照网络内每个节点六个方向的输出。 */

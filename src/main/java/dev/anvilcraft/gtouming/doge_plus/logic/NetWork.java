@@ -36,8 +36,13 @@ final class Network {
     /** 本轮结算开始前的输出快照（下标同 {@link Direction#ordinal()}），用于判断收敛后是否真的变化。 */
     Long2ObjectOpenHashMap<int[]> baseline;
 
-    /** 紧接着执行的 settlePass 是否为复位后的首轮：此时输出被清零，不能用 0→真实值 判定非门翻转。 */
-    boolean postReset;
+    /**
+     * 本轮结算（可能跨多轮 / 跨游戏刻）内输出发生过变化的非门位置。
+     *
+     * <p>结算途中的翻转只是「未收敛」的候选：组合逻辑从全 0 迭代求不动点时中间值不代表真实输出。
+     * 只有网络最终仍未收敛（即真正的即时反馈环）才会据此判定振荡。</p>
+     */
+    final LongOpenHashSet churningNotGates = new LongOpenHashSet();
 
     Network(Long2ObjectLinkedOpenHashMap<GateNode> nodes, boolean overflow, boolean hasStatefulGates) {
         this.nodes = nodes;

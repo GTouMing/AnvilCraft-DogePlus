@@ -68,7 +68,7 @@ public class ModRecipeHandler {
                 .save(provider, AnvilCraftDogePlus.of("crafting_shaped/inlay_table"));
 
         // ===== 两种镶嵌载体：4 红石导线围 1 Doge 钢锭 =====
-        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModBlocks.INLAY_CARRIER.get())
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModBlocks.INLAY_CARRIER.get(), 4)
                 .pattern(" R ")
                 .pattern("RIR")
                 .pattern(" R ")
