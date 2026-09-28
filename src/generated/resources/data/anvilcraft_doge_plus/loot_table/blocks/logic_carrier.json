@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "anvilcraft_doge_plus:logic_carrier"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "anvilcraft_doge_plus:blocks/logic_carrier"
+}

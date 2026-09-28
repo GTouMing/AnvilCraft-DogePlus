@@ -152,6 +152,20 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             0xFF8800
     ));
 
+    // ==================== 物品搬运属性 ====================
+
+    /** 存入：将物品存入面朝的容器。 */
+    public static final InlayProperty INSERT = register(new InlayProperty(
+            AnvilCraftDogePlus.of("insert"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.insert",
+            0x55DD99)); // 绿色
+
+    /** 取出：从面朝的容器取出物品。 */
+    public static final InlayProperty EXTRACT = register(new InlayProperty(
+            AnvilCraftDogePlus.of("extract"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.extract",
+            0xDD9955)); // 橙褐色
+
     // ==================== 数据 ====================
 
     /** tooltip 描述行组件（带颜色）。 */

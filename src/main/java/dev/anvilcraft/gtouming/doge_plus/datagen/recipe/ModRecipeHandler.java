@@ -67,63 +67,38 @@ public class ModRecipeHandler {
                 .unlockedBy("has_doge_steel_ingot", RegistrumRecipeProvider.has(ModItems.DOGE_STEEL_INGOT.get()))
                 .save(provider, AnvilCraftDogePlus.of("crafting_shaped/inlay_table"));
 
-        // ===== 两种镶嵌载体：4 红石导线围 1 Doge 钢锭 =====
+        // ===== 镶嵌载体：5 Doge 钢锭 =====
         ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModBlocks.INLAY_CARRIER.get(), 4)
-                .pattern(" R ")
-                .pattern("RIR")
-                .pattern(" R ")
-                .define('R', anvilcraftItem("redstone_wire"))
+                .pattern(" I ")
+                .pattern("III")
+                .pattern(" I ")
                 .define('I', ModItems.DOGE_STEEL_INGOT.get())
                 .unlockedBy("has_doge_steel_ingot", RegistrumRecipeProvider.has(ModItems.DOGE_STEEL_INGOT.get()))
                 .save(provider, AnvilCraftDogePlus.of("crafting_shaped/inlay_carrier_block"));
-
-        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModBlocks.TRANSCENDIUM_INLAY_CARRIER.get())
-                .pattern(" T ")
-                .pattern("ICI")
-                .pattern(" T ")
-                .define('T', anvilcraftItem("transcendium_ingot"))
-                .define('I', ModItems.DOGE_STEEL_INGOT.get())
-                .define('C', ModBlocks.INLAY_CARRIER.get())
-                .unlockedBy("has_inlay_carrier_block", RegistrumRecipeProvider.has(ModBlocks.INLAY_CARRIER.get()))
-                .save(provider, AnvilCraftDogePlus.of("crafting_shaped/transcendium_inlay_carrier_block"));
     }
 
     // ==================== 无序合成 ====================
 
     private static void shapelessRecipes(RegistrumRecipeProvider provider) {
         // ===== 镶嵌台 / 镶合台：1:1 无序互转 =====
-        ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModBlocks.INLAY_CRAFTING_TABLE.get())
-                .requires(ModBlocks.INLAY_TABLE.get())
-                .unlockedBy("has_inlay_table", RegistrumRecipeProvider.has(ModBlocks.INLAY_TABLE.get()))
-                .save(provider, AnvilCraftDogePlus.of("crafting_shapeless/inlay_crafting_table_from_inlay_table"));
+        shapeless(provider, "inlay_crafting_table_from_inlay_table", List.of(ModBlocks.INLAY_TABLE.get()), ModBlocks.INLAY_CRAFTING_TABLE.get(), 1);
+        shapeless(provider, "inlay_table_from_inlay_crafting_table", List.of(ModBlocks.INLAY_CRAFTING_TABLE.get()), ModBlocks.INLAY_TABLE.get(), 1);
 
-        ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModBlocks.INLAY_TABLE.get())
-                .requires(ModBlocks.INLAY_CRAFTING_TABLE.get())
-                .unlockedBy("has_inlay_crafting_table", RegistrumRecipeProvider.has(ModBlocks.INLAY_CRAFTING_TABLE.get()))
-                .save(provider, AnvilCraftDogePlus.of("crafting_shapeless/inlay_table_from_inlay_crafting_table"));
+        shapeless(provider, "chute_dispenser", List.of(anvilcraftItem("chute"), Items.DISPENSER), ModBlocks.CHUTE_DISPENSER.get(), 2);
+        shapeless(provider, "chute_dropper", List.of(anvilcraftItem("chute"), Items.DROPPER), ModBlocks.CHUTE_DROPPER.get(), 2);
+        shapeless(provider, "magnetic_chute_dispenser", List.of(anvilcraftItem("magnetic_chute"), Items.DISPENSER), ModBlocks.MAGNETIC_CHUTE_DISPENSER.get(), 2);
+        shapeless(provider, "magnetic_chute_dropper", List.of(anvilcraftItem("magnetic_chute"), Items.DROPPER), ModBlocks.MAGNETIC_CHUTE_DROPPER.get(), 2);
 
-        shapeless(provider, "chute_dispenser", List.of(anvilcraftItem("chute"), Items.DISPENSER), ModBlocks.CHUTE_DISPENSER.get());
-        shapeless(provider, "chute_dropper", List.of(anvilcraftItem("chute"), Items.DROPPER), ModBlocks.CHUTE_DROPPER.get());
-        shapeless(provider, "magnetic_chute_dispenser", List.of(anvilcraftItem("magnetic_chute"), Items.DISPENSER), ModBlocks.MAGNETIC_CHUTE_DISPENSER.get());
-        shapeless(provider, "magnetic_chute_dropper", List.of(anvilcraftItem("magnetic_chute"), Items.DROPPER), ModBlocks.MAGNETIC_CHUTE_DROPPER.get());
-
-        ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.DOGE_STEEL_INGOT.get(), 9)
-                .requires(ModBlocks.DOGE_STEEL_BLOCK.get())
-                .unlockedBy("has_doge_steel_block", RegistrumRecipeProvider.has(ModBlocks.DOGE_STEEL_BLOCK.get()))
-                .save(provider, AnvilCraftDogePlus.of("crafting_shapeless/doge_steel_ingot"));
-
-        ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.MOBILE_SILENCER.get())
-                .requires(anvilcraftItem("active_silencer"))
-                .unlockedBy("has_active_silencer", RegistrumRecipeProvider.has(anvilcraftItem("active_silencer")))
-                .save(provider, AnvilCraftDogePlus.of("crafting_shapeless/mobile_silencer"));
+        shapeless(provider, "doge_steel_ingot", List.of(ModBlocks.DOGE_STEEL_BLOCK.get()), ModItems.DOGE_STEEL_INGOT.get(), 9);
+        shapeless(provider, "mobile_silencer", List.of(anvilcraftItem("active_silencer")), ModItems.MOBILE_SILENCER.get(), 1);
     }
 
     private static void shapeless(
             RegistrumRecipeProvider provider,
             String name,
             List<ItemLike> inputs,
-            ItemLike result) {
-        var builder = ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, result);
+            ItemLike result, int count) {
+        var builder = ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, result, count);
         for (ItemLike input : inputs) {
             builder.requires(input);
         }

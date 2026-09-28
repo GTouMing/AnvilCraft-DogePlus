@@ -1,11 +1,9 @@
 package dev.anvilcraft.gtouming.doge_plus.init;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.GiantDogeAnvilBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCraftingTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayTableBlockEntity;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.TranscendiumInlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDispenserBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.ChuteDropperBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.chute.MagneticChuteDispenserBlockEntity;
@@ -39,21 +37,21 @@ public class ModBlockEntities {
             AnvilCraftDogePlus.REGISTRUM.blockEntity(
                     "inlay_crafting_table",
                     InlayCraftingTableBlockEntity::new).validBlock(ModBlocks.INLAY_CRAFTING_TABLE).register();
-    public static final BlockEntityEntry<GiantDogeAnvilBlockEntity> GIANT_DOGE_ANVIL = AnvilCraftDogePlus.REGISTRUM.blockEntity(
-            "giant_doge_anvil",
-            GiantDogeAnvilBlockEntity::new).validBlock(ModBlocks.GIANT_DOGE_ANVIL).register();
 
     public static final BlockEntityEntry<InlayCarrierBlockEntity> INLAY_CARRIER =
             AnvilCraftDogePlus.REGISTRUM.blockEntity(
                     "inlay_carrier_block",
                     InlayCarrierBlockEntity::new)
-                    .validBlock(ModBlocks.INLAY_CARRIER).register();
+                    .validBlock(ModBlocks.INLAY_CARRIER)
+                    // 管道载体同样只需要「各面信号强度与运行时显示值」这类数据，复用同一种方块实体。
+                    .validBlock(ModBlocks.PIPE_CARRIER).register();
 
-    public static final BlockEntityEntry<TranscendiumInlayCarrierBlockEntity> TRANSCENDIUM_INLAY_CARRIER =
+    /** 逻辑载体：复用载体的方块实体（只存各面信号强度与运行时显示值）。 */
+    public static final BlockEntityEntry<InlayCarrierBlockEntity> LOGIC_CARRIER =
             AnvilCraftDogePlus.REGISTRUM.blockEntity(
-                    "transcendium_inlay_carrier_block",
-                    TranscendiumInlayCarrierBlockEntity::new)
-                    .validBlock(ModBlocks.TRANSCENDIUM_INLAY_CARRIER).register();
+                    "logic_carrier",
+                    InlayCarrierBlockEntity::new)
+                    .validBlock(ModBlocks.LOGIC_CARRIER).register();
 
     public static void register() {
     }

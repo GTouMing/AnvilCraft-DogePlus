@@ -1,0 +1,35 @@
+{
+	"format_version": "1.9.0",
+	"credit": "Made with Blockbench",
+	"parent": "minecraft:block/block",
+	"render_type": "minecraft:cutout",
+	"textures": {
+		"particle": "anvilcraft_doge_plus:block/logic_carrier_unpowered",
+		"lc": "anvilcraft_doge_plus:block/logic_carrier_unpowered"
+	},
+	"elements": [
+		{
+			"name": "+",
+			"from": [6.5, 10, 5],
+			"to": [9.5, 11, 6],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 8]},
+			"faces": {
+				"north": {"uv": [0, 5, 3, 6], "texture": "#lc"},
+				"east": {"uv": [3, 5, 4, 6], "texture": "#lc"},
+				"south": {"uv": [0, 5, 3, 6], "texture": "#lc"},
+				"west": {"uv": [3, 5, 4, 6], "texture": "#lc"},
+				"up": {"uv": [0, 5, 3, 6], "texture": "#lc"},
+				"down": {"uv": [0, 5, 3, 6], "texture": "#lc"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "pipe-edge-un",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0]
+		}
+	]
+}

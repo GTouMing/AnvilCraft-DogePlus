@@ -33,6 +33,7 @@ public class AnvilCraftDogePlus {
         ModBlockEntities.register();
         ModMenuTypes.register();
         ModRecipeTypes.register(modEventBus);
+        ModIngredients.register(modEventBus);
 
         // datagen：注册各类数据生成回调（非 datagen 环境下为空操作）
         ModDataGen.init();

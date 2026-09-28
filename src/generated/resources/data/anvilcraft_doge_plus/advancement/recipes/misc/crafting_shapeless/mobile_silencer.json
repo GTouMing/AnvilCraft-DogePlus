@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_active_silencer": {
+    "has_mobile_silencer": {
       "conditions": {
         "items": [
           {
@@ -21,7 +21,7 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_active_silencer"
+      "has_mobile_silencer"
     ]
   ],
   "rewards": {

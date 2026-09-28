@@ -1,0 +1,12 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:confinement_chamber",
+  "inlays": [
+    {
+      "item": "anvilcraft:charged_neutronium_ingot"
+    }
+  ],
+  "results": [
+    "anvilcraft:confined_neutronium_ingot"
+  ]
+}

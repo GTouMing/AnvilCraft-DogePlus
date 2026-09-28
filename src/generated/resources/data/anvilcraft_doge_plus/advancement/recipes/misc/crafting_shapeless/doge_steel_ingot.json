@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_doge_steel_block": {
+    "has_doge_steel_ingot": {
       "conditions": {
         "items": [
           {
@@ -21,7 +21,7 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_doge_steel_block"
+      "has_doge_steel_ingot"
     ]
   ],
   "rewards": {

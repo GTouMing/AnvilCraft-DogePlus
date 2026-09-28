@@ -1,0 +1,20 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "minecraft:trial_key",
+  "inlays": [
+    {
+      "item": "minecraft:polished_tuff"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    }
+  ],
+  "kind": "copying",
+  "results": [
+    {
+      "curse": true,
+      "item": "minecraft:trial_key"
+    },
+    "minecraft:trial_key"
+  ]
+}

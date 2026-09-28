@@ -1,0 +1,20 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:two_to_one_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:weatherproof_core"
+    },
+    {
+      "item": "anvilcraft:ionocraft_backpack"
+    },
+    {
+      "item": "minecraft:netherite_chestplate"
+    }
+  ],
+  "kind": "smithing",
+  "results": [
+    "anvilcraft:weatherproof_spacesuit_chestplate",
+    "anvilcraft:two_to_one_smithing_template"
+  ]
+}

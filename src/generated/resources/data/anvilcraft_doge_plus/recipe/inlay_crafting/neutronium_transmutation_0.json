@@ -1,0 +1,19 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:overheated_ember_metal_block",
+  "inlays": [
+    {
+      "enchants_count": {
+        "max": 0,
+        "min": 0
+      },
+      "item": "anvilcraft:charged_neutronium_ingot"
+    }
+  ],
+  "results": [
+    {
+      "count": 4,
+      "item": "anvilcraft:transcendium_ingot"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_inlay_table": {
+    "has_inlay_crafting_table_from_inlay_table": {
       "conditions": {
         "items": [
           {
@@ -21,7 +21,7 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_inlay_table"
+      "has_inlay_crafting_table_from_inlay_table"
     ]
   ],
   "rewards": {

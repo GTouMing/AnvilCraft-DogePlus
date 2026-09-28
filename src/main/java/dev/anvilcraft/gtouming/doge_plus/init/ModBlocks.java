@@ -1,11 +1,13 @@
 package dev.anvilcraft.gtouming.doge_plus.init;
 
+import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.DogeAnvil;
 import dev.anvilcraft.gtouming.doge_plus.block.GiantDogeAnvil;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCraftingTableBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayTableBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.TranscendiumInlayCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.PipeCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.ChuteDispenserBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.ChuteDropperBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.MagneticChuteDispenserBlock;
@@ -158,22 +160,54 @@ public class ModBlocks {
     public static final BlockEntry<InlayCarrierBlock> INLAY_CARRIER =
             REGISTRUM.block("inlay_carrier_block", InlayCarrierBlock::new)
                     .initialProperties(() -> Blocks.IRON_BLOCK)
-                    .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
+                    .properties(p -> p.isValidSpawn(Blocks::never))
                     .blockstate(InlayCarrierBlockStateGenerator::generate)
                     .loot(ModBlocks::dropSelfLoot)
+                    // 方块状态是 multipart，Registrum 取不到「默认变体的模型」，只能自己指定物品模型。
+                    // 部件模型是家族目录，不再按 id 推导，三个载体都得显式给。
                     .item()
+                    .model((context, provider) -> provider.withExistingParent(
+                            context.getName(), AnvilCraftDogePlus.of("block/carrier/inlay/item"))
+                            .renderType("minecraft:translucent"))
                     .build()
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
                     .tag(ModBlockTags.HAMMER_REMOVABLE)
                     .register();
 
-    public static final BlockEntry<TranscendiumInlayCarrierBlock> TRANSCENDIUM_INLAY_CARRIER =
-            REGISTRUM.block("transcendium_inlay_carrier_block", TranscendiumInlayCarrierBlock::new)
+    public static final BlockEntry<LogicCarrierBlock> LOGIC_CARRIER =
+            REGISTRUM.block("logic_carrier", LogicCarrierBlock::new)
                     .initialProperties(() -> Blocks.IRON_BLOCK)
-                    .properties(p -> p.noOcclusion().isValidSpawn(Blocks::never))
-                    .blockstate(DataGenUtil::noExtraModelOrState)
-                    .loot(ModBlocks::copyComponentsLoot)
+                    .properties(p -> p.isValidSpawn(Blocks::never))
+                    .blockstate(InlayCarrierBlockStateGenerator::generate)
+                    .loot(ModBlocks::dropSelfLoot)
                     .item()
+                    .model((context, provider) -> provider.withExistingParent(
+                            context.getName(), AnvilCraftDogePlus.of("block/carrier/logic/item"))
+                        .renderType("minecraft:translucent"))
+                    .build()
+                    .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                    .tag(ModBlockTags.HAMMER_REMOVABLE)
+                    .register();
+
+    public static final BlockEntry<PipeCarrierBlock> PIPE_CARRIER =
+            REGISTRUM.block("pipe_carrier", PipeCarrierBlock::new)
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .properties(p -> p.isValidSpawn(Blocks::never))
+                    // 管道面不参与红石、永远不会通电：没有通电变体（相应模型名传 null）；中心体也不是
+                    // hub 那一支（恒渲染、由未编程面逐面画），贯通模型与贯通通电模型同样传 null。
+                    .blockstate((context, provider) -> InlayCarrierBlockStateGenerator.generate(
+                            context, provider,
+                            "carrier/pipe/core", null, null, null,
+                            "carrier/pipe/wire", null,
+                            "carrier/pipe/edge", null, "carrier/pipe/edge_vertical", null,
+                            "carrier/pipe/corner"))
+                    .loot(ModBlocks::dropSelfLoot)
+                    .item()
+                    .model((context, provider) -> provider.withExistingParent(
+                                    context.getName(), AnvilCraftDogePlus.of("block/carrier/pipe/item"))
+                            // 方块物品的渲染层不看部件模型的 render_type（默认 solid），
+                            // 必须写在物品模型自己身上才会走半透明通道
+                            .renderType("minecraft:translucent"))
                     .build()
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
                     .tag(ModBlockTags.HAMMER_REMOVABLE)

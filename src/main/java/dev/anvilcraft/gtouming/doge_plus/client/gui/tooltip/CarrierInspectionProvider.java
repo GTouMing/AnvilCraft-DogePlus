@@ -2,7 +2,6 @@ package dev.anvilcraft.gtouming.doge_plus.client.gui.tooltip;
 
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.TranscendiumInlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayInspection;
 import dev.dubhe.anvilcraft.api.tooltip.providers.ITooltipProvider;
 import net.minecraft.client.Minecraft;
@@ -25,8 +24,8 @@ import java.util.List;
  * <p>前置的方块实体通道只传入方块实体，拿不到瞄准面；这里自行读取客户端准星命中面，
  * 再交给 {@link InlayInspection} 生成文本，以优先级 0 覆盖前置的兜底 provider。</p>
  *
- * <p>普通载体按命中的<b>模型部件</b>判定面（{@link InlayCarrierBlock#pickFace}），
- * 避免从侧面看到通道时误判成侧面的镶孔；超限载体仍按方块面。</p>
+ * <p>按命中的<b>模型部件</b>判定面（{@link InlayCarrierBlock#pickFace}），
+ * 避免从侧面看到通道时误判成侧面的镶孔。</p>
  */
 public class CarrierInspectionProvider extends ITooltipProvider.BlockEntityTooltipProvider {
 
@@ -35,7 +34,7 @@ public class CarrierInspectionProvider extends ITooltipProvider.BlockEntityToolt
 
     @Override
     public boolean accepts(BlockEntity value) {
-        return value instanceof InlayCarrierBlockEntity || value instanceof TranscendiumInlayCarrierBlockEntity;
+        return value instanceof InlayCarrierBlockEntity;
     }
 
     @Override
@@ -43,13 +42,9 @@ public class CarrierInspectionProvider extends ITooltipProvider.BlockEntityToolt
         BlockPos pos = value.getBlockPos();
         BlockHitResult hit = blockHit(pos);
         if (value.getLevel() == null) return List.of();
-        if (value instanceof InlayCarrierBlockEntity carrier) {
-            Direction focus = hit == null ? null : normalFocus(value, hit);
-            return InlayInspection.carrierTooltip(value.getLevel(), pos, value.getBlockState(), focus, carrier);
-        }
-        Direction focus = hit == null ? null : hit.getDirection();
-        TranscendiumInlayCarrierBlockEntity carrier = (TranscendiumInlayCarrierBlockEntity) value;
-        return InlayInspection.transcendiumTooltip(carrier.getBlockState(), carrier.getInlays(), focus);
+        if (!(value instanceof InlayCarrierBlockEntity carrier)) return List.of();
+        Direction focus = hit == null ? null : normalFocus(value, hit);
+        return InlayInspection.carrierTooltip(value.getLevel(), pos, value.getBlockState(), focus, carrier);
     }
 
     @Override

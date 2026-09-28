@@ -37,12 +37,30 @@ final class Network {
     Long2ObjectOpenHashMap<int[]> baseline;
 
     /**
+     * 上一次已通知邻居的输出快照（下标同 {@link Direction#ordinal()}）。
+     *
+     * <p>通知判定必须与它比较，而不是与 {@link #baseline}：{@code baseline} 每轮结算开始时都会重建，
+     * 会把「上一轮结算末尾写入的有状态门输出」吸收进去，导致计数 / 锁存 / 延时门的输出变化
+     * 永远不通知邻居（红石读不到）。本快照只在真正通知后更新，因此任何写入路径的变化都会被补上通知。</p>
+     */
+    Long2ObjectOpenHashMap<int[]> lastNotified;
+
+    /**
      * 本轮结算（可能跨多轮 / 跨游戏刻）内输出发生过变化的非门位置。
      *
      * <p>结算途中的翻转只是「未收敛」的候选：组合逻辑从全 0 迭代求不动点时中间值不代表真实输出。
      * 只有网络最终仍未收敛（即真正的即时反馈环）才会据此判定振荡。</p>
      */
     final LongOpenHashSet churningNotGates = new LongOpenHashSet();
+
+    /**
+     * 本轮还需要重新求值的节点（工作队列的入口）。
+     *
+     * <p>一跳不再等于一轮：求值后只有输出真正变化的节点才会把邻居重新入队，
+     * 因此无环网络的代价与网络长度同阶，链长不再受「一轮一跳」的轮数上限限制。
+     * 预算用尽时剩余节点留在这里，交给下一次结算（下一轮或下一游戏刻）继续。</p>
+     */
+    final LongOpenHashSet dirtyNodes = new LongOpenHashSet();
 
     Network(Long2ObjectLinkedOpenHashMap<GateNode> nodes, boolean overflow, boolean hasStatefulGates) {
         this.nodes = nodes;

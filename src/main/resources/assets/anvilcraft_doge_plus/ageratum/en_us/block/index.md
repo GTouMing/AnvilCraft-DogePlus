@@ -6,20 +6,26 @@ navigation:
 
 # Blocks
 
-Blocks added by this mod, organized by function:
+Blocks added by this mod, grouped by function:
 
 ## Materials
 
-- [Doge Steel Block](doge_steel_block.md): the nine-to-one compact of Doge Steel Ingots, and the building block of the Giant Doge Anvil.
+- [Doge Steel Block](doge_steel_block.md): The multiblock conversion material for the Giant Doge Anvil.
 
 ## Machines & Functional Blocks
 
-- [Doge Anvil](doge_anvil.md): a growing anvil that turns into the Giant Doge Anvil when fully fed.
-- [Giant Doge Anvil](giant_doge_anvil.md): a 3×3×3 multiblock inheriting the full Giant Anvil feature set.
-- [Inlay Table](inlay_table.md): the workstation of the Inlay System.
-- [Inlay Crafting Table](inlay_crafting_table.md): the workstation of the Inlay Crafting recipes, freely convertible with the Inlay Table.
-- [Inlay Carrier Block](inlay_carrier_block.md): a 6-socket directional base material that becomes a logic gate.
-- [Chute Dispenser](chute_dispenser.md): a chute + dispenser hybrid.
-- [Chute Dropper](chute_dropper.md): a chute + dropper hybrid.
-- [Magnetic Chute Dispenser](magnetic_chute_dispenser.md): a magnetic chute + dispenser hybrid.
-- [Magnetic Chute Dropper](magnetic_chute_dropper.md): a magnetic chute + dropper hybrid.
+- [Doge Anvil](doge_anvil.md): A special anvil that grows into the Giant Doge Anvil once fed enough.
+- [Giant Doge Anvil](giant_doge_anvil.md): A 3×3×3 multiblock structure that inherits the functions of the Giant Anvil.
+- [Inlay Table](inlay_table.md): The workstation of the inlay system.
+- [Inlay Crafting Table](inlay_crafting_table.md): The workstation for inlay crafting recipes; it and the Inlay Table can be crafted into each other.
+- [Inlay Carrier Block](inlay_carrier_block.md): A block with 6 directional sockets.
+- [Logic Carrier](logic_carrier.md): No sockets; the gate type of each of its six faces is programmable.
+- [Pipe Carrier](pipe_carrier.md): No sockets; the transfer mode of each of its six faces is programmable, with throughput and filter settings.
+- [Chute Dispenser](chute_dispenser.md): A Chute combined with a Dispenser.
+- [Chute Dropper](chute_dropper.md): A Chute combined with a Dropper.
+- [Magnetic Chute Dispenser](magnetic_chute_dispenser.md): A Magnetic Chute combined with a Dispenser.
+- [Magnetic Chute Dropper](magnetic_chute_dropper.md): A Magnetic Chute combined with a Dropper.
+
+::: info
+All chute variants support item filtering, slot locking and comparator output just like the base Chute, and can launch/throw up to nine times as many items.
+:::

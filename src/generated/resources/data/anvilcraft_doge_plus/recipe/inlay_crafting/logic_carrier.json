@@ -1,0 +1,30 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft_doge_plus:inlay_carrier_block",
+  "inlays": [
+    {
+      "properties": "anvilcraft_doge_plus:not_gate"
+    },
+    {
+      "properties": "anvilcraft_doge_plus:and_gate"
+    },
+    {
+      "properties": "anvilcraft_doge_plus:or_gate"
+    },
+    {
+      "properties": "anvilcraft_doge_plus:counter_gate"
+    },
+    {
+      "properties": "anvilcraft_doge_plus:latch_gate"
+    },
+    {
+      "properties": "anvilcraft_doge_plus:delay_gate"
+    }
+  ],
+  "results": [
+    {
+      "count": 6,
+      "item": "anvilcraft_doge_plus:logic_carrier"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:frost_metal_upgrade_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:frost_metal_block"
+    },
+    {
+      "item": "anvilcraft:royal_dragon_rod"
+    }
+  ],
+  "kind": "smithing",
+  "results": [
+    "anvilcraft:frost_dragon_rod",
+    "anvilcraft:frost_metal_upgrade_smithing_template"
+  ]
+}

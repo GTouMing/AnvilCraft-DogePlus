@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.logic;
 
+import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -9,9 +10,9 @@ import net.minecraft.world.level.Level;
  */
 public interface ILogicGate {
     /**
-     * 获取门类型
+     * 获取该面的方向性属性
      */
-    LogicGateType doge_plus$getGateType(Level level, BlockPos pos, Direction outputDir);
+    FaceMode doge_plus$getGateType(Level level, BlockPos pos, Direction outputDir);
 
     /**
      * 获取该面逻辑门的设定值（0-15；仅输入门 / 输出门有意义，其余门忽略）。

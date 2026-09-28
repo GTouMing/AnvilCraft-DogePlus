@@ -1,0 +1,20 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:anvil_amulet",
+  "inlays": [
+    {
+      "item": "anvilcraft:silver_ingot"
+    },
+    {
+      "item": "minecraft:anvil"
+    }
+  ],
+  "kind": "copying",
+  "results": [
+    {
+      "curse": true,
+      "item": "anvilcraft:anvil_amulet"
+    },
+    "anvilcraft:anvil_amulet"
+  ]
+}

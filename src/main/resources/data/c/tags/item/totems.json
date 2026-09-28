@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:totem_of_undying",
+    "anvilcraft:totem_of_recovery",
+    "anvilcraft:totem_of_rage"
+  ]
+}

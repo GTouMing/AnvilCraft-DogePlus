@@ -22,7 +22,9 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 import org.joml.Quaternionf;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Doge 节点渲染器。
@@ -96,6 +98,13 @@ public class DogeNodeEntityRenderer extends EntityRenderer<DogeNodeEntity> {
         pose.mulPose(Axis.YP.rotationDegrees(randomOffsetDeg));
 
         ItemRenderer renderer = Minecraft.getInstance().getItemRenderer();
+        // 只结束这次真正用到的渲染类型：BufferSource.endBatch() 无参版本会把整个缓冲区（含别人的批次）
+        // 一起冲掉。物品用哪些类型取决于模型 / 附魔光效，没法静态列举，所以顺手记录一下。
+        Set<RenderType> usedTypes = new HashSet<>();
+        MultiBufferSource recording = type -> {
+            usedTypes.add(type);
+            return source.getBuffer(type);
+        };
         int itemCount = items.size();
         float partAngleDeg = 360F / itemCount;
         // 与鱼缸一致：单物品置于中心，多物品沿 0.125 半径圆环排布（进入循环前按总数量判定一次）
@@ -119,14 +128,16 @@ public class DogeNodeEntityRenderer extends EntityRenderer<DogeNodeEntity> {
                         (random.nextFloat() - 0.5F) * 2 * radius,
                         (random.nextFloat() - 0.5F) * 2 * radius);
                 renderer.renderStatic(stack, ItemDisplayContext.GROUND, light,
-                        OverlayTexture.NO_OVERLAY, pose, source, node.level(), 0);
+                        OverlayTexture.NO_OVERLAY, pose, recording, node.level(), 0);
                 pose.popPose();
             }
             pose.popPose();
             itemCount--;
         }
         pose.popPose();
-        if (source instanceof MultiBufferSource.BufferSource buffer) buffer.endBatch();
+        if (source instanceof MultiBufferSource.BufferSource buffers) {
+            for (RenderType type : usedTypes) buffers.endBatch(type);
+        }
     }
 
     @Override

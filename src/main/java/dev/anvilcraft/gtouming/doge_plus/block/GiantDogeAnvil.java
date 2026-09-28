@@ -1,8 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.block;
 
 import com.mojang.serialization.MapCodec;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.GiantDogeAnvilBlockEntity;
-import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
+import dev.anvilcraft.gtouming.doge_plus.client.renderer.GiantDogeAnvilRenderer;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
 import dev.dubhe.anvilcraft.api.event.AnvilEvent;
 import dev.dubhe.anvilcraft.block.GiantAnvilBlock;
@@ -17,24 +16,24 @@ import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.EntityBlock;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.common.NeoForge;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * 巨型 Doge 砧：由小型 {@link DogeAnvil} 喂满成长值后原地长成。
  * 复用前置模组 {@link GiantAnvilBlock} 的巨型铁砧功能（3×3×3 多方块、坠落、铁砧菜单）。
+ *
+ * <p>没有方块实体：中心那三个旋转的核心由
+ * {@code client.renderer.GiantDogeAnvilRenderer} 在 {@code RenderLevelStageEvent} 里按世界时间自己画，
+ * 位置也由它自己在客户端发现。</p>
  */
-public class GiantDogeAnvil extends GiantAnvilBlock implements EntityBlock {
+public class GiantDogeAnvil extends GiantAnvilBlock {
 
     public GiantDogeAnvil(Properties properties) {
         super(properties);
@@ -195,20 +194,17 @@ public class GiantDogeAnvil extends GiantAnvilBlock implements EntityBlock {
             0.55f,
             level.random.nextFloat() * 0.1F + 0.55f);
     }
-    @Nullable
-    @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        // 只有中心方块才创建 BlockEntity（避免重复）
-        if (state.getValue(HALF) == Cube3x3PartHalf.TOP_CENTER) {
-            return new GiantDogeAnvilBlockEntity(ModBlockEntities.GIANT_DOGE_ANVIL.get(), pos, state);
-        }
-        return null;
-    }
 
-    @Nullable
+    /**
+     * 客户端侧登记锚点：放置、生长、落地重建都会触发，中心核心当场就在新位置，不用等客户端扫描。
+     *
+     * <p>这里用的是 NeoForge 的方块扩展钩子 {@code onBlockStateChange}——它两侧都会调用。原版的
+     * {@code onPlace}/{@code onRemove} 在 {@code LevelChunk.setBlockState} 里被 {@code !isClientSide}
+     * 挡掉，客户端收不到，所以不能拿它们做这件事。{@code isClientSide} 为假时不会走到客户端那个类。</p>
+     */
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return type == ModBlockEntities.GIANT_DOGE_ANVIL.get() ?
-                GiantDogeAnvilBlockEntity::clientTick : null;
+    public void onBlockStateChange(LevelReader level, BlockPos pos, BlockState oldState, BlockState newState) {
+        super.onBlockStateChange(level, pos, oldState, newState);
+        if (level.isClientSide()) GiantDogeAnvilRenderer.updateAnchor(newState, pos);
     }
 }

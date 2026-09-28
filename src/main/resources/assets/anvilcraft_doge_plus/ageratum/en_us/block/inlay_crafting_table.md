@@ -12,17 +12,17 @@ items:
 
 <block id="anvilcraft_doge_plus:inlay_crafting_table"/>
 
-The workstation of the Inlay Crafting recipes. It has a single slot, holding a **base material filled with all its inlays**:
+The workstation for inlay crafting recipes:
 
-- Place items by hand on the top face (an occupied slot is replaced and the old item returned), take them back with an empty hand.
-- An anvil strike performs the inlay crafting; the product and the returned **empty base material** drop below the table, ready for hoppers/chutes to collect.
+- Right-click its top face with an item to insert it (if the slot already holds something, it is replaced and the old contents are returned); right-click with an empty hand to take it out.
+- An anvil landing on the table performs the inlay crafting; products drop below, and can be collected automatically with hoppers/chutes.
 
-The Inlay Crafting Table and the [Inlay Table](inlay_table.md) can be crafted into each other (1:1 shapeless, either direction):
+The Inlay Crafting Table and the [Inlay Table](inlay_table.md) can be crafted into each other:
 
 <recipe id="anvilcraft_doge_plus:crafting_shapeless/inlay_crafting_table_from_inlay_table"/>
 
 <recipe id="anvilcraft_doge_plus:crafting_shapeless/inlay_table_from_inlay_crafting_table"/>
 
 ::: info
-See [Mechanics](../mechanics.md) for the full inlay and inlay-crafting rules.
+For the complete inlay and inlay crafting mechanics, see [Mechanics](../mechanics.md).
 :::

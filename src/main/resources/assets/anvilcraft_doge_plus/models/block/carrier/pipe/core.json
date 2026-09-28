@@ -1,0 +1,105 @@
+{
+    "format_version":  "1.9.0",
+    "credit":  "Made with Blockbench",
+    "parent":  "minecraft:block/block",
+    "render_type":  "minecraft:translucent",
+    "textures":  {
+                     "pc":  "anvilcraft_doge_plus:block/pipe_carrier",
+                     "particle":  "anvilcraft_doge_plus:block/pipe_carrier"
+                 },
+    "elements":  [
+                     {
+                         "name":  "+",
+                         "from":  [
+                                      6,
+                                      6,
+                                      6
+                                  ],
+                         "to":  [
+                                    10,
+                                    10,
+                                    6
+                                ],
+                         "rotation":  {
+                                          "angle":  0,
+                                          "axis":  "y",
+                                          "origin":  [
+                                                         8,
+                                                         8,
+                                                         8
+                                                     ]
+                                      },
+                         "faces":  {
+                                       "north":  {
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                4,
+                                                                4
+                                                            ],
+                                                     "texture":  "#pc"
+                                                 },
+                                       "east":  {
+                                                    "uv":  [
+                                                               6,
+                                                               0,
+                                                               10,
+                                                               4
+                                                           ],
+                                                    "texture":  "#pc"
+                                                },
+                                       "south":  {
+                                                     "uv":  [
+                                                                6,
+                                                                0,
+                                                                10,
+                                                                4
+                                                            ],
+                                                     "texture":  "#pc"
+                                                 },
+                                       "west":  {
+                                                    "uv":  [
+                                                               6,
+                                                               0,
+                                                               10,
+                                                               4
+                                                           ],
+                                                    "texture":  "#pc"
+                                                },
+                                       "up":  {
+                                                  "uv":  [
+                                                             6,
+                                                             0,
+                                                             10,
+                                                             4
+                                                         ],
+                                                  "texture":  "#pc"
+                                              },
+                                       "down":  {
+                                                    "uv":  [
+                                                               6,
+                                                               0,
+                                                               10,
+                                                               4
+                                                           ],
+                                                    "texture":  "#pc"
+                                                }
+                                   }
+                     }
+                 ],
+    "groups":  [
+                   {
+                       "name":  "center",
+                       "origin":  [
+                                      7,
+                                      7,
+                                      8
+                                  ],
+                       "scope":  0,
+                       "color":  0,
+                       "children":  [
+                                        0
+                                    ]
+                   }
+               ]
+}

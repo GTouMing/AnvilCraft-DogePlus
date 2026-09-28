@@ -28,8 +28,8 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("block.anvilcraft_doge_plus.inlay_crafting_table", "镶合台");
         add("block.anvilcraft_doge_plus.doge_steel_block", "Doge 钢块");
         add("block.anvilcraft_doge_plus.inlay_carrier_block", "镶嵌载体");
-        add("block.anvilcraft_doge_plus.transcendium_inlay_carrier_block", "超限镶嵌载体");
-
+        add("block.anvilcraft_doge_plus.logic_carrier", "逻辑载体");
+        add("block.anvilcraft_doge_plus.pipe_carrier", "管道载体");
         // ===== 容器标题 =====
         add("container.anvilcraft_doge_plus.chute_dispenser", "溜槽发射器");
         add("container.anvilcraft_doge_plus.chute_dropper", "溜槽投掷器");
@@ -38,7 +38,17 @@ public class ZhCnLanguageProvider extends LanguageProvider {
 
         // ===== GUI =====
         add("gui.anvilcraft_doge_plus.jei.inlay", "镶嵌");
-        add("gui.anvilcraft_doge_plus.jei.inlay_crafting", "镶合");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting", "镶嵌合成");
+        add("gui.anvilcraft_doge_plus.jei.inlay_smithing", "镶嵌锻造");
+        add("gui.anvilcraft_doge_plus.jei.inlay_copying", "镶嵌复制");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_requirement", "此配方按属性指定镶孔：");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_any_of", "（以下任一属性 ×%s）");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_times", " ×%s");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.chance", "概率：%s%%");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.enchantments", "魔咒数量为 %s");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.enchantments_at_least", "%s 及以上");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.amount", "数量为魔咒数量 × %s");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.probability", "概率：(%s × (魔咒数量)) / 100");
 
         // ===== Tooltips =====
         add("tooltip.anvilcraft_doge_plus.inlay_property.fire_proof", "耐火：不会被烧毁");
@@ -62,6 +72,8 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inlay_property.latch_gate", "锁存门：收到输入则记录并输出该信号，再收到则清除");
         add("tooltip.anvilcraft_doge_plus.inlay_property.delay_gate", "延时门：收到输入起输出该信号，持续设定 tick 数");
         add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "发电：放置后产生 512 kW 电力");
+        add("tooltip.anvilcraft_doge_plus.inlay_property.insert", "存入：将物品存入面朝的容器");
+        add("tooltip.anvilcraft_doge_plus.inlay_property.extract", "取出：从面朝的容器取出物品");
         add("tooltip.anvilcraft_doge_plus.inlay_property.resonance", "共鸣：增强其他镶孔的部分材料属性");
         add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.cold_forged", "✦冷锻：在水中或细雪中较快回复耐久（仅耐久物品生效）");
         add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.high_temp", "✦高温：在熔岩或火中越久，累加的伤害越高；攻击时缓慢消耗累加的伤害");
@@ -83,11 +95,9 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inspection.value", "设定：%s");
         add("tooltip.anvilcraft_doge_plus.inspection.counted", "已计数：%s");
         add("tooltip.anvilcraft_doge_plus.inspection.elapsed", "已计时：%s");
-        add("tooltip.anvilcraft_doge_plus.inspection.tally", "%1$s ×%2$s");
-        add("tooltip.anvilcraft_doge_plus.inspection.more", "…另有 %s 种");
-        add("tooltip.anvilcraft_doge_plus.inspection.phase", "相位：%s");
-        add("tooltip.anvilcraft_doge_plus.inspection.phase.alpha", "α");
-        add("tooltip.anvilcraft_doge_plus.inspection.phase.beta", "β");
+        add("tooltip.anvilcraft_doge_plus.inspection.throughput", "物流量：%s");
+        add("tooltip.anvilcraft_doge_plus.inspection.filter", "过滤：%s");
+        add("tooltip.anvilcraft_doge_plus.inspection.filter_none", "无");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.not_gate", "非门");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.and_gate", "与门");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.or_gate", "或门");
@@ -96,6 +106,9 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inspection.gate.counter_gate", "计数门");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.latch_gate", "锁存门");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.delay_gate", "延时门");
+        add("tooltip.anvilcraft_doge_plus.inspection.transfer.none", "清除");
+        add("tooltip.anvilcraft_doge_plus.inspection.transfer.insert", "存入");
+        add("tooltip.anvilcraft_doge_plus.inspection.transfer.extract", "取出");
         add("tooltip.anvilcraft_doge_plus.inspection.dir.down", "下");
         add("tooltip.anvilcraft_doge_plus.inspection.dir.up", "上");
         add("tooltip.anvilcraft_doge_plus.inspection.dir.north", "北");
@@ -122,6 +135,21 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         // ===== 按键 =====
         add("key.categories.anvilcraft_doge_plus", "铁砧工艺：Doge+");
         add("key.anvilcraft_doge_plus.open_silencer", "打开消音器");
-        add("key.anvilcraft_doge_plus.toggle_carrier_phase", "切换超限镶嵌载体相位");
+
+        // ===== 逻辑载体轮盘 =====
+        add("wheel.anvilcraft_doge_plus.gate.none", "清除");
+        add("wheel.anvilcraft_doge_plus.gate.not_gate", "非门");
+        add("wheel.anvilcraft_doge_plus.gate.and_gate", "与门");
+        add("wheel.anvilcraft_doge_plus.gate.or_gate", "或门");
+        add("wheel.anvilcraft_doge_plus.gate.output", "输出门");
+        add("wheel.anvilcraft_doge_plus.gate.input", "输入门");
+        add("wheel.anvilcraft_doge_plus.gate.counter_gate", "计数门");
+        add("wheel.anvilcraft_doge_plus.gate.latch_gate", "锁存门");
+        add("wheel.anvilcraft_doge_plus.gate.delay_gate", "延时门");
+
+        // ===== 管道载体轮盘 =====
+        add("wheel.anvilcraft_doge_plus.transfer.none", "清除");
+        add("wheel.anvilcraft_doge_plus.transfer.insert", "存入");
+        add("wheel.anvilcraft_doge_plus.transfer.extract", "取出");
     }
 }

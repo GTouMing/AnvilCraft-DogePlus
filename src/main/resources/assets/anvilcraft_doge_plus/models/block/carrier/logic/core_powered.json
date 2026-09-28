@@ -1,0 +1,168 @@
+{
+    "format_version":  "1.9.0",
+    "credit":  "Made with Blockbench",
+    "parent":  "minecraft:block/block",
+    "render_type":  "minecraft:translucent",
+    "textures":  {
+                     "lc":  "anvilcraft_doge_plus:block/logic_carrier_powered",
+                     "particle":  "anvilcraft_doge_plus:block/logic_carrier_powered"
+                 },
+    "elements":  [
+                     {
+                         "name":  "c_powered",
+                         "from":  [
+                                      5.4499999999999993,
+                                      5.4499999999999993,
+                                      5.4499999999999993
+                                  ],
+                         "to":  [
+                                    10.55,
+                                    10.55,
+                                    10.55
+                                ],
+                         "faces":  {
+                                       "north":  {
+                                                     "uv":  [
+                                                                11,
+                                                                0,
+                                                                16,
+                                                                5
+                                                            ],
+                                                     "texture":  "#lc",
+                                                     "cullface":  "north"
+                                                 },
+                                       "east":  {
+                                                    "uv":  [
+                                                               11,
+                                                               0,
+                                                               16,
+                                                               5
+                                                           ],
+                                                    "texture":  "#lc",
+                                                    "cullface":  "east"
+                                                },
+                                       "south":  {
+                                                     "uv":  [
+                                                                11,
+                                                                0,
+                                                                16,
+                                                                5
+                                                            ],
+                                                     "texture":  "#lc",
+                                                     "cullface":  "south"
+                                                 },
+                                       "west":  {
+                                                    "uv":  [
+                                                               11,
+                                                               0,
+                                                               16,
+                                                               5
+                                                           ],
+                                                    "texture":  "#lc",
+                                                    "cullface":  "west"
+                                                },
+                                       "up":  {
+                                                  "uv":  [
+                                                             11,
+                                                             0,
+                                                             16,
+                                                             5
+                                                         ],
+                                                  "texture":  "#lc",
+                                                  "cullface":  "up"
+                                              },
+                                       "down":  {
+                                                    "uv":  [
+                                                               11,
+                                                               0,
+                                                               16,
+                                                               5
+                                                           ],
+                                                    "texture":  "#lc",
+                                                    "cullface":  "down"
+                                                }
+                                   }
+                     },
+                     {
+                         "name":  "c1_powered",
+                         "from":  [
+                                      6.975,
+                                      6.975,
+                                      6.975
+                                  ],
+                         "to":  [
+                                    9.025,
+                                    9.025,
+                                    9.025
+                                ],
+                         "faces":  {
+                                       "north":  {
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                2,
+                                                                2
+                                                            ],
+                                                     "texture":  "#lc",
+                                                     "cullface":  "north",
+                                                     "tintindex":  0
+                                                 },
+                                       "east":  {
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               2,
+                                                               2
+                                                           ],
+                                                    "texture":  "#lc",
+                                                    "cullface":  "east",
+                                                    "tintindex":  0
+                                                },
+                                       "south":  {
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                2,
+                                                                2
+                                                            ],
+                                                     "texture":  "#lc",
+                                                     "cullface":  "south",
+                                                     "tintindex":  0
+                                                 },
+                                       "west":  {
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               2,
+                                                               2
+                                                           ],
+                                                    "texture":  "#lc",
+                                                    "cullface":  "west",
+                                                    "tintindex":  0
+                                                },
+                                       "up":  {
+                                                  "uv":  [
+                                                             0,
+                                                             0,
+                                                             2,
+                                                             2
+                                                         ],
+                                                  "texture":  "#lc",
+                                                  "cullface":  "up",
+                                                  "tintindex":  0
+                                              },
+                                       "down":  {
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               2,
+                                                               2
+                                                           ],
+                                                    "texture":  "#lc",
+                                                    "cullface":  "down",
+                                                    "tintindex":  0
+                                                }
+                                   }
+                     }
+                 ]
+}

@@ -1,12 +1,11 @@
 package dev.anvilcraft.gtouming.doge_plus.block.entity;
 
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
-import dev.anvilcraft.gtouming.doge_plus.init.ModRecipeTypes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayRecipe;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
-import lombok.Getter;
+import dev.dubhe.anvilcraft.api.itemhandler.IItemHandlerHolder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
@@ -21,7 +20,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -31,6 +29,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -43,7 +42,7 @@ import static dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager.has
  * 产出镶嵌后的物品。基材镶孔数（数据驱动）决定可镶嵌次数：
  * 未满时追加镶嵌，满镶时替换指定槽位。产物与被替换的旧材料均以掉落物形式生成。</p>
  */
-public class InlayTableBlockEntity extends BlockEntity {
+public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHolder {
 
     // ==================== 槽位常量 ====================
 
@@ -55,8 +54,14 @@ public class InlayTableBlockEntity extends BlockEntity {
 
     // ==================== IItemHandler 实现 ====================
 
-    @Getter
-    private final IItemHandler itemHandler = new ItemStackHandler(SLOT_COUNT) {
+    /**
+     * 内部存储：读写抽取都正常，供本方块自身与玩家交互使用。
+     *
+     * <p>与前置加工台 {@code ProcessingTableBlockEntity} 一样，真正存放材料的是一份内部
+     * handler，对外只暴露下面的 {@link #proxy}——「存储输入材料、不存储输出产物」，
+     * 产物由镶击流程从台体下方掉出。</p>
+     */
+    private final ItemStackHandler input = new ItemStackHandler(SLOT_COUNT) {
         @Override
         public ItemStack getStackInSlot(int slot) {
             return isValidSlot(slot) ? slots[slot] : ItemStack.EMPTY;
@@ -96,11 +101,9 @@ public class InlayTableBlockEntity extends BlockEntity {
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
             if (!isValidSlot(slot)) return ItemStack.EMPTY;
-
             ItemStack existing = slots[slot];
             int extracted = Math.min(amount, existing.getCount());
             ItemStack result = existing.copyWithCount(extracted);
-
             if (!simulate) {
                 existing.shrink(extracted);
                 syncToClient();
@@ -123,6 +126,63 @@ public class InlayTableBlockEntity extends BlockEntity {
             return SLOT_COUNT;
         }
     };
+
+    /**
+     * 对外暴露给漏斗 / 溜槽 / 管道的代理（同前置加工台的 {@code proxy}）：可以放入材料，
+     * 但**一律拒绝抽取**——存储的材料只由镶嵌流程消耗或玩家手动取用，因此溜槽只会吸到
+     * 从台下方掉出的产物，不会把材料槽里的材料吸走。
+     */
+    private final ItemStackHandler proxy = new ItemStackHandler(SLOT_COUNT) {
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return input.getStackInSlot(slot);
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            return input.insertItem(slot, stack, simulate);
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return input.getSlotLimit(slot);
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return input.isItemValid(slot, stack);
+        }
+
+        @Override
+        public void setSize(int size) {
+        }
+
+        @Override
+        public void setStackInSlot(int slot, ItemStack stack) {
+            input.setStackInSlot(slot, stack);
+        }
+
+        @Override
+        public int getSlots() {
+            return input.getSlots();
+        }
+    };
+
+    /** 对外（能力）暴露的代理：只进不出。 */
+    @Override
+    public IItemHandler getItemHandler() {
+        return proxy;
+    }
+
+    /** 内部存储，供本方块自身读写。 */
+    public IItemHandler getInput() {
+        return input;
+    }
 
     // ==================== 构造 ====================
 
@@ -179,7 +239,7 @@ public class InlayTableBlockEntity extends BlockEntity {
 
             ItemStack item = entity.getItem();
             for (int i = 0; i < SLOT_COUNT; i++) {
-                ItemStack result = itemHandler.insertItem(i, item, false);
+                ItemStack result = input.insertItem(i, item, false);
                 if (result.getCount() == item.getCount()) continue;
 
                 changed = true;
@@ -233,20 +293,42 @@ public class InlayTableBlockEntity extends BlockEntity {
     }
 
     private int processAddInlay(ItemStack inlay, ItemStack base, float fallDistance) {
+        // 属性以配方引用的材料定义为准（同一物品可匹配多个定义，避免无属性材料被其它定义污染）；
+        // 没有显式配方时按「静默镶嵌」放行——此时材料可以没有定义（如两种中子锭），属性记为空
         InlayRecipe recipe = findRecipe(inlay, base);
-        if (recipe == null) return 0;
+        MaterialManager.InlayMaterial inlayMaterial;
+        boolean silent = false;
+        if (recipe != null) {
+            inlayMaterial = recipe.getInlayMaterial();
+        } else if (level != null && InlayRecipe.canSilentlyInlay(level, inlay, base)) {
+            inlayMaterial = MaterialManager.getInlayMaterial(inlay);
+            silent = true;
+        } else {
+            return 0;
+        }
+        if (!silent && inlayMaterial == null) return 0;
 
-        // 一次砸击耗尽整叠：消耗 min(材料,基材) 份，产物为整叠基材统一更新一次组件。
+        // 一次砸击消耗 min(材料,基材) 份，多出的材料/基材保留在槽位中；产物按份数生成。
         int count = Math.min(inlay.getCount(), base.getCount());
 
-        // 属性以配方引用的材料定义为准（同一物品可匹配多个定义，避免无属性材料被其它定义污染）
-        MaterialManager.InlayMaterial inlayMaterial = recipe.getInlayMaterial();
-        if (inlayMaterial == null) return 0;
-        InlayEntry entry = InlayEntry.fromItemStack(inlay, inlayMaterial);
+        InlayEntry entry = inlayMaterial == null
+                ? InlayEntry.ofItem(inlay)
+                : InlayEntry.fromItemStack(inlay, inlayMaterial);
         int sockets = MaterialManager.getSocketCount(base);
 
+        // 镶嵌操作在基材副本上执行：补空占位、抽取附魔等都不应污染未被消耗的剩余基材。
+        ItemStack workBase = base.copyWithCount(1);
+
         // 槽位列表：取出过的槽位为空占位，列表长度即物理槽位数
-        List<InlayEntry> existing = InlayUtil.getInlays(base);
+        List<InlayEntry> existing = InlayUtil.getInlays(workBase);
+        if (existing.isEmpty() && sockets > 0) {
+            // 基材尚无镶嵌组件（全新基材，或全部镶孔被取出后组件被移除）：
+            // 先按镶孔数补满 empty() 占位再执行镶嵌，保证槽位下标稳定，
+            // 也避免空镶孔在工具提示中消失。
+            existing = new ArrayList<>(sockets);
+            for (int i = 0; i < sockets; i++) existing.add(InlayEntry.empty());
+            InlayUtil.setInlays(workBase, new ArrayList<>(existing));
+        }
         boolean full = !hasEmptySlot(existing) && existing.size() >= sockets;
 
         // 满镶时准备旧材料（整叠基材同一槽位换下同一种旧材料）
@@ -258,18 +340,18 @@ public class InlayTableBlockEntity extends BlockEntity {
             int slotToReplace = Math.min((int) Math.floor(fallDistance), existing.size() - 1);
             if (slotToReplace < 0) return 0;
 
-            InlayEntry oldEntry = InlayUtil.getInlayAt(base, slotToReplace);
+            InlayEntry oldEntry = InlayUtil.getInlayAt(workBase, slotToReplace);
             // 命中已取走的空占位：直接中止本次操作，不消耗、不顺延到其它槽
             if (oldEntry.isEmpty()) return 0;
 
             oldStack = oldEntry.toItemStack();
             if (oldEntry.containsAttributes(InlayProperty.ENCHANT)) {
-                oldStack = InlayUtil.extractFirstEnchantment(base, oldStack);
+                oldStack = InlayUtil.extractFirstEnchantment(workBase, oldStack);
             }
-            result = InlayUtil.withReplacedAt(base, slotToReplace, entry);
+            result = InlayUtil.withReplacedAt(workBase, slotToReplace, entry);
         } else {
             // 未满：追加到空占位或列表末尾
-            result = InlayUtil.withAddedInlay(base, entry);
+            result = InlayUtil.withAddedInlay(workBase, entry);
         }
         if (result.isEmpty()) return 0;
 
@@ -277,8 +359,9 @@ public class InlayTableBlockEntity extends BlockEntity {
             InlayUtil.transferEnchantments(result, inlay);
         }
 
+        // 仅消耗已镶嵌的份数，剩余基材留在槽位中等待下次砸击
         inlay.shrink(count);
-        base.setCount(0);
+        base.shrink(count);
 
         dropItem(result, count);
         dropItem(oldStack, count);
@@ -357,15 +440,7 @@ public class InlayTableBlockEntity extends BlockEntity {
     @Nullable
     private InlayRecipe findRecipe(ItemStack material, ItemStack base) {
         if (level == null) return null;
-        List<RecipeHolder<InlayRecipe>> recipes = level.getRecipeManager()
-                .getAllRecipesFor(ModRecipeTypes.INLAY_TYPE.get());
-
-        for (RecipeHolder<InlayRecipe> holder : recipes) {
-            if (holder.value().matches(material, base)) {
-                return holder.value();
-            }
-        }
-        return null;
+        return InlayRecipe.find(level, material, base);
     }
 
     private void playEffects(Level level) {

@@ -1,0 +1,17 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "minecraft:netherite_upgrade_smithing_template",
+  "inlays": [
+    {
+      "item": "minecraft:netherite_ingot"
+    },
+    {
+      "item": "minecraft:diamond_helmet"
+    }
+  ],
+  "kind": "smithing",
+  "results": [
+    "minecraft:netherite_helmet",
+    "minecraft:netherite_upgrade_smithing_template"
+  ]
+}

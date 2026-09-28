@@ -1,0 +1,20 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft:two_to_one_smithing_template",
+  "inlays": [
+    {
+      "item": "anvilcraft:multiphase_transcendium"
+    },
+    {
+      "item": "anvilcraft:ember_anvil_hammer"
+    },
+    {
+      "item": "anvilcraft:frost_anvil_hammer"
+    }
+  ],
+  "kind": "smithing",
+  "results": [
+    "anvilcraft:transcendence_anvil_hammer",
+    "anvilcraft:two_to_one_smithing_template"
+  ]
+}

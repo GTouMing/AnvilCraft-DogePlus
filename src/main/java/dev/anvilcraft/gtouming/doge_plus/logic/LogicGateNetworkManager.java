@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.logic;
 
+import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -16,8 +17,17 @@ import java.util.Map;
  */
 public final class LogicGateNetworkManager {
 
-    /** 单次更新允许的最大收敛轮数 */
+    /** 单次更新允许的最大收敛轮数（拓扑 + 信号批次），剩余脏数据留到 tick 继续收敛 */
     static final int MAX_SETTLING_PASSES = 16;
+
+    /**
+     * 单次结算里「每个节点」允许的最大求值次数。
+     *
+     * <p>取代原先「一轮一跳、最多 16 轮」的传播预算。取 16 与原预算的最坏代价持平（16 轮 × 每个节点），
+     * 但工作队列下无环网络（门链）每个节点只被求值一两次，一次调用就能传到底，链长不再撞上限。
+     * 吃满这个预算说明存在真正的即时反馈环（非门环等），仍按原路径记为振荡。</p>
+     */
+    static final int MAX_SETTLING_EVALUATIONS_PER_NODE = 16;
 
     /** 单个网络最大节点数 */
     static final int MAX_NETWORK_SIZE = 32768;
@@ -60,6 +70,14 @@ public final class LogicGateNetworkManager {
 
     /**
      * 邻居变化时触发更新
+     *
+     * <p>这里不能因为「正在重建拓扑」就整段跳过。初次收敛（{@code buildNetwork → recompute → notifyNeighbors}）
+     * 本身就发生在重建过程中，而它点亮红石粉之后，粉会反过来通知它旁边的门——这正是信号跨过外部方块
+     * 传到下一张网（输出 → 红石粉 → 输入）的唯一途径。若把它吞掉，下一张网若是先于本网重建的，那次求值
+     * 读到的还是旧信号，此后又再没有更新进来，输入门就会一直没信号。</p>
+     *
+     * <p>本方法只排「重采样输入」，不碰拓扑，重建期间调用没有重入问题（{@link LevelNetworks#runUpdates} 自带闸门），
+     * 而 {@code byGate} 里失效的旧网络会在结算时被跳过。</p>
      */
     public static void neighborChanged(Level level, BlockPos pos, BlockPos neighborPos) {
         if (!(level instanceof ServerLevel serverLevel)) {
@@ -67,26 +85,27 @@ public final class LogicGateNetworkManager {
         }
         LevelNetworks state = state(serverLevel);
 
-        // 防止重入
-        if (state.applyingTopology) {
-            return;
-        }
-
         long packedPos = pos.asLong();
         Network network = state.byGate.get(packedPos);
 
         if (network == null || !network.valid) {
-            state.requestTopologyUpdate(packedPos);
+            // 该位置本身不在任何已建网络里（世界上的绝大多数邻居变化都落在这里）。
+            // 拓扑变化（放置 / 破坏 / 编程面）都由 topologyChanged 负责，网络失效时其节点也会被
+            // 重新排进重建种子，所以这里不必再排一次重建：只需让紧邻的网络重采样输入。
+            // 来源网络要排除掉——它刚收敛完，再标脏等于让同一张网整张重算第二遍。
+            state.signalUpdateAdjacent(pos, state.byGate.get(neighborPos.asLong()));
             return;
         }
 
-        // 如果变化的邻居是逻辑门，可能需要重建拓扑
-        if (isLogicGate(level, neighborPos)) {
-            state.requestTopologyUpdate(packedPos);
+        // 变化的邻居是逻辑门时，它只是「输出」变了，拓扑并没有变（它本来就还是门）；
+        // 同网络的邻居更是本次更新已经整体重算过的对象。
+        // 两者都不能触发重建：否则链内每个节点的通知（约 6L 次）都会让整网 BFS 重建一次，
+        // 并在重建后从全 0 重新结算一遍，长链上这就是「每次翻转慢好几 tick」的主要来源。
+        if (state.byGate.get(neighborPos.asLong()) == network) {
             return;
         }
 
-        // 非逻辑门邻居变化，只需重算信号
+        // 其余情况（跨网络的逻辑门、红石粉/中继器等外部方块）都只是让本网重采样输入。
         if (!network.overflow) {
             state.requestSignalUpdate(network);
         }
@@ -172,6 +191,19 @@ public final class LogicGateNetworkManager {
     }
 
     /**
+     * 清除某面逻辑门的输出与运行状态（该面换料 / 移除镶嵌时调用）。
+     *
+     * <p>换料可能把该面从无状态门换成有状态门（计数 / 锁存 / 延时）。有状态门的输出由自身逻辑
+     * 持有、不参与组合结算清零，若不显式清除，旧门的输出会被一直保留，红石读数不会更新。</p>
+     */
+    public static void clearFaceSignal(Level level, BlockPos pos, Direction face) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        state(serverLevel).clearFace(pos, face);
+    }
+
+    /**
      * 区块加载时扫描逻辑门
      */
     public static void chunkLoaded(ServerLevel level, ChunkAccess chunk) {
@@ -204,7 +236,7 @@ public final class LogicGateNetworkManager {
     public static boolean isLogicGate(Level level, BlockPos pos) {
         if (level.getBlockState(pos).getBlock() instanceof ILogicGate gate) {
             for (Direction dir : Direction.values()) {
-                if (gate.doge_plus$getGateType(level, pos, dir) != LogicGateType.NONE) return true;
+                if (gate.doge_plus$getGateType(level, pos, dir) != FaceMode.NONE) return true;
             }
         }
         return false;

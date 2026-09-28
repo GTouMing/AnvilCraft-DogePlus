@@ -2,8 +2,12 @@ package dev.anvilcraft.gtouming.doge_plus.entity;
 
 import dev.anvilcraft.gtouming.doge_plus.api.entity.ICaptured;
 import dev.anvilcraft.gtouming.doge_plus.init.ModEntities;
+import dev.anvilcraft.gtouming.doge_plus.transfer.ItemTransferNetworkManager;
 import dev.anvilcraft.lib.v2.util.Util;
 import dev.dubhe.anvilcraft.api.injection.entity.IItemEntityExtension;
+import dev.dubhe.anvilcraft.api.itemhandler.ItemHandlerUtil;
+import dev.dubhe.anvilcraft.block.FishTankBlock;
+import dev.dubhe.anvilcraft.block.LargeCauldronBlock;
 import lombok.Getter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,16 +25,20 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.piston.PistonMovingBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Doge 节点：吸附并捕获物品的节点实体（不继承前置磁化节点，自行实现等价行为）。
@@ -43,8 +51,16 @@ import java.util.List;
  * </ol>
  *
  * <p><b>方块自适应</b>：附着方块改变时按顶面承载高度调整自身位置——完整方块变为不完整方块
- * （顶面降低）时下沉；反之（顶面升高）上抬；完整↔完整不变化；方块变为空气或承载顶面
- * 完全消失（如活板门打开）时节点消失并返还物品。</p>
+ * （顶面降低）时下沉；反之（顶面升高）上抬；完整↔完整不变化。</p>
+ *
+ * <p><b>方块被破坏时</b>：原格变空气后不立即移除，先给 {@value #SUPPORT_GONE_GRACE_TICKS} tick
+ * 宽限——期内重新放下附着方块即保留节点并自适应到新方块，到期仍未恢复才移除并返还物品。
+ * 承载顶面完全消失（如活板门打开、方块仍在）时仍立即移除。</p>
+ *
+ * <p><b>被推动时</b>：附着方块被活塞 / 滑轨当作推动实体搬走（原格变空气，方块由实体那侧承载）时，
+ * 只要搬运中的方块还与节点所占这一格有重合就先不移除（且不计入上面的宽限）；等它彻底离开，
+ * 再按宽限决定去留。附着面检查因此改成每 tick 做一次——搬运窗口只有几 tick，按位置自适应的
+ * 5 tick 采样会整段错过。</p>
  */
 public class DogeNodeEntity extends Entity {
 
@@ -56,13 +72,17 @@ public class DogeNodeEntity extends Entity {
     public static final int MAX_CAPTURED = 8;
     private static final double CAPTURE_RADIUS = 0.5;
     private static final int MAX_STACK_SIZE = 64;
-    /** 自适应检测周期（tick）。 */
+    /** 位置自适应的检测周期（tick）；附着面是否还在则每 tick 都查。 */
     private static final int ADAPT_CHECK_PERIOD = 5;
+    /** 附着方块被破坏后的宽限（tick）：期内重新放下附着方块则保留节点，否则移除。 */
+    private static final int SUPPORT_GONE_GRACE_TICKS = 4;
 
     /** 附着方块坐标（public 以兼容原 {@code MagnetizedNodeEntity#blockPos} 用法）。 */
     public BlockPos blockPos = BlockPos.ZERO;
     /** 附着方块状态（同步给客户端）。 */
     private BlockState blockState = Blocks.AIR.defaultBlockState();
+    /** 附着方块已消失的持续 tick 数（4gt 宽限用）；支撑存在时为 0。 */
+    private int supportGoneTicks = 0;
 
     /**
      * -- GETTER --
@@ -246,6 +266,24 @@ public class DogeNodeEntity extends Entity {
         if (this.level().isClientSide) return;
         if (this.isRemoved()) return;
 
+        // 附着面检查每 tick 做一次：活塞 / 滑轨推走方块的可视窗口只有几 tick，隔 ADAPT_CHECK_PERIOD
+        // 采样会整段错过，「搬运中仍与节点重合就先留着」就无从生效。被推走时原格变空气、方块由
+        // 实体那侧承载，这里先看推动实体是否还与节点有重合，有则本次不做任何处理。
+        if (this.isSupportGone()) {
+            // 附着方块被破坏后给出 SUPPORT_GONE_GRACE_TICKS 的宽限：期内重新放下附着方块即保留节点，
+            // 到期仍未恢复才移除并返还物品。被搬运中的方块覆盖时不计时，等搬运结束再判断。
+            if (this.isCarriedByMovingEntity()) {
+                this.supportGoneTicks = 0;
+                return;
+            }
+            this.supportGoneTicks++;
+            if (this.supportGoneTicks > SUPPORT_GONE_GRACE_TICKS) {
+                this.removeNodeAndRelease();
+            }
+            return;
+        }
+        this.supportGoneTicks = 0;
+
         // 方块自适应：每 ADAPT_CHECK_PERIOD tick 检测附着方块顶面变化
         if (this.tickCount % ADAPT_CHECK_PERIOD == 0) {
             this.adaptToBlock();
@@ -280,27 +318,25 @@ public class DogeNodeEntity extends Entity {
      * 台阶/半砖等不完整方块小于 1.0；形状在该处为空时返回 -Infinity（如空气、打开的活板门）。
      * 比较上一检测周期的承载高度：</p>
      * <ul>
-     *   <li>当前方块为空气，或承载顶面完全消失（如活板门打开）→ 节点消失（返还物品）；</li>
+     *   <li>承载顶面完全消失（如活板门打开）→ 节点消失（返还物品）；原格上出现移动活塞标记
+     *       （正有方块被推进 / 推出这一格）时先留着，等搬运结束再判断；</li>
      *   <li>承载高度升高（不完整→完整）→ 节点上抬；</li>
      *   <li>承载高度降低（完整→不完整）→ 节点下沉；</li>
      *   <li>同为完整（1.0↔1.0）→ 位置不变。</li>
      * </ul>
+     *
+     * <p>附着方块被推走（原格变空气）由 {@link #tick()} 里的每 tick 检查处理，不在这里重复。</p>
      */
     private void adaptToBlock() {
         if (this.level().isClientSide) return;
         BlockState current = this.level().getBlockState(blockPos);
-        if (current.isAir() && !blockState.isAir()) {
-            // 附着方块消失：节点移除，释放捕获物品
-            this.removeNodeAndRelease();
-            return;
-        }
-
         double maxY = current.getCollisionShape(this.level(), blockPos).max(Direction.Axis.Y, 0.5, 0.5);
         double prevMaxY = this.blockState.getCollisionShape(this.level(), blockPos).max(Direction.Axis.Y, 0.5, 0.5);
 
-        // 承载顶面完全消失：碰撞形状在该处为空时 maxY 为 -Infinity（如活板门打开、方块变空气），
-        // 节点失去支撑 → 移除并返还捕获物品（<=0 同时覆盖 0 与 -Infinity）
+        // 承载顶面完全消失：碰撞形状在该处为空时 maxY 为 -Infinity（如活板门打开）。原格是移动活塞标记，
+        // 说明正有方块被推进 / 推出这一格（推动实体搬运中）→ 先留着，等搬运结束、附着面定下来再判断。
         if (maxY <= 0) {
+            if (current.is(Blocks.MOVING_PISTON)) return;
             this.removeNodeAndRelease();
             return;
         }
@@ -336,14 +372,61 @@ public class DogeNodeEntity extends Entity {
         this.getEntityData().set(DATA_BLOCK_STATE, current);
     }
 
+    /** 附着方块是否已不在原格：原格变空气，而记忆里还记着一个方块（被推走或破坏）。 */
+    private boolean isSupportGone() {
+        return !this.blockState.isAir() && this.level().getBlockState(blockPos).isAir();
+    }
+
+    /**
+     * 附着方块是否正被推动实体（活塞 / 滑轨）搬运，且与节点所占这一格仍有重合。
+     *
+     * <p>搬运中的方块在原格是空气 / 移动活塞标记，实体那一侧放在目标格，由
+     * {@link PistonMovingBlockEntity} 承载（前置的可搬运方块走的也是它）。这里扫节点自己这一格与六个邻格，
+     * 按进度还原方块<b>这一帧</b>实际占的盒子：进度 0 还在原格、进度 1 才到目标格；与节点所占这一格
+     * （与右击判定同一块区域）相交即算还有重合——此时先不移除节点，等搬运结束、方块彻底离开，再按
+     * 附着面是否合法（顶面是否还有支撑）决定去留。</p>
+     */
+    private boolean isCarriedByMovingEntity() {
+        AABB nodeArea = new AABB(blockPos).expandTowards(0.0, 0.0625, 0.0);
+        if (this.movingBlockOverlaps(blockPos, nodeArea)) return true;
+        for (Direction direction : Direction.values()) {
+            if (this.movingBlockOverlaps(blockPos.relative(direction), nodeArea)) return true;
+        }
+        return false;
+    }
+
+    /** 该格若是搬运中的方块，且这一帧实际占据的盒子与给定区域相交，返回 true。 */
+    private boolean movingBlockOverlaps(BlockPos pos, AABB area) {
+        if (!this.level().getBlockState(pos).is(Blocks.MOVING_PISTON)) return false;
+        if (!(this.level().getBlockEntity(pos) instanceof PistonMovingBlockEntity moving)) return false;
+        // 推出时沿活塞朝向走、拉回时反向，与前置取真实搬运方向的方式一致。
+        Direction movement = moving.isExtending() ? moving.getDirection() : moving.getDirection().getOpposite();
+        // 实体那一侧放在目标格：进度 0 时方块仍在原格，故整体回退 (1 - 进度) 格。
+        double shift = moving.getProgress(1.0F) - 1.0;
+        AABB box = moving.getMovedState()
+                .getCollisionShape(this.level(), pos)
+                .bounds()
+                .move(movement.getStepX() * shift, movement.getStepY() * shift, movement.getStepZ() * shift);
+        return box.intersects(area);
+    }
+
     // ==================== 物品捕获 ====================
 
     private void captureNearby(AABB box) {
+        // 节点位于鱼缸 / 大型炼药锅等物品容器内部时，优先把物品放行给容器；
+        // 容器装不下（已满）才继续捕获。容器自身的 entityInside 会完成入料。
+        IItemHandler container = this.supportContainer();
         for (ItemEntity entity : level().getEntitiesOfClass(ItemEntity.class, box)) {
             if (capturedItems.contains(entity)) continue;
 
             ItemStack stack = entity.getItem();
             if (stack.isEmpty()) continue;
+
+            if (container != null
+                    && entity.blockPosition().equals(this.blockPos)
+                    && ItemHandlerUtil.insertItem(container, stack.copy(), true).getCount() < stack.getCount()) {
+                continue;
+            }
 
             // 1. 先尝试合并到现有物品
             for (ItemEntity existing : capturedItems) {
@@ -374,6 +457,20 @@ public class DogeNodeEntity extends Entity {
 
     private boolean isFull() {
         return capturedItems.size() >= MAX_CAPTURED;
+    }
+
+    /**
+     * 节点坐落其内部的物品容器（鱼缸 / 大型炼药锅）的处理器，用于在容器未满时让位。
+     *
+     * <p>这两种容器的缸底 / 锅底都很低，节点是「坐进容器内部」而非站在顶面，故物品应优先
+     * 放行给容器；从上方（UP）查询能力才能拿到可注入的输入槽（大型炼药锅底部是只读输出面）。</p>
+     */
+    @Nullable
+    private IItemHandler supportContainer() {
+        if (this.level().isClientSide) return null;
+        Block block = this.level().getBlockState(this.blockPos).getBlock();
+        if (!(block instanceof FishTankBlock) && !(block instanceof LargeCauldronBlock)) return null;
+        return this.level().getCapability(Capabilities.ItemHandler.BLOCK, this.blockPos, Direction.UP);
     }
 
     private Vec3 above() {
@@ -451,5 +548,19 @@ public class DogeNodeEntity extends Entity {
         }
         capturedItems.clear();
         discard();
+        // 节点已移除后再通知：让周边传输网重算货源时确实找不到它。
+        this.notifyTransferNetwork();
+    }
+
+    /**
+     * 通知物品传输网重算周边货源：本节点是传输网的端点，出现 / 消失都会改变「取出」有效性。
+     *
+     * <p>节点是实体，网络只在拓扑变化时重算记录，因此放置 / 移除节点后必须主动通知，
+     * 否则管道载体编程时算出的端点记录里不会有这个节点。</p>
+     */
+    public void notifyTransferNetwork() {
+        if (this.level().isClientSide) return;
+        ItemTransferNetworkManager.topologyChanged(this.level(), this.blockPos);
+        ItemTransferNetworkManager.topologyChanged(this.level(), this.blockPosition());
     }
 }

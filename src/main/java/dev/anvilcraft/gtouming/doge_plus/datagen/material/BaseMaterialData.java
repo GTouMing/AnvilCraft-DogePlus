@@ -42,12 +42,28 @@ public record BaseMaterialData(String name, int sockets, JsonArray ingredient) {
     public static final String TOOLS = "tools";
     public static final String DOGE_STEEL_BLOCK = "doge_steel_block";
     public static final String INLAY_CARRIER_BLOCK = "inlay_carrier_block";
-    public static final String TRANSCENDIUM_INLAY_CARRIER_BLOCK = "transcendium_inlay_carrier_block";
     public static final String NETHERITE_UPGRADE_TEMPLATE = "netherite_upgrade_smithing_template";
     public static final String HOLLOW_MAGNET_BLOCK = "hollow_magnet_block";
+    // 中子锭相关：这两个文件键同时被镶嵌材料与镶合配方引用，故集中定义在此，避免重复常量
+    public static final String OVERHEATED_EMBER_METAL_BLOCK = "overheated_ember_metal_block";
+    public static final String CHARGED_NEUTRONIUM_INGOT = "charged_neutronium_ingot";
+    /** 约束仓：镶入充能中子锭后镶合为约束中子锭（前置 item_inject 配方的镶合版）。 */
+    public static final String CONFINEMENT_CHAMBER = "confinement_chamber";
+
+    /** 超温余烬金属块镶孔数：1，镶入中子锭后由镶合按附魔条数出产物。 */
+    public static final int OVERHEATED_EMBER_METAL_BLOCK_SOCKETS = 1;
+
+    /** 约束仓镶孔数：1，镶入充能中子锭即镶合为约束中子锭。 */
+    public static final int CONFINEMENT_CHAMBER_SOCKETS = 1;
+
+    /** 中子锭镶孔数：2（书 / 附魔书 / 紫水晶）。 */
+    public static final int NEUTRONIUM_INGOT_SOCKETS = 2;
 
     /** 空心磁铁块镶孔数：每个镶孔镶入一个铁锭，镶合出等量磁铁锭。 */
     public static final int HOLLOW_MAGNET_BLOCK_SOCKETS = 4;
+
+    /** 镶嵌载体镶孔数：固定 6 个（每面一个）。 */
+    public static final int INLAY_CARRIER_SOCKETS = 6;
 
     /** 原版全部盔甲纹饰模板（18 种，1.21.1）。 */
     public static final List<Item> TRIM_TEMPLATES = List.of(
@@ -93,17 +109,24 @@ public record BaseMaterialData(String name, int sockets, JsonArray ingredient) {
                     .item(dev.anvilcraft.gtouming.doge_plus.init.ModBlocks.DOGE_STEEL_BLOCK).sockets(5).buildBase(),
             // 镶嵌载体：固定 6 镶孔
             builder().name(INLAY_CARRIER_BLOCK)
-                    .item(dev.anvilcraft.gtouming.doge_plus.init.ModBlocks.INLAY_CARRIER).sockets(6).buildBase(),
-            // 超限镶嵌载体：镶孔数写死为「已镶嵌数量 + 1」，此处 sockets 仅为占位，运行时由
-            // MaterialManager 特判覆盖，数据包无法更改实际镶孔数
-            builder().name(TRANSCENDIUM_INLAY_CARRIER_BLOCK)
-                    .item(dev.anvilcraft.gtouming.doge_plus.init.ModBlocks.TRANSCENDIUM_INLAY_CARRIER).sockets(1).buildBase(),
+                    .item(dev.anvilcraft.gtouming.doge_plus.init.ModBlocks.INLAY_CARRIER)
+                    .sockets(INLAY_CARRIER_SOCKETS).buildBase(),
             // 原版锻造兼容：下界合金升级模板开两个镶孔（镶孔可分别嵌入锻造材料与钻石装备）
             builder().name(NETHERITE_UPGRADE_TEMPLATE)
                     .item(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE).sockets(2).buildBase(),
             // 空心磁铁块：每个镶孔可镶入一个铁锭，镶合出等量磁铁锭
             builder().name(HOLLOW_MAGNET_BLOCK)
-                    .item(ModBlocks.HOLLOW_MAGNET_BLOCK).sockets(HOLLOW_MAGNET_BLOCK_SOCKETS).buildBase()
+                    .item(ModBlocks.HOLLOW_MAGNET_BLOCK).sockets(HOLLOW_MAGNET_BLOCK_SOCKETS).buildBase(),
+            // 超温余烬金属块：1 镶孔，镶入中子锭后按附魔条数镶合（基底不返还）
+            builder().name(OVERHEATED_EMBER_METAL_BLOCK)
+                    .item(ModBlocks.OVERHEATED_EMBER_METAL_BLOCK)
+                    .sockets(OVERHEATED_EMBER_METAL_BLOCK_SOCKETS).buildBase(),
+            // 中子锭：2 镶孔，可镶书 / 附魔书 / 紫水晶
+            builder().name(CHARGED_NEUTRONIUM_INGOT)
+                    .item(ModItems.CHARGED_NEUTRONIUM_INGOT).sockets(NEUTRONIUM_INGOT_SOCKETS).buildBase(),
+            // 约束仓：1 镶孔，镶入充能中子锭后镶合为约束中子锭（基底不返还）
+            builder().name(CONFINEMENT_CHAMBER)
+                    .item(ModBlocks.CONFINEMENT_CHAMBER).sockets(CONFINEMENT_CHAMBER_SOCKETS).buildBase()
     };
 
     /**

@@ -15,6 +15,6 @@ items:
 Doge 钢锭的九合一配方，同时也是巨型 Doge 砧多方块结构的材料。
 
 - 合成：9 锭 → 1 块（分解：1 块 → 9 锭）。
-- 高温熔炼铁块与骨块也可直接获得Doge 钢块：
+- 高温熔炼铁块与骨块也可直接获得 Doge 钢块：
 
 <recipe id="anvilcraft_doge_plus:super_heating/doge_steel_block"/>

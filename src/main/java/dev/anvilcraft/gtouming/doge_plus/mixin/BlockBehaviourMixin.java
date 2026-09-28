@@ -5,8 +5,8 @@ import dev.anvilcraft.gtouming.doge_plus.data.*;
 import dev.anvilcraft.gtouming.doge_plus.logic.ILogicGate;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateStateData;
-import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
+import dev.anvilcraft.gtouming.doge_plus.transfer.ItemTransferNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.util.AnvilMagnetUtil;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.anvilcraft.lib.v2.util.Util;
@@ -80,6 +80,8 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
     ) {
         if (level.isClientSide()) return;
         LogicGateNetworkManager.topologyChanged(level, pos);
+        // 物品传输网的拓扑：放置的可能是节点本身，也可能是端点的容器（「有效取出」的判定随之变化）。
+        ItemTransferNetworkManager.topologyChanged(level, pos);
         if (state.getBlock() == oldState.getBlock() || state.getBlock() == Blocks.AIR) return;
 
         BlockPos mainPos = pos;
@@ -112,6 +114,8 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
             CallbackInfo ci) {
         if (level.isClientSide()) return;
         LogicGateNetworkManager.topologyChanged(level, pos);
+        // 物品传输网：移除的可能是节点本身，也可能是端点的容器（「有效取出」的判定随之变化）。
+        ItemTransferNetworkManager.topologyChanged(level, pos);
         if (state.getBlock() == newState.getBlock() || state.getBlock() == Blocks.AIR) return;
 
         BlockPos mainPos = pos;
@@ -196,8 +200,8 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
     }
 
     @Override
-    public LogicGateType doge_plus$getGateType(Level level, BlockPos pos, Direction outputDir) {
-        return BlockInlayManager.get(level, pos).getGateType(outputDir);
+    public FaceMode doge_plus$getGateType(Level level, BlockPos pos, Direction outputDir) {
+        return BlockInlayManager.get(level, pos).getFace(outputDir);
     }
 
     @Override

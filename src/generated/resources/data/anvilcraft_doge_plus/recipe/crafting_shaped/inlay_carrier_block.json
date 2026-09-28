@@ -4,15 +4,12 @@
   "key": {
     "I": {
       "item": "anvilcraft_doge_plus:doge_steel_ingot"
-    },
-    "R": {
-      "item": "anvilcraft:redstone_wire"
     }
   },
   "pattern": [
-    " R ",
-    "RIR",
-    " R "
+    " I ",
+    "III",
+    " I "
   ],
   "result": {
     "count": 4,

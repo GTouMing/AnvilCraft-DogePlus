@@ -38,11 +38,6 @@ public final class InlayUtil {
         stack.set(ModDataComponentTypes.INLAY, list);
     }
 
-    /** 返回去掉全部镶嵌（含属性修饰器）的基材副本；无有效镶嵌时一并移除组件。 */
-    public static ItemStack withInlaysRemoved(ItemStack base) {
-        return withInlays(base, List.of());
-    }
-
     // ==================== 属性查询 ====================
 
     public static boolean hasProperty(ItemStack stack, InlayProperty property) {
@@ -67,8 +62,8 @@ public final class InlayUtil {
 
     public static ItemStack withAddedInlay(ItemStack base, InlayEntry inlay) {
         List<InlayEntry> inlays = new ArrayList<>(getInlays(base));
-        if (inlays.contains(InlayEntry.nulls()))
-            inlays.set(inlays.indexOf(InlayEntry.nulls()), inlay);
+        if (inlays.contains(InlayEntry.empty()))
+            inlays.set(inlays.indexOf(InlayEntry.empty()), inlay);
         else
             inlays.add(inlay);
         return withInlays(base, inlays);
@@ -90,7 +85,7 @@ public final class InlayUtil {
     public static ItemStack withRemovedAt(ItemStack base, int slot) {
         List<InlayEntry> inlays = new ArrayList<>(getInlays(base));
         if (slot < 0 || slot >= inlays.size()) return ItemStack.EMPTY;
-        inlays.set(slot, InlayEntry.nulls());
+        inlays.set(slot, InlayEntry.empty());
         return withInlays(base, inlays);
     }
 
@@ -99,7 +94,7 @@ public final class InlayUtil {
      */
     public static InlayEntry getInlayAt(ItemStack stack, int slot) {
         List<InlayEntry> inlays = getInlays(stack);
-        if (slot < 0 || slot >= inlays.size()) return InlayEntry.nulls();
+        if (slot < 0 || slot >= inlays.size()) return InlayEntry.empty();
         return inlays.get(slot);
     }
 

@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "extract"
+  ],
+  "ingredient": [
+    {
+      "item": "anvilcraft:magnetic_chute"
+    }
+  ]
+}

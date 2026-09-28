@@ -1,6 +1,5 @@
 package dev.anvilcraft.gtouming.doge_plus.data;
 
-import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateType;
 import dev.anvilcraft.gtouming.doge_plus.network.BlockInlaySyncPacket;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import net.minecraft.core.BlockPos;
@@ -9,11 +8,13 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -180,10 +181,11 @@ public class BlockInlayManager extends SavedData {
                 // 保存 id
                 inlayTag.putString("id", inlayEntry.id().toString());
 
-                // 保存 extra 列表
+                // extra 为带类型的数据（药水效果 / 附魔条数……），按 InlayExtra 编解码写成复合标签
                 ListTag extraList = new ListTag();
-                for (ResourceLocation extra : inlayEntry.extra()) {
-                    extraList.add(StringTag.valueOf(extra.toString()));
+                for (InlayExtra extra : inlayEntry.extra()) {
+                    InlayExtra.CODEC.encodeStart(NbtOps.INSTANCE, extra)
+                            .result().ifPresent(extraList::add);
                 }
                 inlayTag.put("extra", extraList);
 
@@ -197,15 +199,15 @@ public class BlockInlayManager extends SavedData {
             }
             entryTag.put("I", inlayList);
 
-            // 保存方向映射 (如果需要持久化)
-            ListTag dirList = new ListTag();
-            for (Map.Entry<Direction, LogicGateType> dirEntry : inlays.directions().entrySet()) {
-                CompoundTag dirTag = new CompoundTag();
-                dirTag.putString("dir", dirEntry.getKey().getName());
-                dirTag.putString("type", dirEntry.getValue().name());
-                dirList.add(dirTag);
+            // 保存各面方向性属性（门种 / 搬运角色统一在一张表里）
+            ListTag faceList = new ListTag();
+            for (Map.Entry<Direction, FaceMode> faceEntry : inlays.faces().entrySet()) {
+                CompoundTag faceTag = new CompoundTag();
+                faceTag.putString("dir", faceEntry.getKey().getName());
+                faceTag.putString("mode", faceEntry.getValue().name());
+                faceList.add(faceTag);
             }
-            entryTag.put("D", dirList);
+            entryTag.put("M", faceList);
 
             // 保存各面逻辑门设定值
             ListTag valueList = new ListTag();
@@ -216,6 +218,26 @@ public class BlockInlayManager extends SavedData {
                 valueList.add(valueTag);
             }
             entryTag.put("V", valueList);
+
+            // 保存各面物流量（管道载体的「存入」面）
+            ListTag throughputList = new ListTag();
+            for (Map.Entry<Direction, Integer> throughputEntry : inlays.throughputs().entrySet()) {
+                CompoundTag throughputTag = new CompoundTag();
+                throughputTag.putString("dir", throughputEntry.getKey().getName());
+                throughputTag.putInt("value", throughputEntry.getValue());
+                throughputList.add(throughputTag);
+            }
+            entryTag.put("Q", throughputList);
+
+            // 保存各面过滤物品（管道载体的「存入」面）
+            ListTag filterList = new ListTag();
+            for (Map.Entry<Direction, ItemStack> filterEntry : inlays.filters().entrySet()) {
+                CompoundTag filterTag = new CompoundTag();
+                filterTag.putString("dir", filterEntry.getKey().getName());
+                filterTag.put("item", filterEntry.getValue().save(registries));
+                filterList.add(filterTag);
+            }
+            entryTag.put("F", filterList);
 
             list.add(entryTag);
         }
@@ -251,11 +273,18 @@ public class BlockInlayManager extends SavedData {
                 String idStr = inlayTag.getString("id");
                 ResourceLocation id = ResourceLocation.parse(idStr);
 
-                // 读取 extra 列表
-                List<ResourceLocation> extra = new ArrayList<>();
-                ListTag extraList = inlayTag.getList("extra", Tag.TAG_STRING);
+                // 读取 extra：新格式为复合标签，旧格式（纯药水 id 字符串）照旧兼容
+                List<InlayExtra> extra = new ArrayList<>();
+                ListTag extraList = inlayTag.getList("extra", Tag.TAG_COMPOUND);
                 for (int k = 0; k < extraList.size(); k++) {
-                    extra.add(ResourceLocation.parse(extraList.getString(k)));
+                    InlayExtra.CODEC.parse(NbtOps.INSTANCE, extraList.get(k))
+                            .result().ifPresent(extra::add);
+                }
+                if (extraList.isEmpty()) {
+                    ListTag legacyExtra = inlayTag.getList("extra", Tag.TAG_STRING);
+                    for (int k = 0; k < legacyExtra.size(); k++) {
+                        extra.add(new InlayExtra.Potion(ResourceLocation.parse(legacyExtra.getString(k))));
+                    }
                 }
 
                 List<ResourceLocation> attributes = new ArrayList<>();
@@ -267,23 +296,37 @@ public class BlockInlayManager extends SavedData {
                 inlayEntries.add(new InlayEntry(id, extra, attributes));
             }
 
-            // 读取方向映射 (兼容旧数据)
-            Map<Direction, LogicGateType> directions = new HashMap<>();
-            ListTag dirList = entryTag.getList("D", Tag.TAG_COMPOUND);
-            if (!dirList.isEmpty()) {
-                for (int j = 0; j < dirList.size(); j++) {
-                    CompoundTag dirTag = dirList.getCompound(j);
-                    String dirName = dirTag.getString("dir");
-                    String typeName = dirTag.getString("type");
-                    Direction dir = Direction.byName(dirName);
-                    LogicGateType type = LogicGateType.valueOf(typeName);
-                    if (dir != null) {
-                        directions.put(dir, type);
-                    }
+            // 读取各面方向性属性。
+            // 新格式是统一表 "M"；旧数据分别存在 "D"（门种）与 "T"（搬运角色）里，读出来合并即可
+            // （两类按方块类型互斥，不会冲突）；更旧的数据连 "D" 都没有，退回从材料推导。
+            Map<Direction, FaceMode> faces = new HashMap<>();
+            ListTag faceList = entryTag.getList("M", Tag.TAG_COMPOUND);
+            if (!faceList.isEmpty()) {
+                for (int j = 0; j < faceList.size(); j++) {
+                    CompoundTag faceTag = faceList.getCompound(j);
+                    Direction dir = Direction.byName(faceTag.getString("dir"));
+                    if (dir == null) continue;
+                    faces.put(dir, parseFaceMode(faceTag.getString("mode")));
                 }
             } else {
-                // 兼容旧数据：从 inlayEntries 重新构建方向映射
-                directions = buildDirectionsFromInlays(inlayEntries);
+                ListTag dirList = entryTag.getList("D", Tag.TAG_COMPOUND);
+                if (!dirList.isEmpty()) {
+                    for (int j = 0; j < dirList.size(); j++) {
+                        CompoundTag dirTag = dirList.getCompound(j);
+                        Direction dir = Direction.byName(dirTag.getString("dir"));
+                        if (dir == null) continue;
+                        faces.put(dir, parseFaceMode(dirTag.getString("type")));
+                    }
+                } else {
+                    faces = buildFacesFromInlays(inlayEntries);
+                }
+                ListTag transferList = entryTag.getList("T", Tag.TAG_COMPOUND);
+                for (int j = 0; j < transferList.size(); j++) {
+                    CompoundTag transferTag = transferList.getCompound(j);
+                    Direction dir = Direction.byName(transferTag.getString("dir"));
+                    if (dir == null) continue;
+                    faces.put(dir, parseFaceMode(transferTag.getString("mode")));
+                }
             }
 
             // 读取各面逻辑门设定值（旧数据无此 tag → 全部走默认值）
@@ -297,8 +340,31 @@ public class BlockInlayManager extends SavedData {
                 }
             }
 
+            // 读取各面物流量（旧数据无此 tag → 全部走默认值）
+            Map<Direction, Integer> throughputs = new HashMap<>();
+            ListTag throughputList = entryTag.getList("Q", Tag.TAG_COMPOUND);
+            for (int j = 0; j < throughputList.size(); j++) {
+                CompoundTag throughputTag = throughputList.getCompound(j);
+                Direction dir = Direction.byName(throughputTag.getString("dir"));
+                if (dir != null) {
+                    throughputs.put(dir, throughputTag.getInt("value"));
+                }
+            }
+
+            // 读取各面过滤物品（旧数据无此 tag → 全部无过滤）
+            Map<Direction, ItemStack> filters = new HashMap<>();
+            ListTag filterList = entryTag.getList("F", Tag.TAG_COMPOUND);
+            for (int j = 0; j < filterList.size(); j++) {
+                CompoundTag filterTag = filterList.getCompound(j);
+                Direction dir = Direction.byName(filterTag.getString("dir"));
+                if (dir == null) continue;
+                ItemStack filter = ItemStack.parseOptional(registries, filterTag.getCompound("item"));
+                if (!filter.isEmpty()) filters.put(dir, filter.copyWithCount(1));
+            }
+
             // 构建 BlockInlays 并存入
-            BlockInlays inlays = new BlockInlays(block, inlayEntries, directions, values);
+            BlockInlays inlays =
+                    new BlockInlays(block, inlayEntries, faces, values, throughputs, filters);
             data.INLAID_BLOCKS.put(pos, inlays);
         }
 
@@ -306,67 +372,32 @@ public class BlockInlayManager extends SavedData {
     }
 
     /**
-     * 从 InlayEntry 列表构建方向映射
+     * 从 InlayEntry 列表构建面属性表：更旧的数据连 "D" 都没有时的退回路径。
      */
-    private static Map<Direction, LogicGateType> buildDirectionsFromInlays(List<InlayEntry> inlays) {
+    private static Map<Direction, FaceMode> buildFacesFromInlays(List<InlayEntry> inlays) {
         List<Direction> directionOrder = List.of(Direction.values());
-        Map<Direction, LogicGateType> directions = new HashMap<>();
+        Map<Direction, FaceMode> faces = new HashMap<>();
 
-        // 初始化为 NONE
         for (Direction dir : directionOrder) {
-            directions.put(dir, LogicGateType.NONE);
+            faces.put(dir, FaceMode.NONE);
         }
 
-        // 遍历镶孔，填充对应方向的门类型
         for (int i = 0; i < Math.min(inlays.size(), directionOrder.size()); i++) {
             InlayEntry entry = inlays.get(i);
-            Direction dir = directionOrder.get(i);
-            // 空镶孔（取出过的槽位）不携带任何门逻辑
-            if (entry.isEmpty()) {
-                directions.put(dir, LogicGateType.NONE);
-                continue;
-            }
-            LogicGateType gateType = detectGateType(entry);
-            directions.put(dir, gateType);
+            // 空镶孔（取出过的槽位）不携带任何方向性属性
+            faces.put(directionOrder.get(i), entry.isEmpty() ? FaceMode.NONE : BlockInlays.faceModeOf(entry));
         }
 
-        return directions;
+        return faces;
     }
 
-    /**
-     * 从 InlayEntry 检测门逻辑类型
-     */
-    private static LogicGateType detectGateType(InlayEntry entry) {
-        // 从 extra 中检测门逻辑
-        for (ResourceLocation extra : entry.extra()) {
-            String path = extra.getPath();
-            switch (path) {
-                case "not_gate" -> {
-                    return LogicGateType.NOT_GATE;
-                }
-                case "and_gate" -> {
-                    return LogicGateType.AND_GATE;
-                }
-                case "or_gate" -> {
-                    return LogicGateType.OR_GATE;
-                }
-                case "output" -> {
-                    return LogicGateType.OUTPUT;
-                }
-                case "input" -> {
-                    return LogicGateType.INPUT;
-                }
-                case "counter_gate" -> {
-                    return LogicGateType.COUNTER_GATE;
-                }
-                case "latch_gate" -> {
-                    return LogicGateType.LATCH_GATE;
-                }
-                case "delay_gate" -> {
-                    return LogicGateType.DELAY_GATE;
-                }
-            }
+    /** 按名字解析面属性；未知名字（版本回退等）按未编程处理。 */
+    private static FaceMode parseFaceMode(String name) {
+        if (name == null || name.isEmpty()) return FaceMode.NONE;
+        try {
+            return FaceMode.valueOf(name);
+        } catch (IllegalArgumentException ignored) {
+            return FaceMode.NONE;
         }
-        return LogicGateType.NONE;
     }
 }

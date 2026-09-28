@@ -80,11 +80,11 @@ public class ModDataGen {
             generator.addProvider(event.includeServer(), new MaterialJsonProvider(
                     packOutput,
                     BaseMaterialData.all(smithing, jewel),
-                    InlayMaterialData.all(smithing, jewel)));
+                    InlayMaterialData.all()));
 
             // inlay（镶嵌）配方 —— 本 mod 自有配方类型，自写 provider 输出
             generator.addProvider(event.includeServer(),
-                    new InlayRecipeProvider(packOutput, InlayRecipeData.all(smithing, jewel)));
+                    new InlayRecipeProvider(packOutput, InlayRecipeData.all()));
 
             // inlay_crafting（镶合）配方 —— 同上，路径 recipe/inlay_crafting/
             generator.addProvider(event.includeServer(),

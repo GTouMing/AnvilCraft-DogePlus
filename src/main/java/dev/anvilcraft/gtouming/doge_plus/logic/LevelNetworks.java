@@ -2,8 +2,9 @@ package dev.anvilcraft.gtouming.doge_plus.logic;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
+import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
+import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import it.unimi.dsi.fastutil.longs.*;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.core.BlockPos;
@@ -63,11 +64,17 @@ final class LevelNetworks {
     /** 正在倒计时的延时门（位置 -> 方向位），每 tick 只推进这些门 */
     private final Long2IntOpenHashMap pendingDelays = new Long2IntOpenHashMap();
 
+    /**
+     * 延时门本次计时的登记时刻（位置 -> 游戏刻）。
+     *
+     * <p>上升沿在世界更新阶段处理、{@code tick()} 在同一刻末尾递减，若登记当刻就递减，
+     * 设定 N 只会输出 N-1 tick（N=1 更是来不及被观察到就被清零）。登记当刻跳过递减，
+     * 使持续时长正好为设定值。</p>
+     */
+    private final Long2LongOpenHashMap delayRegisteredAt = new Long2LongOpenHashMap();
+
     /** 非门在连续游戏刻内翻转次数达到该值视为振荡，破坏方块 */
     private static final int OSCILLATION_LIMIT = 16;
-
-    /** 防止写回触发重入 */
-    boolean applyingTopology = false;
 
     /** 防止更新循环重入 */
     private boolean processingUpdates = false;
@@ -101,6 +108,29 @@ final class LevelNetworks {
         runUpdates();
     }
 
+    /**
+     * 让紧邻该位置的网络重采样输入（位置本身不在任何网络里时使用）。
+     *
+     * <p>红石粉等外部方块变化时，受影响的只是相邻网络的输入，拓扑并没有变。
+     * 绝大多数邻居变化周围根本没有门，因此先在无分配的情况下扫一遍就返回。</p>
+     *
+     * @param except 本次变化来源所属的网络，跳过它：它的输出刚刚收敛，再标脏只会让同一张网
+     *               被整张重新结算一遍（自己通知自己导致的二次结算）
+     */
+    void signalUpdateAdjacent(BlockPos pos, @Nullable Network except) {
+        ObjectOpenHashSet<Network> affected = null;
+        for (Direction dir : Direction.values()) {
+            Network network = byGate.get(pos.relative(dir).asLong());
+            if (network == null || !network.valid || network.overflow || network == except) continue;
+            if (affected == null) affected = new ObjectOpenHashSet<>();
+            affected.add(network);
+        }
+        if (affected == null) return;
+        for (Network network : affected) {
+            requestSignalUpdate(network);
+        }
+    }
+
     void tick() {
         // 清理超过一个游戏刻未翻转的计数条目，防止残留导致误判与内存增长。
         // 连续翻转（同一刻或相邻刻）会保留计数，跨刻累计到阈值判定振荡。
@@ -112,6 +142,7 @@ final class LevelNetworks {
         lastInputs.keySet().removeIf(pos -> !byGate.containsKey(pos));
         pulseMasks.keySet().removeIf(pos -> !byGate.containsKey(pos));
         pendingDelays.keySet().removeIf(pos -> !byGate.containsKey(pos));
+        delayRegisteredAt.keySet().removeIf(pos -> !byGate.containsKey(pos));
         advanceTimers();
 
         runUpdates();
@@ -119,6 +150,41 @@ final class LevelNetworks {
 
     /** 一个输入面的到达事件：该上升沿的信号值。 */
     private record Rise(int value) {
+    }
+
+    /**
+     * 抹掉某面逻辑门的输出与运行时状态（该面换料 / 移除镶嵌时调用）。
+     *
+     * <p>换料可能把该面从无状态门换成有状态门。有状态门的输出由自身逻辑（到达事件 / 倒计时）
+     * 持有，既不参与组合结算、也不在 {@code resetOutputs} 的范围内，若不显式清除，
+     * 旧门的输出会被一直保留，红石读数不会更新（如输出门的 15 换成锁存门后仍是 15）。</p>
+     */
+    void clearFace(BlockPos pos, Direction face) {
+        long packedPos = pos.asLong();
+        int bit = 1 << face.ordinal();
+
+        if (persistentData != null) {
+            persistentData.setSignal(pos, face, 0);
+            persistentData.setDirty();
+        }
+        if (stateData != null) {
+            stateData.clear(pos, face);
+        }
+        // 该面未跑完的计数脉冲 / 延时倒计时一并丢弃，避免它们之后把新门的输出清零。
+        int pulses = pulseMasks.get(packedPos);
+        if ((pulses & bit) != 0) {
+            if ((pulses & ~bit) == 0) pulseMasks.remove(packedPos);
+            else pulseMasks.put(packedPos, pulses & ~bit);
+        }
+        int delays = pendingDelays.get(packedPos);
+        if ((delays & bit) != 0) {
+            if ((delays & ~bit) == 0) {
+                pendingDelays.remove(packedPos);
+                delayRegisteredAt.remove(packedPos);
+            } else {
+                pendingDelays.put(packedPos, delays & ~bit);
+            }
+        }
     }
 
     /**
@@ -148,6 +214,7 @@ final class LevelNetworks {
 
         // 延时门倒计时，归零时停止输出。
         if (!pendingDelays.isEmpty()) {
+            long now = level.getGameTime();
             Long2IntOpenHashMap stillPending = new Long2IntOpenHashMap();
             for (Long2IntMap.Entry entry : pendingDelays.long2IntEntrySet()) {
                 long packedPos = entry.getLongKey();
@@ -155,6 +222,11 @@ final class LevelNetworks {
                 if (network == null) continue;
                 BlockPos pos = BlockPos.of(packedPos);
                 int mask = entry.getIntValue();
+                // 本刻刚登记的计时不在本刻递减，保证持续时长正好为设定 tick 数（见 delayRegisteredAt）。
+                if (delayRegisteredAt.containsKey(packedPos) && delayRegisteredAt.get(packedPos) == now) {
+                    stillPending.put(packedPos, mask);
+                    continue;
+                }
                 int remainingMask = 0;
                 for (Direction dir : Direction.values()) {
                     if ((mask & (1 << dir.ordinal())) == 0) continue;
@@ -173,6 +245,9 @@ final class LevelNetworks {
                 }
                 if (remainingMask != 0) {
                     stillPending.put(packedPos, remainingMask);
+                } else {
+                    // 计时结束，登记时刻一并清除，避免长期残留。
+                    delayRegisteredAt.remove(packedPos);
                 }
                 // 同步"已计时"显示值；外观刷新期间抑制拓扑更新。
                 LogicGateNetworkManager.runSuppressedTopologyChange(
@@ -198,14 +273,23 @@ final class LevelNetworks {
     private boolean applyGateArrivals(Network network) {
         if (stateData == null || !network.hasStatefulGates) return false;
 
-        Long2ObjectOpenHashMap<Map<Direction, Integer>> inputs = collectInputs(network);
-        boolean changed = false;
+        // 先把所有有状态门的输入取成快照：同一轮内各门的到达判定必须基于同一份输入，
+        // 否则先处理的门写回的输出会被后处理的门读到，结果会取决于遍历顺序。
+        Long2ObjectOpenHashMap<Map<Direction, Integer>> inputs = new Long2ObjectOpenHashMap<>();
+        for (Long2ObjectMap.Entry<GateNode> entry : network.nodes.long2ObjectEntrySet()) {
+            if (entry.getValue().statefulMask() == 0) continue;
+            long packedPos = entry.getLongKey();
+            BlockPos pos = BlockPos.of(packedPos);
+            inputs.put(packedPos, collectNodeInputs(network, pos, BlockInlayManager.get(level, pos)));
+        }
 
+        boolean changed = false;
         for (Long2ObjectMap.Entry<GateNode> entry : network.nodes.long2ObjectEntrySet()) {
             long packedPos = entry.getLongKey();
             GateNode node = entry.getValue();
             if (node.statefulMask() == 0) continue;
             BlockPos pos = BlockPos.of(packedPos);
+            BlockInlays inlays = BlockInlayManager.get(level, pos);
             Map<Direction, Integer> inputMap = inputs.getOrDefault(packedPos, Map.of());
 
             // 逐输入面与上次记录比对，得到本轮的到达事件。
@@ -224,7 +308,7 @@ final class LevelNetworks {
 
             for (Direction dir : Direction.values()) {
                 if ((node.statefulMask() & (1 << dir.ordinal())) == 0) continue;
-                LogicGateType type = BlockInlayManager.get(level, pos).getGateType(dir);
+                FaceMode type = inlays.getFace(dir);
                 int held = node.getOutput(dir);
                 int next = switch (type) {
                     case COUNTER_GATE -> arriveCounter(pos, dir, packedPos, rises.size(), held);
@@ -274,8 +358,12 @@ final class LevelNetworks {
             }
         }
         stateData.setLatched(pos, dir, latched);
-        // 锁存门的设定值与当前记录同步：记录值直接写回镶嵌数据（随后同步给客户端）。
-        BlockInlayManager.put(level, pos, BlockInlayManager.get(level, pos).withValue(dir, next));
+        // 锁存门的设定值与当前记录同步：记录值写回镶嵌数据（随后同步给客户端）。
+        // 但「可调节的设定值」是载体独有的特性——只有载体会渲染 / 显示这个值；
+        // 非载体（如镶嵌了锁存门的石头）写回只会留下无意义的存档写入与客户端同步。
+        if (level.getBlockState(pos).getBlock() instanceof InlayCarrierBlock) {
+            BlockInlayManager.put(level, pos, BlockInlayManager.get(level, pos).withValue(dir, next));
+        }
         return next;
     }
 
@@ -291,6 +379,8 @@ final class LevelNetworks {
                     BlockInlayManager.get(level, pos).getValue(dir), 0, AnvilCraftDogePlus.CONFIG.delayMaxTicks);
             if (remaining > 0) {
                 pendingDelays.put(packedPos, pendingDelays.get(packedPos) | (1 << dir.ordinal()));
+                // 登记当刻不递减（见 advanceTimers），保证持续时长正好为设定 tick 数。
+                delayRegisteredAt.put(packedPos, level.getGameTime());
             }
         }
         if (remaining > 0) {
@@ -376,18 +466,14 @@ final class LevelNetworks {
             invalidate(network, rebuildSeeds);
         }
 
-        // 从种子重建新网络
-        applyingTopology = true;
-        try {
-            for (LongIterator it = rebuildSeeds.iterator(); it.hasNext();) {
-                long seed = it.nextLong();
-                if (byGate.containsKey(seed)) continue;
-                if (isLogicGate(level,BlockPos.of(seed))) {
-                    buildNetwork(seed);
-                }
+        // 从种子重建新网络。重建期间外部方块（红石粉等）会被通知并反过来通知相邻的门，
+        // 那些「重采样输入」的排期必须照常生效，否则跨外部方块的下一张网收不到更新。
+        for (LongIterator it = rebuildSeeds.iterator(); it.hasNext();) {
+            long seed = it.nextLong();
+            if (byGate.containsKey(seed)) continue;
+            if (isLogicGate(level, BlockPos.of(seed))) {
+                buildNetwork(seed);
             }
-        } finally {
-            applyingTopology = false;
         }
     }
 
@@ -418,7 +504,7 @@ final class LevelNetworks {
             BlockInlays inlays = BlockInlayManager.get(level, pos);
             int statefulMask = 0;
             for (Direction dir : Direction.values()) {
-                if (inlays.getGateType(dir).isStateful()) statefulMask |= 1 << dir.ordinal();
+                if (inlays.getFace(dir).isStateful()) statefulMask |= 1 << dir.ordinal();
             }
             if (statefulMask != 0) hasStateful = true;
 
@@ -442,6 +528,8 @@ final class LevelNetworks {
 
         // 创建网络
         Network network = new Network(nodes, overflow, hasStateful);
+        // 建网时的输出即视为「已通知」的基准：区块加载 / 拓扑重建不应误报一次全量邻居更新。
+        network.lastNotified = snapshotOutputs(network);
         registerNetwork(network);
 
         if (!overflow) {
@@ -528,12 +616,13 @@ final class LevelNetworks {
             network.needsReset = false;
             // 新一轮结算开始，清空上一轮遗留的未收敛候选。
             network.churningNotGates.clear();
+            // 从全 0 起步：整网都要重新求值。
+            network.dirtyNodes.clear();
+            network.dirtyNodes.addAll(network.nodes.keySet());
         }
 
-        boolean passChanged = settlePass(network);
-
-        if (passChanged) {
-            // 尚未收敛：保留中间值继续下一轮（长链可能跨 tick 传播），
+        if (!propagate(network)) {
+            // 预算用尽仍未静默：保留中间值继续下一轮（极端的长反馈环），
             // 期间不刷新外观 / 通知邻居，避免把中间态暴露出去。
             requestContinuation(network);
             return;
@@ -548,11 +637,14 @@ final class LevelNetworks {
         // 刷新载体外观（powered 模型）。即使门输出未变，输入门「收到信号」也可能变化。
         refreshCarrierVisuals(network);
 
-        // 只有最终输出相对结算前真正变化时才同步 / 通知。
+        // 只有输出相对「上次已通知」的状态真正变化时才同步 / 通知。
         // 「清零」只是求最小不动点的手段，不能算作变化，否则每次重算都会通知形成回声。
-        if (!outputsEqual(network, network.baseline)) {
+        // 也不能与 baseline 比较：baseline 每轮结算都会重建，会把上一轮末尾写入的有状态门输出
+        // （计数 / 锁存 / 延时）吸收进去，使这些门的输出变化永远不通知邻居。
+        if (network.lastNotified == null || !outputsEqual(network, network.lastNotified)) {
             syncToData(network);
             notifyNeighbors(network);
+            network.lastNotified = snapshotOutputs(network);
         }
         network.baseline = null;
 
@@ -564,43 +656,82 @@ final class LevelNetworks {
     }
 
     /**
-     * 单轮信号结算：所有门基于本轮开始时收集到的输入求值（一轮传播一跳）。
+     * 把本次待求值的节点推进到静默：逐节点用**当前**输入求值，输出变了就把它在网内的邻居入队。
      *
-     * @return 本轮输出相对上一轮是否发生变化
+     * <p>旧实现「先收全部输入再统一求值」意味着一次握手只前进一跳，链长 L 就要 L 轮，
+     * 于是被 {@link LogicGateNetworkManager#MAX_SETTLING_PASSES} 截断成「每 tick 十几跳」，
+     * 并让单次传播退化成 O(L²)。工作队列下每个节点只在输入变化时被求值，无环网络（门链）
+     * 一次调用内即可传到底，代价与网络长度同阶。</p>
+     *
+     * @return 是否在预算内达到静默
      */
-    private boolean settlePass(Network network) {
-        // 收集所有门的输入
-        Long2ObjectOpenHashMap<Map<Direction, Integer>> inputs = collectInputs(network);
+    private boolean propagate(Network network) {
+        LongOpenHashSet queued = new LongOpenHashSet();
+        LongArrayList queue = new LongArrayList();
+        for (LongIterator it = network.dirtyNodes.iterator(); it.hasNext(); ) {
+            long pos = it.nextLong();
+            if (queued.add(pos)) queue.add(pos);
+        }
+        network.dirtyNodes.clear();
 
-        // 计算每个门的输出
-        boolean changed = false;
-        for (Long2ObjectMap.Entry<GateNode> entry : network.nodes.long2ObjectEntrySet()) {
-            long pos = entry.getLongKey();
-            GateNode node = entry.getValue();
+        long budget = (long) MAX_SETTLING_EVALUATIONS_PER_NODE * network.nodes.size();
+        // 下标即队头：出队只推进 head，不移动元素。
+        for (int head = 0; head < queue.size(); head++) {
+            if (budget-- <= 0) {
+                // 预算用尽：剩余待求值节点留给下一次结算（下一轮或下一游戏刻）继续推进。
+                for (int i = head; i < queue.size(); i++) {
+                    network.dirtyNodes.add(queue.getLong(i));
+                }
+                return false;
+            }
+
+            long pos = queue.getLong(head);
+            queued.remove(pos);
+            if (!evaluateNode(network, pos)) continue;
+
+            // 只有输出真的变了，邻居才需要重新求值。
             BlockPos blockPos = BlockPos.of(pos);
-            BlockState state = level.getBlockState(blockPos);
+            for (Direction dir : Direction.values()) {
+                long neighbor = blockPos.relative(dir).asLong();
+                if (network.nodes.containsKey(neighbor) && queued.add(neighbor)) {
+                    queue.add(neighbor);
+                }
+            }
+        }
+        return true;
+    }
 
-            if (!(state.getBlock() instanceof ILogicGate gate)) continue;
+    /**
+     * 求值单个节点的所有无状态输出面。
+     *
+     * @return 该节点是否有输出发生变化
+     */
+    private boolean evaluateNode(Network network, long packedPos) {
+        GateNode node = network.nodes.get(packedPos);
+        if (node == null) return false;
 
-            // 获取该门所有方向的输入
-            Map<Direction, Integer> inputMap = inputs.getOrDefault(pos, Map.of());
+        BlockPos blockPos = BlockPos.of(packedPos);
+        BlockState state = level.getBlockState(blockPos);
+        if (!(state.getBlock() instanceof ILogicGate)) return false;
 
-            // 计算各方向输出
-            for (Direction outputDir : Direction.values()) {
-                LogicGateType gateType = gate.doge_plus$getGateType(level, blockPos, outputDir);
-                // 有状态门（计数 / 锁存 / 延时）的输出由每 tick 驱动写入，不参与纯函数结算。
-                if (gateType.isStateful()) continue;
-                int newSignal = gateType.calculate(
-                        outputDir, inputMap, gate.doge_plus$getValue(level, blockPos, outputDir));
-                int oldSignal = node.getOutput(outputDir);
-                if (oldSignal != newSignal) {
-                    node.setOutput(outputDir, newSignal);
-                    changed = true;
-                    // 结算途中的翻转只记为「未收敛」候选，不代表真实输出变化：
-                    // 只有网络最终无法收敛（真正的即时反馈环）才会据其判定振荡（见 runUpdates）。
-                    if (gateType == LogicGateType.NOT_GATE) {
-                        network.churningNotGates.add(pos);
-                    }
+        // 每节点只取一次镶嵌数据；各方向的输入与设定值直接从它读，避免逐方向重复查 SavedData。
+        BlockInlays inlays = BlockInlayManager.get(level, blockPos);
+        Map<Direction, Integer> inputMap = collectNodeInputs(network, blockPos, inlays);
+
+        boolean changed = false;
+        for (Direction outputDir : Direction.values()) {
+            FaceMode gateType = inlays.getFace(outputDir);
+            // 有状态门（计数 / 锁存 / 延时）的输出由每 tick 驱动写入，不参与纯函数结算。
+            if (gateType.isStateful()) continue;
+            int newSignal = gateType.calculate(inputMap, inlays.getValue(outputDir));
+            int oldSignal = node.getOutput(outputDir);
+            if (oldSignal != newSignal) {
+                node.setOutput(outputDir, newSignal);
+                changed = true;
+                // 结算途中的翻转只记为「未收敛」候选，不代表真实输出变化：
+                // 只有网络最终无法收敛（真正的即时反馈环）才会据其判定振荡（见 runUpdates）。
+                if (gateType == FaceMode.NOT_GATE) {
+                    network.churningNotGates.add(packedPos);
                 }
             }
         }
@@ -626,7 +757,7 @@ final class LevelNetworks {
             BlockState state = level.getBlockState(blockPos);
             if (!(state.getBlock() instanceof ILogicGate gate)) continue;
             for (Direction dir : Direction.values()) {
-                if (gate.doge_plus$getGateType(level, blockPos, dir) != LogicGateType.NOT_GATE) continue;
+                if (gate.doge_plus$getGateType(level, blockPos, dir) != FaceMode.NOT_GATE) continue;
                 if (node.getOutput(dir) != before[dir.ordinal()]) {
                     recordNotGateToggle(pos, now);
                     break;
@@ -706,53 +837,47 @@ final class LevelNetworks {
     }
 
     /**
-     * 收集网络中所有门的输入信号
-     * <p>只把标记为 {@link LogicGateType#INPUT} 的方向放入 map（值可为 0），
-     * 使 {@link LogicGateType#calculate} 能区分「输入面存在但信号为 0」与「无输入面」。</p>
+     * 收集单个节点各输入面的信号。
+     *
+     * <p>只把标记为 {@link FaceMode#INPUT} 的方向放入 map（值可为 0），
+     * 使 {@link FaceMode#calculate} 能区分「输入面存在但信号为 0」与「无输入面」。</p>
+     *
+     * @param inlays 该位置已取好的镶嵌数据，避免逐方向重复查 SavedData
      */
-    private Long2ObjectOpenHashMap<Map<Direction, Integer>> collectInputs(Network network) {
-        Long2ObjectOpenHashMap<Map<Direction, Integer>> result = new Long2ObjectOpenHashMap<>();
+    private Map<Direction, Integer> collectNodeInputs(Network network, BlockPos blockPos, BlockInlays inlays) {
+        Map<Direction, Integer> inputs = new EnumMap<>(Direction.class);
 
-        for (LongIterator it = network.nodes.keySet().iterator(); it.hasNext();) {
-            long pos = it.nextLong();
-            BlockPos blockPos = BlockPos.of(pos);
-            Map<Direction, Integer> inputs = new EnumMap<>(Direction.class);
+        // 仅收集「输入面」（INPUT 门标记的方向）的信号，非输入面不查询邻居。
+        // 这样输入信号映射只含输入面，门的计算逻辑无需再过滤非输入面。
+        for (Direction dir : Direction.values()) {
+            if (inlays.getFace(dir) != FaceMode.INPUT) continue;
+            BlockPos neighborPos = blockPos.relative(dir);
+            long neighbor = neighborPos.asLong();
 
-            // 仅收集「输入面」（INPUT 门标记的方向）的信号，非输入面不查询邻居。
-            // 这样输入信号映射只含输入面，门的计算逻辑无需再过滤非输入面。
-            BlockInlays inlays = BlockInlayManager.get(level, blockPos);
-            for (Direction dir : Direction.values()) {
-                if (inlays.getGateType(dir) != LogicGateType.INPUT) continue;
-                BlockPos neighborPos = blockPos.relative(dir);
-                long neighbor = neighborPos.asLong();
-
-                // 如果邻居在网络中，从网络读取输出
-                int signal;
-                if (network.nodes.containsKey(neighbor)) {
-                    GateNode neighborNode = network.nodes.get(neighbor);
-                    signal = neighborNode.getOutput(dir.getOpposite());
-                } else if (LogicGateNetworkManager.isLogicGate(level, neighborPos)) {
-                    // 跨网络的逻辑门：直接读其网络输出（该门朝本门方向的面）。
-                    signal = LogicGateNetworkManager.getSignal(level, neighborPos, dir.getOpposite());
-                } else {
-                    // 外部输入：从世界读取红石信号。
-                    // vanilla 约定：getSignal/getDirectSignal 的 direction 参数是
-                    // 「调用者 → 被查询方块」的方向，即本门指向邻居的 dir（而非 dir.getOpposite()）。
-                    // 中继器等方向敏感信号源按此约定输出，传反则读不到（红石粉不分方向所以不暴露）。
-                    // 取弱信号与强信号的最大值：红石粉只提供弱信号（getSignal），
-                    // 而中继器/比较器等只输出强信号（getDirectSignal），两者都需支持。
-                    int weak = level.getSignal(neighborPos, dir);
-                    int strong = level.getDirectSignal(neighborPos, dir);
-                    signal = Math.max(weak, strong);
-                }
-                // 输入门设定值：只传递 [0, 设定值] 内的信号（取小截断）
-                inputs.put(dir, Math.min(signal, inlays.getValue(dir)));
+            // 如果邻居在网络中，从网络读取输出
+            int signal;
+            if (network.nodes.containsKey(neighbor)) {
+                GateNode neighborNode = network.nodes.get(neighbor);
+                signal = neighborNode.getOutput(dir.getOpposite());
+            } else if (LogicGateNetworkManager.isLogicGate(level, neighborPos)) {
+                // 跨网络的逻辑门：直接读其网络输出（该门朝本门方向的面）。
+                signal = LogicGateNetworkManager.getSignal(level, neighborPos, dir.getOpposite());
+            } else {
+                // 外部输入：从世界读取红石信号。
+                // vanilla 约定：getSignal/getDirectSignal 的 direction 参数是
+                // 「调用者 → 被查询方块」的方向，即本门指向邻居的 dir（而非 dir.getOpposite()）。
+                // 中继器等方向敏感信号源按此约定输出，传反则读不到（红石粉不分方向所以不暴露）。
+                // 取弱信号与强信号的最大值：红石粉只提供弱信号（getSignal），
+                // 而中继器/比较器等只输出强信号（getDirectSignal），两者都需支持。
+                int weak = level.getSignal(neighborPos, dir);
+                int strong = level.getDirectSignal(neighborPos, dir);
+                signal = Math.max(weak, strong);
             }
-
-            result.put(pos, inputs);
+            // 输入门设定值：只传递 [0, 设定值] 内的信号（取小截断）
+            inputs.put(dir, Math.min(signal, inlays.getValue(dir)));
         }
 
-        return result;
+        return inputs;
     }
 
     /**

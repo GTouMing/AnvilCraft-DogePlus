@@ -12,6 +12,6 @@ items:
 
 <item id="anvilcraft_doge_plus:doge_steel_ingot"/>
 
-The core material of the addon. Produced by **Super Heating** an iron ingot with bone meal; used in nearly every recipe of the mod.
+The mod's core material. Made by **super-heating** Iron Ingots and Bone Meal, it is used in almost every recipe of the mod.
 
 <recipe id="anvilcraft_doge_plus:super_heating/doge_steel_ingot"/>

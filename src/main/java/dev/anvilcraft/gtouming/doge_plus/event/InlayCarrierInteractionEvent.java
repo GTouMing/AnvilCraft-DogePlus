@@ -2,13 +2,13 @@ package dev.anvilcraft.gtouming.doge_plus.event;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.TranscendiumInlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.TranscendiumInlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
+import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayRecipe;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
+import dev.anvilcraft.gtouming.doge_plus.transfer.ItemTransferNetworkManager;
 import dev.dubhe.anvilcraft.block.RedstoneWireBlock;
 import dev.dubhe.anvilcraft.block.RedstoneWireNetworkManager;
 import dev.dubhe.anvilcraft.init.item.ModItemTags;
@@ -37,10 +37,10 @@ import java.util.Map;
  * 镶嵌载体交互：主手铁砧锤左键点击载体方块。
  *
  * <p>副手存在合法镶嵌材料 → 添加/替换点击面的镶嵌；否则移除点击面的镶嵌。
- * 被替换/移除的材料返还给玩家。超限载体走其方块实体，普通载体走 {@link BlockInlayManager}。</p>
+ * 被替换/移除的材料返还给玩家，镶嵌数据存于 {@link BlockInlayManager}。</p>
  *
- * <p>普通载体的目标面按准星命中的<b>模型部件</b>判定（见 {@link InlayCarrierBlock#pickFace}），
- * 而不是方块面，避免从侧面看到通道时误判成侧面的镶孔；超限载体仍按方块面定位。</p>
+ * <p>目标面按准星命中的<b>模型部件</b>判定（见 {@link InlayCarrierBlock#pickFace}），
+ * 而不是方块面，避免从侧面看到通道时误判成侧面的镶孔。</p>
  *
  * <p>潜行左键作用于点击面的<b>反面</b>（便于在不便对准背面时操作）。</p>
  */
@@ -60,17 +60,16 @@ public class InlayCarrierInteractionEvent {
         BlockPos pos = event.getPos();
         BlockState state = level.getBlockState(pos);
         Block block = state.getBlock();
-        boolean transcendium = block instanceof TranscendiumInlayCarrierBlock;
-        boolean normal = block instanceof InlayCarrierBlock;
-        if (!normal && !transcendium) return;
+        if (!(block instanceof InlayCarrierBlock carrierBlock)) return;
+        // 逻辑载体没有镶孔，面属性由轮盘 / 门链编程：这里完全不拦截它的铁砧锤交互，
+        // 否则「移除该面镶嵌」会把空镶孔列表重建成 directions，覆盖已编程的面属性。
+        if (!carrierBlock.acceptsInlays()) return;
 
         Direction face = event.getFace();
         if (face == null) return;
-        // 普通载体：按准星命中的模型部件（通道/棱角）判定面，而不是单纯的方块面。
-        if (normal) {
-            Direction picked = pickPartFace(player, pos, state);
-            if (picked != null) face = picked;
-        }
+        // 按准星命中的模型部件（通道/棱角）判定面，而不是单纯的方块面。
+        Direction picked = pickPartFace(player, pos, state);
+        if (picked != null) face = picked;
         // 潜行左键操作点击面的反面（同样：副手有合法材料则替换，否则移除）
         if (player.isShiftKeyDown()) face = face.getOpposite();
 
@@ -82,24 +81,17 @@ public class InlayCarrierInteractionEvent {
         MaterialManager.InlayMaterial material = MaterialManager.getInlayMaterial(offhand);
 
         if (material != null) {
+            // 只有存在对应镶嵌配方（该材料 + 本载体）的组合才能镶上；
+            // 前置派生的配方已改为「静默镶嵌」：无显式配方时再按镶合条件放行。
+            ItemStack baseStack = new ItemStack(block.asItem());
+            if (InlayRecipe.find(level, offhand, baseStack) == null
+                    && !InlayRecipe.canSilentlyInlay(level, offhand, baseStack)) return;
             InlayEntry entry = InlayEntry.fromItemStack(offhand, material);
             if (entry.isEmpty()) return;
-            InlayEntry replaced;
-            if (transcendium) {
-                if (!(level.getBlockEntity(pos) instanceof TranscendiumInlayCarrierBlockEntity be)) return;
-                replaced = be.addOnFace(face.ordinal(), entry);
-            } else {
-                replaced = addOnCarrier(level, pos, face, entry);
-            }
-            returnToPlayer(player, replaced);
+            returnToPlayer(player, addOnCarrier(level, pos, face, entry));
             if (!player.getAbilities().instabuild) offhand.shrink(1);
         } else {
-            if (transcendium) {
-                if (!(level.getBlockEntity(pos) instanceof TranscendiumInlayCarrierBlockEntity be)) return;
-                returnToPlayer(player, be.removeOnFace(face.ordinal()));
-            } else {
-                returnToPlayer(player, removeOnCarrier(level, pos, face));
-            }
+            returnToPlayer(player, removeOnCarrier(level, pos, face));
         }
         level.playSound(null, pos, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
@@ -116,7 +108,7 @@ public class InlayCarrierInteractionEvent {
     private static InlayEntry addOnCarrier(Level level, BlockPos pos, Direction face, InlayEntry entry) {
         List<InlayEntry> existing = new ArrayList<>(BlockInlayManager.get(level, pos).inlays());
         int slot = face.ordinal();
-        InlayEntry old = slot < existing.size() ? existing.get(slot) : InlayEntry.nulls();
+        InlayEntry old = slot < existing.size() ? existing.get(slot) : InlayEntry.empty();
         applyCarrier(level, pos, face, InlayCarrierBlock.withSlot(existing, slot, entry));
         return old;
     }
@@ -125,10 +117,10 @@ public class InlayCarrierInteractionEvent {
     private static InlayEntry removeOnCarrier(Level level, BlockPos pos, Direction face) {
         List<InlayEntry> existing = new ArrayList<>(BlockInlayManager.get(level, pos).inlays());
         int slot = face.ordinal();
-        if (slot >= existing.size()) return InlayEntry.nulls();
+        if (slot >= existing.size()) return InlayEntry.empty();
         InlayEntry old = existing.get(slot);
-        if (old.isEmpty()) return InlayEntry.nulls();
-        existing.set(slot, InlayEntry.nulls());
+        if (old.isEmpty()) return InlayEntry.empty();
+        existing.set(slot, InlayEntry.empty());
         applyCarrier(level, pos, face, existing);
         return old;
     }
@@ -139,10 +131,17 @@ public class InlayCarrierInteractionEvent {
         Map<Direction, Integer> values = new HashMap<>(BlockInlayManager.get(level, pos).values());
         values.remove(face);
         BlockInlayManager.put(level, pos, BlockInlays.fromInlays(block, inlays).withValues(values));
+        // 换料会改变该面的门类型：先抹掉旧门的输出与运行时状态，否则换成有状态门
+        // （计数 / 锁存 / 延时）时旧门的输出会一直被持有，红石读数不更新。
+        LogicGateNetworkManager.clearFaceSignal(level, pos, face);
         InlayCarrierBlock.refreshState(level, pos);
         // 换料可能只改变门类型而面的镶嵌状态不变（外观由 refreshState 更新），
         // 这里显式补一次拓扑更新，确保门类型变更一定被逻辑网络看到。
         LogicGateNetworkManager.topologyChanged(level, pos);
+        // 该面的「存入 / 取出」属性也可能跟着换掉，物品传输网同样要重建并重算货源记录。
+        ItemTransferNetworkManager.topologyChanged(level, pos);
+        // 该面的输出可能已经变化（例如由 15 变为 0），显式通知邻居让红石重新读取。
+        level.updateNeighborsAt(pos, block);
         // 该面的镶嵌状态变化会改变 canConnectRedstone，邻居红石导线需重建拓扑以接入或断开该面。
         BlockPos wirePos = pos.relative(face);
         if (level.getBlockState(wirePos).getBlock() instanceof RedstoneWireBlock) {

@@ -43,7 +43,10 @@ public class DogeNodeUtil {
         }
 
         Vec3 nodePos = pos.getBottomCenter().add(0, maxY, 0);
-        level.addFreshEntity(new DogeNodeEntity(level, nodePos, pos));
+        DogeNodeEntity node = new DogeNodeEntity(level, nodePos, pos);
+        level.addFreshEntity(node);
+        // 节点是物品传输网的端点：放置后通知周边网络重算货源，管道载体才能对它取 / 存。
+        node.notifyTransferNetwork();
         player.getCooldowns().addCooldown(item, 5);
         return InteractionResult.sidedSuccess(level.isClientSide());
     }

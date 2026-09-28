@@ -1,0 +1,6 @@
+{
+	"format_version": "1.9.0",
+	"credit": "Made with Blockbench",
+	"parent": "anvilcraft_doge_plus:block/carrier/logic/core",
+	"render_type": "minecraft:cutout"
+}

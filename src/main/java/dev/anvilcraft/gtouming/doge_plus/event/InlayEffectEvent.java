@@ -121,11 +121,9 @@ public class InlayEffectEvent {
             if (!entry.containsAttributes(InlayProperty.EFFECT)) {
                 continue;
             }
-            for (ResourceLocation extraId : entry.extra()) {
-                if (BuiltInRegistries.POTION.containsKey(extraId)) {
-                    result.add(extraId);
-                }
-            }
+            entry.potion()
+                    .filter(BuiltInRegistries.POTION::containsKey)
+                    .ifPresent(result::add);
         }
         return result;
     }

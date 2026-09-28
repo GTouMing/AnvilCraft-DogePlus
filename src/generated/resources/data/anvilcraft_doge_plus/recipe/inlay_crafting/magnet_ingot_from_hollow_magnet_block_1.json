@@ -6,5 +6,7 @@
       "item": "minecraft:iron_ingot"
     }
   ],
-  "result": "anvilcraft:magnet_ingot"
+  "results": [
+    "anvilcraft:magnet_ingot"
+  ]
 }

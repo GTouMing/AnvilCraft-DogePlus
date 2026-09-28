@@ -12,8 +12,10 @@
       "item": "minecraft:iron_ingot"
     }
   ],
-  "result": {
-    "count": 3,
-    "id": "anvilcraft:magnet_ingot"
-  }
+  "results": [
+    {
+      "count": 3,
+      "item": "anvilcraft:magnet_ingot"
+    }
+  ]
 }

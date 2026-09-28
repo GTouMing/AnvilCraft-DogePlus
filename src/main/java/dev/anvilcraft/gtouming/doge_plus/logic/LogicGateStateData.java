@@ -83,6 +83,13 @@ public class LogicGateStateData extends SavedData {
         }
     }
 
+    /**
+     * 丢弃某位置某方向的状态（该面换料时使用，不影响同方块其它面的计数 / 锁存 / 倒计时）。
+     */
+    public void clear(BlockPos pos, Direction direction) {
+        setState(pos, direction, 0);
+    }
+
     // ==================== 内部 ====================
 
     private int state(BlockPos pos, Direction direction) {

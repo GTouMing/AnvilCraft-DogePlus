@@ -4,9 +4,7 @@ import dev.anvilcraft.gtouming.doge_plus.datagen.material.BaseMaterialData;
 import dev.anvilcraft.gtouming.doge_plus.datagen.material.InlayMaterialData;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import static dev.anvilcraft.gtouming.doge_plus.datagen.material.BaseMaterialData.*;
 import static dev.anvilcraft.gtouming.doge_plus.datagen.material.InlayMaterialData.*;
@@ -32,17 +30,19 @@ public record InlayRecipeData(String inlay, String base) {
     }
 
     /**
-     * 镶嵌载体可镶入的全部红石材料：八个逻辑门。
-     * <p>这些材料原先镶入宝石块（红石/紫水晶等），现统一迁到两种镶嵌载体。</p>
+     * 镶嵌载体可镶入的全部材料：八个逻辑门 + 物品搬运用的溜槽 / 磁性溜槽。
+     * <p>逻辑门材料原先镶入宝石块（红石/紫水晶等），现统一迁到两种镶嵌载体；
+     * 溜槽给该面「存入」、磁性溜槽给该面「取出」（搬运行为由后续版本实现）。</p>
      */
     public static final List<String> CARRIER_INLAYS = List.of(
             NOT_GATE, AND_GATE, OR_GATE, OUTPUT, INPUT,
-            COUNTER_GATE, LATCH_GATE, DELAY_GATE
+            COUNTER_GATE, LATCH_GATE, DELAY_GATE,
+            CHUTE, MAGNETIC_CHUTE
     );
 
-    /** 可镶入上述材料的基材：镶嵌载体与超限镶嵌载体。 */
+    /** 可镶入上述材料的基材：镶嵌载体。 */
     public static final List<String> CARRIER_BASES = List.of(
-            INLAY_CARRIER_BLOCK, TRANSCENDIUM_INLAY_CARRIER_BLOCK
+            INLAY_CARRIER_BLOCK
     );
 
     /**
@@ -65,14 +65,20 @@ public record InlayRecipeData(String inlay, String base) {
             new InlayRecipeData(LIFE, ARMORS),
             new InlayRecipeData(MAGNETIC, DOGE_STEEL_BLOCK),
             new InlayRecipeData(RESONANCE, ENCHANTABLES),
-            new InlayRecipeData(TOTEMS, CRAB_CLAW)
+            new InlayRecipeData(TOTEMS, CRAB_CLAW),
+            // 超温余烬金属块不接受显式镶嵌配方：中子锭没有材料定义，
+            // 由「静默镶嵌」按 neutronium_transmutation 镶合条件放行
+            // 充能中子锭：2 镶孔，可镶书 / 附魔书（enchant）与紫水晶（resonance）
+            new InlayRecipeData(ENCHANT, CHARGED_NEUTRONIUM_INGOT),
+            new InlayRecipeData(RESONANCE, CHARGED_NEUTRONIUM_INGOT)
     );
 
     /**
-     * 本 mod 内置 inlay 配方：手工清单 + 两种镶嵌载体（全部逻辑门）
-     * + 原版锻造兼容（下界合金升级模板可镶入
-     * {@link InlayMaterialData#NETHERITE_UPGRADE_INLAYS} 中的锻造材料/钻石装备）
-     * + 原版盔甲纹饰兼容（每个纹饰模板可镶入可纹饰装备/纹饰材料）。
+     * 本 mod 内置 inlay 配方：手工清单 + 两种镶嵌载体（全部逻辑门）。
+     *
+     * <p>下界升级模板与盔甲纹饰模板<b>不写镶嵌配方</b>：它们要镶入的锻造材料 / 纹饰材料
+     * 没有属性，由「静默镶嵌」按对应镶合（{@code kind = smithing}）的 {@code inlays}
+     * 条件放行，因此不必在 {@code recipe/inlay} 里占条目，也不会出现在 JEI 的镶嵌配方中。</p>
      */
     private static final List<InlayRecipeData> VANILLA = new ArrayList<>(BASE_RECIPES);
     static {
@@ -81,40 +87,17 @@ public record InlayRecipeData(String inlay, String base) {
                 VANILLA.add(new InlayRecipeData(inlay, base));
             }
         }
-        for (String inlay : NETHERITE_UPGRADE_INLAYS) {
-            VANILLA.add(new InlayRecipeData(inlay, NETHERITE_UPGRADE_TEMPLATE));
-        }
-        for (String trimBase : BaseMaterialData.TRIM_TEMPLATE_NAMES) {
-            for (String trimInlay : InlayMaterialData.TRIM_INLAYS) {
-                VANILLA.add(new InlayRecipeData(trimInlay, trimBase));
-            }
-        }
     }
 
     /**
-     * 全部 inlay 配方：内置 + 前置（AnvilCraft）锻造模板 / 珠宝复制被复制物的成分镶入配方。
+     * 全部 inlay 配方：只保留内置清单。
      *
-     * <p>由 {@link AnvilcraftSmithingRecipes.Entry} 派生：每个成分 × 其基材，
-     * 同一「基材 + 成分」只生成一次（珠宝复制配方中的重复材料只占一个同名配方）。</p>
+     * <p>前置（AnvilCraft）锻造 / 珠宝复制派生的镶嵌配方<b>不再生成</b>——那些组合改为
+     * 运行时「静默镶嵌」（{@code InlayRecipe.canSilentlyInlay}）：只要符合对应镶合配方的
+     * 条件就允许镶上去，但不写进配方表、也不出现在 JEI。材料与基材定义仍由 datagen 派生。</p>
      *
-     * @param smithing 前置锻造配方
-     * @param jewel    前置珠宝复制配方（材料数已由读取器筛选）
      */
-    public static List<InlayRecipeData> all(
-            List<AnvilcraftSmithingRecipes.Entry> smithing,
-            List<AnvilcraftSmithingRecipes.Entry> jewel) {
-        List<InlayRecipeData> list = new ArrayList<>(VANILLA);
-        Set<String> seen = new LinkedHashSet<>();
-        List<AnvilcraftSmithingRecipes.Entry> entries = new ArrayList<>(smithing);
-        entries.addAll(jewel);
-        for (AnvilcraftSmithingRecipes.Entry entry : entries) {
-            String base = AnvilcraftSmithingRecipes.itemPath(entry.template());
-            for (AnvilcraftSmithingRecipes.Spec spec : entry.ingredients()) {
-                if (seen.add(base + "/" + spec.name())) {
-                    list.add(new InlayRecipeData(spec.name(), base));
-                }
-            }
-        }
-        return list;
+    public static List<InlayRecipeData> all() {
+        return new ArrayList<>(VANILLA);
     }
 }

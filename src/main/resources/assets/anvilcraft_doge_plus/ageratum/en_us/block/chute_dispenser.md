@@ -12,6 +12,6 @@ items:
 
 <block id="anvilcraft_doge_plus:chute_dispenser"/>
 
-A hybrid of <ref item="anvilcraft:chute"/> and a dispenser: sucks items in from above and fires them in the facing direction.
+A <ref item="anvilcraft:chute"/> combined with a Dispenser: sucks items in from above and shoots them in the direction it faces.
 
 <recipe id="anvilcraft_doge_plus:crafting_shapeless/chute_dispenser"/>

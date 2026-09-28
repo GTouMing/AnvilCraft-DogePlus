@@ -63,4 +63,16 @@ public class DogePlusConfig {
     @Comment("延时门可设定的最大 tick 数。")
     @BoundedDiscrete(max = 200, min = 1)
     public int delayMaxTicks = 20;
+
+    @Comment("管道载体每个存入面单次搬运的物品数上限（各面可在 1 到该值之间设置）。")
+    @BoundedDiscrete(max = 1024, min = 1)
+    public int pipeThroughputMax = 64;
+
+    @Comment("门链手势一次可生成的最大方块数。")
+    @BoundedDiscrete(max = 256, min = 1)
+    public int maxGateChainLength = 32;
+
+    @Comment("门链手势幽灵预览的最大延伸格数。")
+    @BoundedDiscrete(max = 256, min = 1)
+    public int maxGateChainPreview = 24;
 }

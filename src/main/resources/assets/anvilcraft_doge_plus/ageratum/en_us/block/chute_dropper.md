@@ -12,6 +12,6 @@ items:
 
 <block id="anvilcraft_doge_plus:chute_dropper"/>
 
-A hybrid of <ref item="anvilcraft:chute"/> and a dropper: sucks items in from above and drops them in the facing direction.
+A <ref item="anvilcraft:chute"/> combined with a Dropper: sucks items in from above and tosses them out in the direction it faces.
 
 <recipe id="anvilcraft_doge_plus:crafting_shapeless/chute_dropper"/>

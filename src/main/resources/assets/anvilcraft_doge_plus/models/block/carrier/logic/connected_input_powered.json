@@ -1,0 +1,50 @@
+{
+	"format_version": "1.9.0",
+	"credit": "Made with Blockbench",
+	"parent": "minecraft:block/block",
+	"render_type": "minecraft:cutout",
+	"textures": {
+		"lco": "anvilcraft_doge_plus:block/logic_carrier_outline",
+		"particle": "anvilcraft_doge_plus:block/logic_carrier_powered",
+		"lc": "anvilcraft_doge_plus:block/logic_carrier_powered"
+	},
+	"elements": [
+		{
+			"name": "cube_outline",
+			"from": [9.5, 4.5, 2.5],
+			"to": [6.5, 1.5, -0.5],
+			"shade": false,
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 3, 1]},
+			"faces": {
+				"north": {"uv": [0, 0, 2, 2], "rotation": 180, "texture": "#lco"},
+				"east": {"uv": [0, 0, 2, 2], "rotation": 180, "texture": "#lco"},
+				"south": {"uv": [0, 0, 2, 2], "rotation": 180, "texture": "#lco"},
+				"west": {"uv": [0, 0, 2, 2], "rotation": 180, "texture": "#lco"},
+				"up": {"uv": [0, 0, 2, 2], "rotation": 180, "texture": "#lco"},
+				"down": {"uv": [0, 0, 2, 2], "rotation": 180, "texture": "#lco"}
+			}
+		},
+		{
+			"from": [7, 0, 0],
+			"to": [9, 4, 2],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.5, 1]},
+			"faces": {
+				"north": {"uv": [12, 6, 14, 10], "texture": "#lc"},
+				"east": {"uv": [12, 6, 14, 10], "texture": "#lc"},
+				"south": {"uv": [12, 6, 14, 10], "texture": "#lc"},
+				"west": {"uv": [12, 6, 14, 10], "texture": "#lc"},
+				"up": {"uv": [14, 6, 16, 8], "texture": "#lc"},
+				"down": {"uv": [12, 8, 14, 10], "texture": "#lc"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "connected",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0, 1]
+		}
+	]
+}

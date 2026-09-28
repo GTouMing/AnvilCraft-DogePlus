@@ -1,3 +1,4 @@
 {
-  "parent": "anvilcraft_doge_plus:block/inlay_carrier_block"
+  "parent": "anvilcraft_doge_plus:block/carrier/inlay/item",
+  "render_type": "minecraft:translucent"
 }

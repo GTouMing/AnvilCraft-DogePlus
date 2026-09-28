@@ -69,12 +69,11 @@ public final class InlayEffectUtil {
 
     @Nullable
     private static MobEffectInstance firstEffectFrom(InlayEntry entry) {
-        for (ResourceLocation extraId : entry.extra()) {
-            var potionHolder = BuiltInRegistries.POTION.getHolder(extraId).orElse(null);
-            if (potionHolder == null) continue;
-            List<MobEffectInstance> effects = potionHolder.value().getEffects();
-            if (!effects.isEmpty()) return effects.getFirst();
-        }
-        return null;
+        ResourceLocation potionId = entry.potion().orElse(null);
+        if (potionId == null) return null;
+        var potionHolder = BuiltInRegistries.POTION.getHolder(potionId).orElse(null);
+        if (potionHolder == null) return null;
+        List<MobEffectInstance> effects = potionHolder.value().getEffects();
+        return effects.isEmpty() ? null : effects.getFirst();
     }
 }

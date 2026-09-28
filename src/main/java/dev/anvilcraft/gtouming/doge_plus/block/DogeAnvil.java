@@ -9,7 +9,6 @@ import dev.dubhe.anvilcraft.block.state.Cube3x3PartHalf;
 import dev.dubhe.anvilcraft.block.state.GiantAnvilCube;
 import dev.dubhe.anvilcraft.init.ModMenuTypes;
 import dev.dubhe.anvilcraft.init.ModSoundEvents;
-import dev.dubhe.anvilcraft.init.item.ModItemTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -42,6 +41,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.neoforged.neoforge.common.Tags;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -126,14 +126,11 @@ public class DogeAnvil extends BetterAnvilBlock implements IHammerRemovable {
     }
 
     /**
-     * 判断是否为生肉（前置模组 {@code c:foods/raw_*} 系列 tag）。
+     * 判断是否为生肉：走通用生肉标签 {@code c:foods/raw_meat}（NeoForge 约定，
+     * 已含原版全部生肉，模组生肉加入该标签即可被识别）。
      */
     private static boolean isRawMeat(ItemStack stack) {
-        return stack.is(ModItemTags.RAW_BEEF)
-                || stack.is(ModItemTags.RAW_PORKCHOP)
-                || stack.is(ModItemTags.RAW_CHICKEN)
-                || stack.is(ModItemTags.RAW_MUTTON)
-                || stack.is(ModItemTags.RAW_RABBIT);
+        return stack.is(Tags.Items.FOODS_RAW_MEAT);
     }
 
     /**

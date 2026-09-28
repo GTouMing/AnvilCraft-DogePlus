@@ -8,8 +8,6 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.TranscendiumInlayCarrierBlockEntity;
-import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.RegistryOps;
@@ -18,14 +16,19 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 材料数据管理器：数据驱动地加载 {@code data/<ns>/material/} 文件夹，并以**文件名作键**。
@@ -108,7 +111,6 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
 
     /** 基材是否定义了镶孔数据（用于 tooltip 显示空镶孔）。 */
     public static boolean hasSocket(ItemStack baseStack) {
-        if (isTranscendiumCarrier(baseStack)) return true;
         for (BaseMaterial base : BASES.values()) {
             if (base.ingredient().test(baseStack)) {
                 return true;
@@ -117,24 +119,8 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
         return false;
     }
 
-    /** 超限镶嵌载体物品 id：其镶孔数由代码写死，不读取任何数据包定义。 */
-    private static final ResourceLocation TRANSCENDIUM_CARRIER_ID =
-            AnvilCraftDogePlus.of("transcendium_inlay_carrier_block");
-
-    /** 是否为超限镶嵌载体（按物品注册 id 判定，避免类加载顺序依赖）。 */
-    private static boolean isTranscendiumCarrier(ItemStack stack) {
-        return !stack.isEmpty() && BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(TRANSCENDIUM_CARRIER_ID);
-    }
-
     /** 查询基材的镶孔数；无定义时返回 {@link #DEFAULT_SOCKETS}。 */
     public static int getSocketCount(ItemStack baseStack) {
-        // 超限镶嵌载体：镶孔数写死为「已镶嵌数量 + 1」（上限 MAX_SOCKETS），
-        // 数据包中的 sockets 定义对其无效
-        if (isTranscendiumCarrier(baseStack)) {
-            return Math.min(
-                    InlayUtil.getInlays(baseStack).size() + 1,
-                    TranscendiumInlayCarrierBlockEntity.MAX_SOCKETS);
-        }
         for (BaseMaterial base : BASES.values()) {
             if (base.ingredient().test(baseStack)) {
                 return base.sockets();
@@ -147,6 +133,26 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
     @Nullable
     public static InlayMaterial getInlayMaterial(ResourceLocation fileKey) {
         return INLAYS.get(fileKey);
+    }
+
+    /**
+     * 携带给定任一属性的材料物品（去重，按物品 id 排序）。
+     *
+     * <p>供按属性匹配的 ingredient（{@link InlayPropertyIngredient}）枚举候选物品。
+     * {@link #INLAYS} 是 {@link HashMap}，迭代顺序不稳定，这里排序后返回，
+     * 保证服务端与客户端拿到同一份列表，避免展示顺序随加载顺序漂移。</p>
+     */
+    public static List<Item> itemsWithAnyOf(Collection<InlayProperty> properties) {
+        Set<Item> items = new HashSet<>();
+        for (InlayMaterial material : INLAYS.values()) {
+            if (material.properties().stream().noneMatch(properties::contains)) continue;
+            for (ItemStack stack : material.ingredient().getItems()) {
+                if (!stack.isEmpty()) items.add(stack.getItem());
+            }
+        }
+        return items.stream()
+                .sorted(Comparator.comparing(item -> BuiltInRegistries.ITEM.getKey(item).toString()))
+                .toList();
     }
 
     /** 按基材定义文件名查询（键：{@code anvilcraft_doge_plus:anvil}）；未定义返回 null。 */

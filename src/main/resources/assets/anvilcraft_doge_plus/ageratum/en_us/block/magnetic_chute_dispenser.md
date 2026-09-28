@@ -12,6 +12,6 @@ items:
 
 <block id="anvilcraft_doge_plus:magnetic_chute_dispenser"/>
 
-A hybrid of <ref item="anvilcraft:magnetic_chute"/> and a dispenser: sucks items in from the side opposite the facing direction and fires them in the facing direction. Supports **upward** placement.
+A <ref item="anvilcraft:magnetic_chute"/> combined with a Dispenser: sucks items in from the opposite of the direction it faces and shoots them in the direction it faces; supports **upward** placement.
 
 <recipe id="anvilcraft_doge_plus:crafting_shapeless/magnetic_chute_dispenser"/>

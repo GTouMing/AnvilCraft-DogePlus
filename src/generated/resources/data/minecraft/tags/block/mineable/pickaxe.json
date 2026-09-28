@@ -9,6 +9,7 @@
     "anvilcraft_doge_plus:inlay_table",
     "anvilcraft_doge_plus:inlay_crafting_table",
     "anvilcraft_doge_plus:inlay_carrier_block",
-    "anvilcraft_doge_plus:transcendium_inlay_carrier_block"
+    "anvilcraft_doge_plus:logic_carrier",
+    "anvilcraft_doge_plus:pipe_carrier"
   ]
 }

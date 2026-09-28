@@ -1,0 +1,168 @@
+name: Auto Release
+
+# 推送时若 gradle.properties 的 mod_version 发生变化，就自动打标签并发布：
+# 构建 → 创建标签与 GitHub Release（附 jar）→ 发布到 Modrinth & CurseForge。
+# 标签名就是 mod_version（与已有标签 0.0.8 一致，不带 v 前缀）；标签已存在则跳过，
+# 因此构建失败（标签还没建）时再推一次即可重试，也可以手动 workflow_dispatch 重跑。
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - gradle.properties
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    name: Check version bump
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.current }}
+      release: ${{ steps.version.outputs.changed == 'true' && steps.tag.outputs.exists == 'false' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # 需要历史（对比上一个提交的版本）与全部标签（判断是否已发布）
+          fetch-depth: 0
+
+      - name: Compare mod_version with the previous commit
+        id: version
+        run: |
+          current=$(sed -n 's/^mod_version=//p' gradle.properties | tr -d ' \r')
+          previous=$(git show HEAD^:gradle.properties 2>/dev/null | sed -n 's/^mod_version=//p' | tr -d ' \r' || true)
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          if [ -n "$current" ] && [ "$current" != "$previous" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "mod_version: '${previous:-<none>}' -> '${current:-<none>}'"
+
+      - name: Check whether the tag already exists
+        id: tag
+        run: |
+          version="${{ steps.version.outputs.current }}"
+          if [ -n "$version" ] && git ls-remote --exit-code --tags origin "refs/tags/$version" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $version already exists."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    name: Build & publish
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: release
+      VERSION: ${{ needs.check.outputs.version }}
+      # 版本号里带 - 的（如 0.0.9-beta）按 beta 发布
+      VERSION_TYPE: ${{ contains(needs.check.outputs.version, '-') && 'beta' || 'release' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read gradle.properties
+        id: properties
+        uses: christian-draeger/read-properties@1.1.1
+        with:
+          path: gradle.properties
+          properties: 'mod_id mod_name java_version minecraft_version modrinth_id curseforge_id'
+
+      - name: Set up Java ${{ steps.properties.outputs.java_version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: ${{ steps.properties.outputs.java_version }}
+
+      - name: Make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew build --console=plain
+
+      - name: Locate artifacts
+        id: artifacts
+        run: |
+          JAR=$(ls -t build/libs/*.jar | grep -v -- '-sources\.jar$' | head -n 1)
+          SOURCES=$(ls -t build/libs/*-sources.jar | head -n 1)
+          {
+            echo "jar=$JAR"
+            echo "sources=$SOURCES"
+          } >> "$GITHUB_OUTPUT"
+          echo "Jar: $JAR"
+          echo "Sources: $SOURCES"
+
+      - name: Collect changelog (commits since the previous tag)
+        id: changelog
+        run: |
+          previous_tag=$(git describe --tags --abbrev=0 "$GITHUB_SHA^" 2>/dev/null || true)
+          if [ -n "$previous_tag" ]; then
+            range="$previous_tag..$GITHUB_SHA"
+          else
+            range="$GITHUB_SHA"
+          fi
+          {
+            echo "text<<__CHANGELOG__"
+            git log --pretty=format:'- %s (%h)' "$range"
+            echo
+            echo "__CHANGELOG__"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ steps.properties.outputs.mod_name }}-${{ env.VERSION }}"
+          path: |
+            ${{ steps.artifacts.outputs.jar }}
+            ${{ steps.artifacts.outputs.sources }}
+
+      - name: Create tag & GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANGELOG: ${{ steps.changelog.outputs.text }}
+          PRERELEASE: ${{ env.VERSION_TYPE == 'beta' && '--prerelease' || '' }}
+        run: |
+          gh release create "$VERSION" \
+            --target "$GITHUB_SHA" \
+            --title "${{ steps.properties.outputs.mod_name }} $VERSION" \
+            --notes "$CHANGELOG" \
+            $PRERELEASE \
+            "${{ steps.artifacts.outputs.jar }}" \
+            "${{ steps.artifacts.outputs.sources }}"
+
+      - name: Publish to Modrinth & CurseForge
+        uses: Kir-Antipov/mc-publish@v3.3
+        continue-on-error: true
+        with:
+          name: "${{ steps.properties.outputs.mod_name }} ${{ env.VERSION }}"
+          version: ${{ env.VERSION }}
+          version-type: ${{ env.VERSION_TYPE }}
+          changelog: ${{ steps.changelog.outputs.text }}
+          game-versions: ${{ steps.properties.outputs.minecraft_version }}
+          loaders: neoforge
+          java: ${{ steps.properties.outputs.java_version }}
+          fail-mode: skip
+          dependencies: |
+            anvilcraft(required){modrinth:vuISAWPc}{curseforge:986251}
+
+          modrinth-id: ${{ steps.properties.outputs.modrinth_id }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-featured: true
+
+          curseforge-id: ${{ steps.properties.outputs.curseforge_id }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+          files: |
+            ${{ steps.artifacts.outputs.jar }}
+            ${{ steps.artifacts.outputs.sources }}

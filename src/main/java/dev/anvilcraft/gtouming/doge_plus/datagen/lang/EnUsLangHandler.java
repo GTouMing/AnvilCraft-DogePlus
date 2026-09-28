@@ -26,6 +26,16 @@ public class EnUsLangHandler {
         // ===== GUI =====
         provider.add("gui.anvilcraft_doge_plus.jei.inlay", "Inlay");
         provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting", "Inlay Crafting");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_smithing", "Inlay Smithing");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_copying", "Inlay Copying");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_requirement", "This recipe requires sockets by property:");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_any_of", "(any of the following x%s)");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_times", " x%s");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.chance", "Chance: %s%%");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.enchantments", "Required enchantment count: %s");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.enchantments_at_least", "%s+");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.amount", "Amount: enchantment count × %s");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.probability", "Chance: (%s × enchantment count) / 100");
 
         // ===== Tooltips =====
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.fire_proof", "Fire-proof: cannot be burned");
@@ -49,6 +59,8 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.latch_gate", "Latch Gate: records and outputs the received signal; a second input clears it");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.delay_gate", "Delay Gate: outputs the received signal for the set number of ticks");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "Generator: produces 512 kW of power once placed");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.insert", "Insert: puts items into the container it faces");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.extract", "Extract: takes items from the container it faces");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance", "Resonance: enhances some properties of materials in other sockets");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.cold_forged", "✦ Cold Forged: repairs durability faster in water or powder snow (durable items only)");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.high_temp", "✦ High Temp: the longer it stays in lava or fire, the more damage accumulated; attacking slowly consumes the accumulated damage");
@@ -70,11 +82,9 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inspection.value", "Value: %s");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.counted", "Counted: %s");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.elapsed", "Elapsed: %s");
-        provider.add("tooltip.anvilcraft_doge_plus.inspection.tally", "%1$s ×%2$s");
-        provider.add("tooltip.anvilcraft_doge_plus.inspection.more", "…and %s more");
-        provider.add("tooltip.anvilcraft_doge_plus.inspection.phase", "Phase: %s");
-        provider.add("tooltip.anvilcraft_doge_plus.inspection.phase.alpha", "α");
-        provider.add("tooltip.anvilcraft_doge_plus.inspection.phase.beta", "β");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.throughput", "Throughput: %s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.filter", "Filter: %s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.filter_none", "None");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.not_gate", "NOT");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.and_gate", "AND");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.or_gate", "OR");
@@ -83,6 +93,9 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.counter_gate", "Counter");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.latch_gate", "Latch");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.delay_gate", "Delay");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.none", "Clear");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.insert", "Insert");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.extract", "Extract");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.down", "Down");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.up", "Up");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.north", "North");
@@ -97,6 +110,21 @@ public class EnUsLangHandler {
         // ===== Key mappings =====
         provider.add("key.categories.anvilcraft_doge_plus", "AnvilCraft: Doge+");
         provider.add("key.anvilcraft_doge_plus.open_silencer", "Open Silencer");
-        provider.add("key.anvilcraft_doge_plus.toggle_carrier_phase", "Toggle Carrier Phase");
+
+        // ===== Logic carrier wheel =====
+        provider.add("wheel.anvilcraft_doge_plus.gate.none", "Clear");
+        provider.add("wheel.anvilcraft_doge_plus.gate.not_gate", "NOT Gate");
+        provider.add("wheel.anvilcraft_doge_plus.gate.and_gate", "AND Gate");
+        provider.add("wheel.anvilcraft_doge_plus.gate.or_gate", "OR Gate");
+        provider.add("wheel.anvilcraft_doge_plus.gate.output", "Output");
+        provider.add("wheel.anvilcraft_doge_plus.gate.input", "Input");
+        provider.add("wheel.anvilcraft_doge_plus.gate.counter_gate", "Counter");
+        provider.add("wheel.anvilcraft_doge_plus.gate.latch_gate", "Latch");
+        provider.add("wheel.anvilcraft_doge_plus.gate.delay_gate", "Delay");
+
+        // ===== Pipe carrier wheel =====
+        provider.add("wheel.anvilcraft_doge_plus.transfer.none", "Clear");
+        provider.add("wheel.anvilcraft_doge_plus.transfer.insert", "Insert");
+        provider.add("wheel.anvilcraft_doge_plus.transfer.extract", "Extract");
     }
 }

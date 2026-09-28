@@ -5,6 +5,7 @@ import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
+import dev.anvilcraft.gtouming.doge_plus.transfer.ItemTransferNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.anvilcraft.lib.v2.util.Util;
 import net.minecraft.core.BlockPos;
@@ -27,8 +28,8 @@ import java.util.List;
  * 保证只有放置成功时才记录；此时 {@code context.getItemInHand()} 尚未被消耗。</p>
  *
  * <p>放置时 {@code Level.setBlock} 内的 {@code onPlace} 已经先于本注入执行，
- * 那一刻 {@link BlockInlayManager} 里还没有镶嵌数据，逻辑门网络因此看不到门。
- * 写入后必须显式补一次拓扑更新，否则「带镶嵌的载体物品放置后」逻辑门不会被注册。</p>
+ * 那一刻 {@link BlockInlayManager} 里还没有镶嵌数据，逻辑门网络与物品传输网因此都看不到这个方块。
+ * 写入后必须显式补一次拓扑更新，否则「带镶嵌的载体物品放置后」不会被任何网络注册。</p>
  */
 @Mixin(BlockItem.class)
 public abstract class BlockItemMixin {
@@ -46,5 +47,6 @@ public abstract class BlockItemMixin {
         if (block.getBlock() instanceof IMultiPartBlock part) mainPos = part.doge_plus$getMainPos(mainPos, state);
         BlockInlayManager.put(level, mainPos, BlockInlays.fromInlays(state.getBlock(), inlays));
         LogicGateNetworkManager.topologyChanged(level, mainPos);
+        ItemTransferNetworkManager.topologyChanged(level, mainPos);
     }
 }

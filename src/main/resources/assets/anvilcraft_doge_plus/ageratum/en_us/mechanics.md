@@ -27,183 +27,141 @@ items:
 
 # Mechanics
 
-The core of AnvilCraft: Doge+ is the **Inlay System**, a brand-new crafting method that embeds materials into items to grant them special attributes. This page explains the system in full.
+The core of AnvilCraft: Doge+ is the **inlay system**, a brand-new crafting method that embeds materials into items to grant them special properties. This page explains the whole system.
 
-## The Inlay System
+## Inlay System
 
 <recipe id="anvilcraft_doge_plus:inlay/totems_crab_claw"/>
 
 ### How it works
 
-<ref item="anvilcraft_doge_plus:inlay_table"/> has two slots, a **base material slot** and an **inlay material slot**:
+<ref item="anvilcraft_doge_plus:inlay_table"/> has two slots, the **base material slot** and the **inlay material slot**:
 
-- **Base material slot**: the item to be inlaid. How many **sockets** it has decides how many **inlay materials** can be embedded.
-- **Inlay material slot**: the material to embed. It defines the **attribute** granted to the **base material**.
+- The **base material slot** accepts: the item to be inlaid, which has **sockets**.
+- The **inlay material slot** accepts: the material to embed, which has **properties**.
 
-To perform an inlay:
-
-1. Right-click the top of the table to place the **base material** first, then the **inlay material** (or throw items onto the table, dropped items are sucked into the table; or use chutes to automate it).
-2. Make an **anvil strike the table** (or use an Anvil Hammer to hit the table).
-3. The anvil hammers the inlay material into the base material, consuming **1 material + 1 base material** and producing **1 inlaid item**, which drops below the table (together with any replaced old material).
-4. Right-click with an empty hand to take the base material and the inlay material back, or right-click to put items in.
+When the items in the two slots match a recipe, an **inlay** can be performed.
 
 ### Filling and replacing
 
-- As long as the base material has **free sockets**, each impact adds one more inlay.
-- When the base material is **full**, the next inlay **replaces the inlay material in the socket corresponding to the anvil's fall height**, and the old inlay material drops below the table.
-- If the replaced material carried the **Enchant** attribute, its enchantments are extracted back onto the old inlay material.
+- While the base material is **not fully inlaid**, every inlay is appended.
+- When the base material is **fully inlaid**, the next inlay **replaces the inlay material in the socket given by the anvil's fall height**, and the old inlay material drops below the table.
 
 ### Removing inlays
 
-With the base material in place and the **material slot empty**, an anvil impact **removes** one inlay instead:
+When **the base material is present and the material slot is empty**, it tries to remove one inlay:
 
-- The anvil's **fall distance** decides which socket the inlay is taken from: (0,1] corresponds to slot 1, (1,2] to slot 2, and so on.
-- The removed inlay material and the base material (minus that inlay) both drop below the table.
+- The anvil's **fall height** decides which socket is taken out: (0,1] is the 1st socket, (1,2] is the 2nd, and so on.
+- The removed inlay material drops below the table together with the base material.
 
-### Data-driven design
+### Properties
 
-The whole system is fully data-driven, so modpack authors can extend it freely:
-
-- `data/<namespace>/material/base/*.json`: base material definitions (including socket counts).
-- `data/<namespace>/material/inlay/*.json`: material definitions (including granted attributes).
-- `data/<namespace>/recipe/inlay/*.json`: recipes binding a material to a base material.
-- `data/<namespace>/recipe/inlay_crafting/*.json`: Inlay Crafting recipes (see [Inlay Crafting](#inlay-crafting) below).
-
-### Base materials and sockets
-
-A **base material** is any item defined in `data/<namespace>/material/base/*.json`. Its `sockets` value decides how many materials can be inlaid.
-
-## Inlay materials and attributes
-
-An **inlay material** is any item defined in `data/<namespace>/material/inlay/*.json`. Its `attributes` value decides which attributes it has.
-
-### Item attributes
-
-These affect the item (and block, see below) that carries them:
-
-| Attribute       | Source material                             | Effect                                                                                                       |
-|-----------------|---------------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| **Fire-proof**  | Netherite Ingot                             | Cannot be burned.                                                                                            |
-| **Magnetic**    | <ref item="anvilcraft:magnet_ingot"/>       | Has attraction; repels when activated.                                                                       |
-| **High Temp**   | <ref item="anvilcraft:ember_metal_ingot"/>  | The longer it stays in lava or fire, the more damage accumulates; attacking consumes the accumulated damage. |
-| **Cold Forged** | <ref item="anvilcraft:frost_metal_ingot"/>  | Slowly repairs durability while in water or powder snow.                                                     |
-| **Eternal**     | <ref item="anvilcraft:transcendium_ingot"/> | Indestructible: immune to fire, explosion, cactus, time, and the void.                                       |
-| **Nirvana**     | Totem                                       | On death, triggers a totem, then the inlay material shatters.                                                |
-| **Defense**     | Netherite Ingot                             | Grants +2 armor when held or equipped.                                                                       |
-| **Life**        | <ref item="anvilcraft:royal_steel_ingot"/>  | Grants +2 max health when held or equipped.                                                                  |
-| **Attack**      | <ref item="anvilcraft:cursed_gold_ingot"/>  | Grants +2 attack damage when held or equipped.                                                               |
-| **Enchant**     | Enchanted Book / Book                       | Merges enchantments on inlay, extracts them on removal.                                                      |
-| **Effect**      | Potion                                      | Grants potion effects when held, equipped or placed.                                                         |
-
-### Logic-gate attributes
-
-These turn an inlaid block into a logic gate:
-
-| Attribute        | Source material                         | Effect                                                             |
-|------------------|-----------------------------------------|--------------------------------------------------------------------|
-| **Output**       | Redstone                                | Outputs redstone signals from this face.                           |
-| **Input**        | <ref item="anvilcraft:redstone_wire"/>  | Inputs redstone signals from this face.                            |
-| **NOT Gate**     | Redstone Torch                          | Outputs the inverted signal of the opposite face.                  |
-| **AND Gate**     | Repeater                                | Outputs the AND of adjacent inputs, in order.                      |
-| **OR Gate**      | Comparator                              | Outputs the OR of adjacent inputs, in order.                       |
-| **Counter Gate** | Button                                  | Counts input pulses; outputs a 1-tick signal at the set count.     |
-| **Latch Gate**   | Lever                                   | Records and outputs the received signal; a second input clears it. |
-| **Delay Gate**   | Pressure Plate                          | Outputs the received signal for the set number of ticks.           |
-| **Generator**    | <ref item="anvilcraft:supercapacitor"/> | Produces 512 kW of power once placed.                              |
+| Property         | Source material                             | Effect                                                                                     |
+|------------------|---------------------------------------------|--------------------------------------------------------------------------------------------|
+| **Fire-proof**   | Netherite Ingot                             | Cannot be burned.                                                                          |
+| **Magnetic**     | <ref item="anvilcraft:magnet_ingot"/>       | Has attraction, and repels when activated.                                                 |
+| **High Temp**    | <ref item="anvilcraft:ember_metal_ingot"/>  | The longer it stays in lava or fire, the more accumulated damage; attacking consumes it.   |
+| **Cold Forged**  | <ref item="anvilcraft:frost_metal_ingot"/>  | Slowly repairs durability in water or powder snow.                                         |
+| **Eternal**      | <ref item="anvilcraft:transcendium_ingot"/> | Indestructible, immune to fire, explosion, cactus, time and the void.                      |
+| **Nirvana**      | Totem                                       | Triggers a totem on death, then the inlay material shatters.                               |
+| **Defense**      | Netherite Ingot                             | Grants +2 armor when held or equipped.                                                     |
+| **Life**         | <ref item="anvilcraft:royal_steel_ingot"/>  | Grants +2 max health when held or equipped.                                                |
+| **Attack**       | <ref item="anvilcraft:cursed_gold_ingot"/>  | Grants +2 attack damage when held or equipped.                                             |
+| **Enchant**      | Enchanted Book / Book                       | Merges enchantments when inlaid, extracts them when removed.                               |
+| **Effect**       | Potion                                      | Grants potion effects when held, equipped or placed.                                       |
+| **Output**       | Redstone                                    | Outputs redstone signals from this face.                                                   |
+| **Input**        | <ref item="anvilcraft:redstone_wire"/>      | Inputs redstone signals from this face.                                                    |
+| **NOT Gate**     | Redstone Torch                              | Outputs the inverted signal of the opposite face.                                          |
+| **AND Gate**     | Repeater                                    | ANDs adjacent inputs in order.                                                             |
+| **OR Gate**      | Comparator                                  | ORs adjacent inputs in order.                                                              |
+| **Counter Gate** | Button                                      | Counts input pulses and outputs a 1-tick signal at the set count.                          |
+| **Latch Gate**   | Lever                                       | Records and outputs a received signal; a second input clears it.                           |
+| **Delay Gate**   | Pressure Plate                              | Outputs the received signal for the set number of ticks.                                   |
+| **Insert**       | <ref item="anvilcraft:chute"/>              | Puts items into the container it faces.                                                    |
+| **Extract**      | <ref item="anvilcraft:magnetic_chute"/>     | Takes items from the container it faces.                                                   |
+| **Generator**    | <ref item="anvilcraft:supercapacitor"/>     | Produces 512 kW of power once placed.                                                      |
 
 ### Resonance
 
-The **Resonance** attribute does not act on its own, it **enhances other inlays on the same base material**:
+The **Resonance** property does nothing on its own; it enhances the other inlay properties:
 
-| Enhanced attribute | Resonance effect                                                                                                    |
-|--------------------|---------------------------------------------------------------------------------------------------------------------|
-| Defense            | Grants +4 armor when held or equipped.                                                                              |
-| Life               | Grants +4 max health when held or equipped.                                                                         |
-| Attack             | Grants +4 attack damage when held or equipped.                                                                      |
-| Enchant            | Merges enchantments with a 50% chance to boost the level by 1, and a 50% chance to extract them when removed.       |
-| Nirvana            | Triggers a totem on death, then the material has a 50% chance to shatter.                                           |
-| High Temp          | The longer it stays in lava or fire, the more damage accumulates; attacking slowly consumes the accumulated damage. |
-| Cold Forged        | Repairs durability faster in water or powder snow (durable items only).                                             |
+| Enhanced property | Resonance effect                                                                                              |
+|-------------------|---------------------------------------------------------------------------------------------------------------|
+| Defense           | Grants +4 armor when held or equipped.                                                                        |
+| Life              | Grants +4 max health when held or equipped.                                                                   |
+| Attack            | Grants +4 attack damage when held or equipped.                                                                |
+| Enchant           | Merges enchantments with a 50% chance to raise the level by 1, and a 50% chance to extract them when removed. |
+| Nirvana           | Triggers a totem on death, then the material has a 50% chance to shatter.                                     |
+| High Temp         | The longer it stays in lava or fire, the more accumulated damage; attacking slowly consumes it.               |
+| Cold Forged       | Repairs durability faster in water or powder snow (durable items only).                                       |
 
 ## Inlay Crafting
 
-**Inlay Crafting** is the second step of the Inlay System: on the [Inlay Crafting Table](block/inlay_crafting_table.md), a **base material already filled with all its inlays** is pressed into a new product.
+<recipe id="anvilcraft_doge_plus:inlay_crafting/magnet_ingot_from_hollow_magnet_block_4"/>
 
-1. First fill the base material on the [Inlay Table](block/inlay_table.md) until it is full (the socket count matches the required materials, e.g. the Hollow Magnet Block takes 4 Iron Ingots, the Netherite Upgrade Template takes a Netherite Ingot + a piece of diamond gear).
-2. Put the filled base into the Inlay Crafting Table and strike it with an anvil.
-3. On a match the base is consumed, producing the **product** and an **empty-inlaid base** (the mold minus all inlays); both drop below the table.
+**Inlay Crafting** extends the inlay system: at the [Inlay Crafting Table](block/inlay_crafting_table.md), items/blocks carrying the specified inlays are combined into new items/blocks.
 
-### Inlay Crafting recipes
+### The three kinds of inlay crafting
 
-Inlay Crafting recipes live in `data/<namespace>/recipe/inlay_crafting/*.json`:
+Inlay crafting recipes fall into three kinds:
 
-```json
-{
-  "type": "anvilcraft_doge_plus:inlay_crafting",
-  "base": "minecraft:netherite_upgrade_smithing_template",
-  "inlays": [
-    {"item": "minecraft:netherite_ingot"},
-    {"item": "minecraft:diamond_axe"}
-  ],
-  "result": "minecraft:netherite_axe"
-}
-```
+| Kind               | `kind`     | Source                          |
+|--------------------|------------|---------------------------------|
+| **Inlay Crafting** | `crafting` | Added by this mod               |
+| **Inlay Smithing** | `smithing` | Vanilla and AnvilCraft smithing |
+| **Inlay Copying**  | `copying`  | AnvilCraft jewel copying        |
 
-- `base`: the id of the base item that acts as the **mold**.
-- `inlays`: the set of materials that must appear in the base's sockets; each entry may be an item or a tag (e.g. `#minecraft:trimmable_armor`). Matching **ignores socket order**: every non-empty socket must pair with one `inlays` entry one-to-one — empty placeholders, extras, or anything unmatchable count as no match.
-- `result`: the product; the vanilla multi-output form `{"id": "...", "count": n}` is supported. **Omitting** it means the product is derived at craft time from the base and its inlays (as for armor trims: the trimmable gear receives the trim component derived from template and material).
-- `curse_of_vanishing` (optional, default `false`): when true the product carries Vanishing Curse I (the jewel-copying semantics of the prerequisite mod; the mold is unaffected).
 
-Built-in / derived Inlay Crafting recipes:
+**Silent Inlay**: some items can take part in inlaying even without properties; these items are not written into inlay recipes, but defined through **inlay crafting recipes**.
 
-- **Vanilla smithing**: Netherite Upgrade Template inlaid with a Netherite Ingot + diamond gear → the matching netherite gear.
-- **Vanilla armor trims**: the 18 trim templates inlaid with "trimmable armor + trim material" (both matched by tag), product derived at craft time.
-- **Hollow Magnet Block**: n Iron Ingots → n Magnet Ingots (n = 1..4).
-- **Prerequisite (AnvilCraft) smithing**: the 2/4/8-to-one forge templates and the various upgrade templates, mirroring the prerequisite recipes.
-- **Prerequisite jewel copying**: the copied item acts as the mold and the product carries Vanishing Curse I.
 
-## Block-level inlays
+### Inlay crafting recipes
 
-Inlays are **not lost when a block is placed**. An inlaid block item keeps its attributes in the world:
+Built-in/derived inlay crafting recipes of the mod:
 
-- **Magnetic** blocks have attraction; they repel when activated.
-- **Fire-proof** blocks cannot burn.
-- **Eternal** blocks resist explosions and cannot be mined.
-- **Effect** blocks grant potion effects to entities that step on them.
-- Breaking the block returns an item that keeps all its inlays.
+- **Vanilla smithing**: a Netherite Upgrade Smithing Template inlaid with a Netherite Ingot + diamond gear → the matching netherite gear.
+- **AnvilCraft smithing**: 2/4/8-to-one smithing templates and the various upgrade templates, following AnvilCraft's recipes.
+- **Some AnvilCraft jewel copying**: the copied item is the mold, and the product carries Vanishing Curse I.
+- **Vanilla armor trims**: 18 trim templates inlaid with "trimmable armor + trim material".
+- **Hollow Magnet Block**: inlay n Iron Ingots → n Magnet Ingots (n = 1..4).
+- **Confinement Chamber**: inlay 1 Charged Neutronium Ingot → 1 Confined Neutronium Ingot.
 
-## Logic gate blocks
+**Transcendium**: the add-on specifically adds a Transcendium inlay crafting recipe: inlay <ref item="anvilcraft:overheated_ember_metal_block"/> with <ref item="anvilcraft:charged_neutronium_ingot"/> and craft it:
 
-Blocks with **Input**, **Output**, and various **gate** attributes.
+| Enchantment count | Products                                                                             |
+|-------------------|--------------------------------------------------------------------------------------|
+| 0                 | 4 Transcendium Ingots                                                                |
+| 1–10              | 4 Transcendium Ingots + 3n Transcendium Nuggets + (10n% chance) 1 Neutronium Ingot   |
+| 11–14             | 4 Transcendium Ingots + 3n Transcendium Nuggets + 1 Neutronium Ingot                 |
+| 15                | 1 Neutronium Ingot + 1 Block of Transcendium                                         |
+| ≥16               | n Transcendium Nuggets + 1 Neutronium Ingot + 1 Block of Transcendium                |
 
-### Directional sockets
+## Block-level Inlays
 
-When a base material has **6 sockets**, each face of the block corresponds to a socket. Inputs and outputs are then resolved per-face:
+Inlays **are not lost when a block is placed**. A block item that has been inlaid keeps its properties after being placed as a block:
 
-- **Input** inputs redstone signals from this face; a 0–15 cutoff can be set so only signals up to it pass.
-- **Output** outputs the maximum signal of all input faces from this face; a 0–15 cutoff can be set so the output never exceeds it.
-- **NOT Gate** reads the input face signal and outputs the inverted signal.
-- **AND Gate** requires at least two inputs and outputs their minimum.
-- **OR Gate** outputs the maximum of its inputs.
-- **Counter Gate** counts input pulses (any input face going from 0 to a signal counts once) and, at the set count, outputs 15 for 1 tick and resets.
-- **Latch Gate** records and outputs the received signal; a second input clears the record and stops output.
-- **Delay Gate** outputs the received signal for the set number of ticks; a new input during the countdown only updates the output value, it does not reset the timer.
+- A **Magnetic** block can attract the anvil below and repel it when activated, which shows up as an increased fall height.
+- A **Fire-proof** block is not flammable.
+- An **Eternal** block is blast-proof and cannot be mined.
+- An **Effect** block grants potion effects to creatures that step on it.
+- Items dropped when breaking a block keep all of their inlays in almost every case.
 
-::: tip Gate value
-Hold the anvil hammer aiming at the gate's face and use **Ctrl + scroll** to change the value (**Shift** steps by 5), default 15.
-Ranges: Input / Output / Latch 0–15; Counter 1–config cap (default 16); Delay 0–config cap (default 20 ticks).
-The value is drawn on the part's four sides only while you look at it, and shown in the anvil-hammer HUD.
-:::
 
-::: tip
-Maybe you can even build a very small computer?
-:::
 
-## Doge Anvil growth
+## Carriers
 
-<ref item="anvilcraft_doge_plus:doge_anvil"/> has its own growth mechanic:
+**Inlay Carrier Block**: gains face properties from its sockets, and is used to craft the **Logic Carrier** and the **Pipe Carrier**.
 
-- Feed it **raw meat** by right-clicking (default +1 growth per piece).
-- At the cap (default 128), it grows in place into <ref item="anvilcraft_doge_plus:giant_doge_anvil"/>, a 3×3×3 multiblock that inherits all the behaviors of the Giant Anvil.
+<ref item="anvilcraft_doge_plus:logic_carrier"/>:
 
-Both values are server-configurable.
+- The logic gate type of each face can be programmed; hold an Anvil Hammer and long-press right-click to open the wheel.
+- Aim at the face where the gate is and adjust the set value with **Ctrl + scroll wheel**.
+- Faces that have not been programmed neither accept redstone input nor output redstone signals.
+
+<ref item="anvilcraft_doge_plus:pipe_carrier"/>:
+
+- The transfer mode of each face can be programmed; hold an Anvil Hammer and long-press right-click to open the wheel.
+- Aim at an **Insert** pipe face and adjust the **throughput** with **Ctrl + scroll wheel**; with an item in the offhand and an Anvil Hammer in the main hand, right-click a pipe to set a **filter**.
+- **Throughput**: the number of items transported per trip; **filter**: only the specified items are allowed through, and filters are supported.
+- Pipe Carriers can be connected into a transport chain; an **Insert** end records all **Extract** ends, and no matter how long the chain is, items travel end-to-end with a 7gt cooldown.
+- The **Insert / Extract** target can be a block container or an entity container such as a [Doge Node](../entity/doge_node.md).

@@ -1,0 +1,86 @@
+{
+	"format_version": "1.9.0",
+	"credit": "Made with Blockbench",
+	"parent": "minecraft:block/block",
+	"render_type": "minecraft:translucent",
+	"textures": {
+		"particle": "anvilcraft_doge_plus:block/logic_carrier_unpowered",
+		"lc": "anvilcraft_doge_plus:block/logic_carrier_unpowered"
+	},
+	"elements": [
+		{
+			"from": [9.5, 5.5, -0.025],
+			"to": [10.5, 6.5, 5.975],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 3]},
+			"faces": {
+				"north": {"uv": [6, 4, 7, 5], "texture": "#lc", "cullface": "north"},
+				"east": {"uv": [6, 4, 0, 5], "texture": "#lc"},
+				"south": {"uv": [6, 4, 7, 5], "texture": "#lc"},
+				"west": {"uv": [0, 4, 6, 5], "texture": "#lc"},
+				"up": {"uv": [0, 4, 6, 5], "rotation": 90, "texture": "#lc"},
+				"down": {"uv": [6, 4, 0, 5], "rotation": 90, "texture": "#lc"}
+			}
+		},
+		{
+			"from": [5.5, 5.5, -0.025],
+			"to": [6.5, 6.5, 5.975],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 3]},
+			"faces": {
+				"north": {"uv": [6, 4, 7, 5], "texture": "#lc", "cullface": "north"},
+				"east": {"uv": [6, 4, 0, 5], "texture": "#lc"},
+				"south": {"uv": [6, 4, 7, 5], "texture": "#lc"},
+				"west": {"uv": [0, 4, 6, 5], "texture": "#lc"},
+				"up": {"uv": [0, 4, 6, 5], "rotation": 90, "texture": "#lc"},
+				"down": {"uv": [6, 4, 0, 5], "rotation": 90, "texture": "#lc"}
+			}
+		},
+		{
+			"from": [5.5, 9.5, -0.025],
+			"to": [6.5, 10.5, 5.975],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 3]},
+			"faces": {
+				"north": {"uv": [6, 4, 7, 5], "texture": "#lc", "cullface": "north"},
+				"east": {"uv": [0, 4, 6, 5], "texture": "#lc"},
+				"south": {"uv": [6, 4, 7, 5], "texture": "#lc"},
+				"west": {"uv": [0, 4, 6, 5], "texture": "#lc"},
+				"up": {"uv": [0, 4, 6, 5], "rotation": 90, "texture": "#lc"},
+				"down": {"uv": [6, 4, 0, 5], "rotation": 90, "texture": "#lc"}
+			}
+		},
+		{
+			"from": [9.5, 9.5, -0.025],
+			"to": [10.5, 10.5, 5.975],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 3]},
+			"faces": {
+				"north": {"uv": [6, 4, 7, 5], "texture": "#lc", "cullface": "north"},
+				"east": {"uv": [6, 4, 0, 5], "texture": "#lc"},
+				"south": {"uv": [6, 4, 7, 5], "texture": "#lc"},
+				"west": {"uv": [0, 4, 6, 5], "texture": "#lc"},
+				"up": {"uv": [0, 4, 6, 5], "rotation": 90, "texture": "#lc"},
+				"down": {"uv": [6, 4, 0, 5], "rotation": 90, "texture": "#lc"}
+			}
+		},
+		{
+			"from": [6, 6, 0],
+			"to": [10, 10, 6],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 3]},
+			"faces": {
+				"north": {"uv": [6, 0, 10, 4], "texture": "#lc", "cullface": "north"},
+				"east": {"uv": [0, 0, 6, 4], "texture": "#lc"},
+				"south": {"uv": [6, 0, 10, 4], "texture": "#lc"},
+				"west": {"uv": [0, 0, 6, 4], "texture": "#lc"},
+				"up": {"uv": [0, 0, 6, 4], "rotation": 90, "texture": "#lc"},
+				"down": {"uv": [0, 0, 6, 4], "rotation": 90, "texture": "#lc"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "wire",
+			"origin": [8, 6, 0],
+			"scope": 0,
+			"color": 0,
+			"children": [0, 1, 2, 3, 4]
+		}
+	]
+}

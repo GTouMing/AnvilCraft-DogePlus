@@ -6,7 +6,6 @@ import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -44,22 +43,12 @@ public class DogeNodeEvent {
             node.removeNodeAndRelease();
             return;
         }
-        // 空手右键：返还捕获的物品
+        // 空手右键：有捕获的物品时取回；节点为空时不拦截，交给方块自身处理
+        // （如鱼缸 / 大型炼药锅空手取物，否则物品会被节点一直挡住取不出来）
         if (item.isEmpty()) {
+            if (node.getCapturedItems().isEmpty()) return;
             event.setCanceled(true);
             node.releaseToPlayer(player);
-            return;
-        }
-        // shift + 右键非磁铁物品：投喂 1 个到节点（物品实体落在节点处，随后被吸附/捕获）
-        if (player.isShiftKeyDown()) {
-            event.setCanceled(true);
-            ItemStack feed = item.copy();
-            feed.setCount(1);
-            if (!player.getAbilities().instabuild) item.shrink(1);
-            ItemEntity itemEntity = new ItemEntity(level, node.getX(), node.getY(), node.getZ(), feed);
-            itemEntity.setDeltaMovement(0, 0, 0);
-            itemEntity.setPickUpDelay(60);
-            level.addFreshEntity(itemEntity);
         }
     }
 }

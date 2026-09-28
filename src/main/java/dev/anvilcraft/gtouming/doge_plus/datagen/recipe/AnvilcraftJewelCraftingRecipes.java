@@ -30,8 +30,8 @@ import java.util.Map;
  * <p>只镜像材料数小于 {@link #INGREDIENT_LIMIT} 的配方：镶合配方的每个镶孔只能承载一件
  * 材料，猫/狗护符等动辄三四十件材料的配方需要等量镶孔，无法实用。</p>
  *
- * <p>珠宝复制产物带 1 级消失诅咒（与前置珠宝合成台一致），由镶合配方的
- * {@code curse_of_vanishing} 表达。</p>
+ * <p>珠宝复制产物带 1 级消失诅咒（与前置珠宝合成台一致），由镶合配方产物条目的
+ * {@code curse} 标记表达。</p>
  */
 public final class AnvilcraftJewelCraftingRecipes {
 

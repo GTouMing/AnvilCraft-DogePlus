@@ -8,6 +8,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.Block;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +20,8 @@ import java.util.List;
  * 这里仿照其设计把「匹配条件」建模为可级联的 builder 方法：</p>
  * <ul>
  *   <li>{@link #name(String)}：文件键（{@code material/base|<inlay>/<name>.json}）；</li>
- *   <li>{@link #item(ItemLike)} / {@link #tag(TagKey)} / {@link #dataComponent(ItemLike, JsonObject)}：
+ *   <li>{@link #item(ItemLike)} / {@link #tag(TagKey)} / {@link #blockTag(TagKey)} /
+ *       {@link #dataComponent(ItemLike, JsonObject)}：
  *       依次追加匹配条件（可多个，对应 ingredient 数组的多个元素）；</li>
  *   <li>{@link #sockets(int)} / {@link #attributes(String...)}：基材镶孔数 / 材料属性；</li>
  *   <li>{@link #buildBase()} / {@link #buildInlay()}：校验并关闭构造器。</li>
@@ -79,6 +81,22 @@ public class MaterialBuilder {
         ResourceLocation id = tag.location();
         JsonObject condition = new JsonObject();
         condition.addProperty("tag", id.toString());
+        this.conditions.add(condition);
+        return this;
+    }
+
+    /**
+     * 追加一条「匹配某方块标签下各方块物品」条件（NeoForge 扩展 ingredient 格式
+     * {@code neoforge:block_tag}）。
+     *
+     * <p>用于只有方块标签、没有对应物品标签的场合（如 {@code minecraft:pressure_plates}，
+     * 前置模组也往这个方块标签里加自己的压力板）。匹配时按方块的同名物品判定，
+     * 因此压力板这类「方块 + 同名物品」能正常命中。</p>
+     */
+    public MaterialBuilder blockTag(TagKey<Block> tag) {
+        JsonObject condition = new JsonObject();
+        condition.addProperty("type", "neoforge:block_tag");
+        condition.addProperty("tag", tag.location().toString());
         this.conditions.add(condition);
         return this;
     }
