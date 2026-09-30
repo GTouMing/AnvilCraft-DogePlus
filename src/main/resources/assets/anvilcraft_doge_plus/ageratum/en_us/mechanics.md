@@ -73,10 +73,11 @@ When **the base material is present and the material slot is empty**, it tries t
 | **Input**        | <ref item="anvilcraft:redstone_wire"/>      | Inputs redstone signals from this face.                                                    |
 | **NOT Gate**     | Redstone Torch                              | Outputs the inverted signal of the opposite face.                                          |
 | **AND Gate**     | Repeater                                    | ANDs adjacent inputs in order.                                                             |
-| **OR Gate**      | Comparator                                  | ORs adjacent inputs in order.                                                              |
 | **Counter Gate** | Button                                      | Counts input pulses and outputs a 1-tick signal at the set count.                          |
 | **Latch Gate**   | Lever                                       | Records and outputs a received signal; a second input clears it.                           |
 | **Delay Gate**   | Pressure Plate                              | Outputs the received signal for the set number of ticks.                                   |
+| **Delayed Input Gate** | Clock                                 | Records the input signal and, after the set number of ticks, feeds it to this block's other gates as a 1-tick input on that face. |
+| **Remote Gate**  | <ref item="minecraft:ender_pearl"/>         | Remote faces with the same channel link up: forwards inputs on the redstone side, remote extract on the item side. |
 | **Insert**       | <ref item="anvilcraft:chute"/>              | Puts items into the container it faces.                                                    |
 | **Extract**      | <ref item="anvilcraft:magnetic_chute"/>     | Takes items from the container it faces.                                                   |
 | **Generator**    | <ref item="anvilcraft:supercapacitor"/>     | Produces 512 kW of power once placed.                                                      |
@@ -150,7 +151,7 @@ Inlays **are not lost when a block is placed**. A block item that has been inlai
 
 ## Carriers
 
-**Inlay Carrier Block**: gains face properties from its sockets, and is used to craft the **Logic Carrier** and the **Pipe Carrier**.
+**Inlay Carrier**: gains face properties from its sockets, and is used to craft the **Logic Carrier** and the **Logistics Carrier**.
 
 <ref item="anvilcraft_doge_plus:logic_carrier"/>:
 
@@ -158,10 +159,10 @@ Inlays **are not lost when a block is placed**. A block item that has been inlai
 - Aim at the face where the gate is and adjust the set value with **Ctrl + scroll wheel**.
 - Faces that have not been programmed neither accept redstone input nor output redstone signals.
 
-<ref item="anvilcraft_doge_plus:pipe_carrier"/>:
+<ref item="anvilcraft_doge_plus:logistics_carrier"/>:
 
 - The transfer mode of each face can be programmed; hold an Anvil Hammer and long-press right-click to open the wheel.
-- Aim at an **Insert** pipe face and adjust the **throughput** with **Ctrl + scroll wheel**; with an item in the offhand and an Anvil Hammer in the main hand, right-click a pipe to set a **filter**.
+- Aim at an **Insert** logistics face and adjust the **throughput** with **Ctrl + scroll wheel**; with an item in the offhand and an Anvil Hammer in the main hand, right-click a logistics to set a **filter**.
 - **Throughput**: the number of items transported per trip; **filter**: only the specified items are allowed through, and filters are supported.
-- Pipe Carriers can be connected into a transport chain; an **Insert** end records all **Extract** ends, and no matter how long the chain is, items travel end-to-end with a 7gt cooldown.
+- Logistics Carriers can be connected into a transport chain; an **Insert** end records all **Extract** ends, and no matter how long the chain is, items travel end-to-end with a 7gt cooldown.
 - The **Insert / Extract** target can be a block container or an entity container such as a [Doge Node](../entity/doge_node.md).

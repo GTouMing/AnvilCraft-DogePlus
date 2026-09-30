@@ -121,12 +121,6 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             "tooltip.anvilcraft_doge_plus.inlay_property.and_gate",
             0x00FF44)); // 亮绿色
 
-    /** 或门：该面输出邻面输入的或信号（按序查找）。 */
-    public static final InlayProperty OR_GATE = register(new InlayProperty(
-            AnvilCraftDogePlus.of("or_gate"),
-            "tooltip.anvilcraft_doge_plus.inlay_property.or_gate",
-            0x44FF00)); // 黄绿色
-
     /** 计数门：累计输入脉冲次数，达到设定次数时输出 1 tick 的 15。 */
     public static final InlayProperty COUNTER_GATE = register(new InlayProperty(
             AnvilCraftDogePlus.of("counter_gate"),
@@ -144,6 +138,18 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             AnvilCraftDogePlus.of("delay_gate"),
             "tooltip.anvilcraft_doge_plus.inlay_property.delay_gate",
             0xCCCC00)); // 黄色
+
+    /** 延时输入门：记录输入信号，等待设定 tick 数后作为该面的输入向本方块的门送出 1 tick。 */
+    public static final InlayProperty DELAY_INPUT_GATE = register(new InlayProperty(
+            AnvilCraftDogePlus.of("delay_input_gate"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.delay_input_gate",
+            0xCCCC00)); // 黄色
+
+    /** 远程门：同信道编号的远程面互连为一条总线；红石侧为双向导线，物品侧提供远程查找取出货源。 */
+    public static final InlayProperty REMOTE = register(new InlayProperty(
+            AnvilCraftDogePlus.of("remote"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.remote",
+            0x55FFFF)); // 青色
 
     /** 发电：放置后产生 512 kW 电力*/
     public static final InlayProperty GENERATOR = register(new InlayProperty(

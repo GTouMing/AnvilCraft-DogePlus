@@ -226,8 +226,8 @@ public final class GateChainPreviewRenderer {
             if (outFace != null && !inlaid.contains(outFace)) inlaid.add(outFace);
         }
 
-        // 预览的默认方块状态按手势作用的载体族取（逻辑载体 / 管道载体）。
-        BlockState state = (GateChainGesture.isPipe() ? ModBlocks.PIPE_CARRIER : ModBlocks.LOGIC_CARRIER)
+        // 预览的默认方块状态按手势作用的载体族取（逻辑载体 / 物流载体）。
+        BlockState state = (GateChainGesture.isLogistics() ? ModBlocks.LOGISTICS_CARRIER : ModBlocks.LOGIC_CARRIER)
                 .get().defaultBlockState();
         for (Direction direction : inlaid) {
             state = state.setValue(InlayCarrierBlock.property(direction), CarrierWire.of(true, false));

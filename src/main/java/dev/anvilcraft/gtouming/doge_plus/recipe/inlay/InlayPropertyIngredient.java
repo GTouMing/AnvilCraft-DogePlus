@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  *
  * <pre>{@code
  * { "type": "anvilcraft_doge_plus:inlay_property",
- *   "properties": ["and_gate", "or_gate", "not_gate"] }
+ *   "properties": ["and_gate", "counter_gate", "not_gate"] }
  * }</pre>
  *
  * <p>{@link #getItems()} 返回携带这些属性的材料物品，供 JEI 与配方书展示——

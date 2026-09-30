@@ -1,7 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.util;
 
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.PipeCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
@@ -81,9 +81,9 @@ public final class InlayInspection {
         }
         lines.add(faceLine(data, inlays, direction));
         lines.add(Component.translatable(KEY + "signal", carrier.signal(direction)).withStyle(ChatFormatting.GRAY));
-        // 管道「存入」面：物流量在上、过滤在下（与世界渲染里「物品层在数字层之下」对应）。
-        // 镶嵌载体的存入 / 取出来自材料，没有这两项参数，因此只对管道载体显示。
-        if (state.getBlock() instanceof PipeCarrierBlock && data.getFace(direction) == FaceMode.INSERT) {
+        // 物流「存入」面：物流量在上、过滤在下（与世界渲染里「物品层在数字层之下」对应）。
+        // 镶嵌载体的存入 / 取出来自材料，没有这两项参数，因此只对物流载体显示。
+        if (state.getBlock() instanceof LogisticsCarrierBlock && data.getFace(direction) == FaceMode.INSERT) {
             lines.add(Component.translatable(KEY + "throughput", data.getThroughput(direction))
                     .withStyle(ChatFormatting.GRAY));
             ItemStack filter = data.getFilter(direction);
@@ -92,6 +92,10 @@ public final class InlayInspection {
                     .withStyle(ChatFormatting.GRAY));
         }
         FaceMode mode = data.getFace(direction);
+        if (mode.isRemote()) {
+            lines.add(Component.translatable(KEY + "channel", data.getChannel(direction).describe())
+                    .withStyle(ChatFormatting.GRAY));
+        }
         if (mode.isSettable()) {
             lines.add(Component.translatable(KEY + "value", data.getValue(direction))
                     .withStyle(ChatFormatting.GRAY));
@@ -99,7 +103,7 @@ public final class InlayInspection {
         if (mode == FaceMode.COUNTER_GATE) {
             lines.add(Component.translatable(KEY + "counted", carrier.runtime(direction))
                     .withStyle(ChatFormatting.GRAY));
-        } else if (mode == FaceMode.DELAY_GATE) {
+        } else if (mode == FaceMode.DELAY_GATE || mode == FaceMode.DELAY_INPUT_GATE) {
             lines.add(Component.translatable(KEY + "elapsed", carrier.runtime(direction))
                     .withStyle(ChatFormatting.GRAY));
         }
@@ -113,18 +117,13 @@ public final class InlayInspection {
                 ? inlays.get(slot).toItemStack().getHoverName()
                 : Component.literal("?");
         FaceMode mode = data.getFace(direction);
-        // 逻辑载体没有镶孔材料：已编程的面只显示门名（复用两参数的行文案，不带材料）。
-        if (mode.isRedstone() && !hasMaterial) {
+        // 逻辑 / 物流载体没有镶孔材料：已编程的面只显示面属性名（不带材料）；
+        // 少了这一支就会掉到下面的材料分支，把空材料渲染成 "?"。
+        if (!hasMaterial && mode != FaceMode.NONE) {
             return Component.translatable(KEY + "line_material", faceName(direction), modeName(mode))
                     .withStyle(ChatFormatting.GRAY);
         }
-        // 管道载体既没有镶孔也没有红石门：已编程的面显示搬运角色。少了这一支就会掉到下面的材料分支，
-        // 把空材料渲染成 "?"（管道面永远没有材料）。
-        if (mode.isTransfer() && !hasMaterial) {
-            return Component.translatable(KEY + "line_material", faceName(direction), modeName(mode))
-                    .withStyle(ChatFormatting.GRAY);
-        }
-        // 镶嵌载体：门种（若该面的材料是门）与材料名并列；搬运材料走纯材料行。
+        // 镶嵌载体：门种（若该面的材料是门）与材料名并列；搬运 / 远程材料走纯材料行。
         Component line = mode.isRedstone()
                 ? Component.translatable(KEY + "line_gate", faceName(direction), modeName(mode), material)
                 : Component.translatable(KEY + "line_material", faceName(direction), material);
@@ -147,8 +146,9 @@ public final class InlayInspection {
         return Component.translatable(KEY + "dir." + direction.getName());
     }
 
-    /** 面属性的显示名：红石门走 gate.* 文案，搬运角色走 transfer.* 文案。 */
+    /** 面属性的显示名：红石门与远程门走 gate.* 文案，搬运角色走 transfer.* 文案。 */
     private static Component modeName(FaceMode mode) {
-        return Component.translatable(KEY + (mode.isRedstone() ? "gate." : "transfer.") + mode.getSerializedName());
+        boolean gate = mode.isRedstone() || mode.isRemote();
+        return Component.translatable(KEY + (gate ? "gate." : "transfer.") + mode.getSerializedName());
     }
 }

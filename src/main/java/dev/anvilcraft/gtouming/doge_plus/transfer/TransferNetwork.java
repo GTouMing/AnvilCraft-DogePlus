@@ -57,16 +57,22 @@ final class TransferNetwork {
 }
 
 /**
- * 传输节点：一个方块上六个面里哪些带「存入」、哪些带「取出」。
+ * 传输节点：一个方块上六个面里哪些带「存入」、哪些带「取出」，以及参与哪些远程门信道。
  *
- * @param packedPos   位置（{@link BlockPos#asLong()}）
- * @param insertMask  「存入」面掩码，位下标同 {@link Direction#ordinal()}
- * @param extractMask 「取出」面掩码
+ * @param packedPos       位置（{@link BlockPos#asLong()}）
+ * @param insertMask      「存入」面掩码，位下标同 {@link Direction#ordinal()}
+ * @param extractMask     「取出」面掩码
+ * @param remoteChannels  该节点上远程面（{@link FaceMode#REMOTE}）的信道键（去重）
  */
-record TransferNode(long packedPos, int insertMask, int extractMask) {
+record TransferNode(long packedPos, int insertMask, int extractMask, long[] remoteChannels) {
 
     boolean hasInsert() {
         return this.insertMask != 0;
+    }
+
+    /** 是否参与远程门（有远程面）。 */
+    boolean isRemote() {
+        return this.remoteChannels.length != 0;
     }
 
     /** 该面是否是「存入」（物品从这里进入本节点面朝的容器）。 */

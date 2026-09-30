@@ -219,7 +219,7 @@ public class BlockInlayManager extends SavedData {
             }
             entryTag.put("V", valueList);
 
-            // 保存各面物流量（管道载体的「存入」面）
+            // 保存各面物流量（物流载体的「存入」面）
             ListTag throughputList = new ListTag();
             for (Map.Entry<Direction, Integer> throughputEntry : inlays.throughputs().entrySet()) {
                 CompoundTag throughputTag = new CompoundTag();
@@ -229,7 +229,7 @@ public class BlockInlayManager extends SavedData {
             }
             entryTag.put("Q", throughputList);
 
-            // 保存各面过滤物品（管道载体的「存入」面）
+            // 保存各面过滤物品（物流载体的「存入」面）
             ListTag filterList = new ListTag();
             for (Map.Entry<Direction, ItemStack> filterEntry : inlays.filters().entrySet()) {
                 CompoundTag filterTag = new CompoundTag();
@@ -238,6 +238,17 @@ public class BlockInlayManager extends SavedData {
                 filterList.add(filterTag);
             }
             entryTag.put("F", filterList);
+
+            // 保存各面远程门信道标识（物品类型 + 数字）
+            ListTag channelList = new ListTag();
+            for (Map.Entry<Direction, RemoteChannel> channelEntry : inlays.channels().entrySet()) {
+                CompoundTag channelTag = new CompoundTag();
+                channelTag.putString("dir", channelEntry.getKey().getName());
+                channelTag.put("item", channelEntry.getValue().item().save(registries));
+                channelTag.putInt("number", channelEntry.getValue().number());
+                channelList.add(channelTag);
+            }
+            entryTag.put("C", channelList);
 
             list.add(entryTag);
         }
@@ -362,9 +373,21 @@ public class BlockInlayManager extends SavedData {
                 if (!filter.isEmpty()) filters.put(dir, filter.copyWithCount(1));
             }
 
+            // 读取各面远程门信道标识（旧数据无此 tag → 全部走默认信道）
+            Map<Direction, RemoteChannel> channels = new HashMap<>();
+            ListTag channelList = entryTag.getList("C", Tag.TAG_COMPOUND);
+            for (int j = 0; j < channelList.size(); j++) {
+                CompoundTag channelTag = channelList.getCompound(j);
+                Direction dir = Direction.byName(channelTag.getString("dir"));
+                if (dir == null) continue;
+                ItemStack item = ItemStack.parseOptional(registries, channelTag.getCompound("item"));
+                RemoteChannel channel = new RemoteChannel(item, channelTag.getInt("number")).normalized();
+                if (!channel.isDefault()) channels.put(dir, channel);
+            }
+
             // 构建 BlockInlays 并存入
             BlockInlays inlays =
-                    new BlockInlays(block, inlayEntries, faces, values, throughputs, filters);
+                    new BlockInlays(block, inlayEntries, faces, values, throughputs, filters, channels);
             data.INLAID_BLOCKS.put(pos, inlays);
         }
 

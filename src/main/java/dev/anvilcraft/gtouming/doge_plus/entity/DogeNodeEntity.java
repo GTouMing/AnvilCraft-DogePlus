@@ -556,7 +556,7 @@ public class DogeNodeEntity extends Entity {
      * 通知物品传输网重算周边货源：本节点是传输网的端点，出现 / 消失都会改变「取出」有效性。
      *
      * <p>节点是实体，网络只在拓扑变化时重算记录，因此放置 / 移除节点后必须主动通知，
-     * 否则管道载体编程时算出的端点记录里不会有这个节点。</p>
+     * 否则物流载体编程时算出的端点记录里不会有这个节点。</p>
      */
     public void notifyTransferNetwork() {
         if (this.level().isClientSide) return;

@@ -196,13 +196,13 @@ public record InlayCraftingData(
                 InlayCraftingRecipe.Kind.CRAFTING
         ));
 
-        // ===== 管道载体：镶嵌载体分别镶入「存入」与「取出」各一件 → 4 个管道载体 =====
+        // ===== 物流载体：镶嵌载体分别镶入「存入」与「取出」各一件 → 4 个物流载体 =====
         // 两个镶孔各只认一种属性，因此必须一件溜槽 + 一件磁性溜槽；产率 4:1。
         VANILLA.add(new InlayCraftingData(
-                "pipe_carrier",
+                "logistics_carrier",
                 dev.anvilcraft.gtouming.doge_plus.init.ModBlocks.INLAY_CARRIER.asItem(),
                 List.of(properties(InlayProperty.INSERT), properties(InlayProperty.EXTRACT)),
-                List.of(fixed(dev.anvilcraft.gtouming.doge_plus.init.ModBlocks.PIPE_CARRIER.asItem(), 4)),
+                List.of(fixed(dev.anvilcraft.gtouming.doge_plus.init.ModBlocks.LOGISTICS_CARRIER.asItem(), 4)),
                 InlayCraftingRecipe.Kind.CRAFTING
         ));
 

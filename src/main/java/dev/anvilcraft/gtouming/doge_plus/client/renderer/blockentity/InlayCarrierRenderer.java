@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.PipeCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
@@ -19,6 +19,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.block.model.ItemTransform;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
@@ -54,8 +55,8 @@ import java.util.List;
  * <ul>
  *   <li><b>红石连接件</b>（只有逻辑 / 普通载体）：取决于邻居是否为红石粉 / 红石导线，逐面布尔属性
  *       会让状态数膨胀 64 倍；并按「该面是不是输入门」与是否通电换用输入 / 非输入两个变体。
- *       管道面不参与红石，不画；</li>
- *   <li><b>管道搬运方向指示件</b>（存入 / 取出两个手写模型）：传输链的首尾（正邻格没有互补搬运角色
+ *       物流面不参与红石，不画；</li>
+ *   <li><b>物流搬运方向指示件</b>（存入 / 取出两个手写模型）：传输链的首尾（正邻格没有互补搬运角色
  *       ——链首从容器取货、链尾把货送进容器），以及「相对两面角色相同」这种接线异常处。
  *       链内正常相接的面不画。</li>
  * </ul>
@@ -77,23 +78,30 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
     private static final ModelResourceLocation CONNECTED_INPUT = standalone("carrier/logic/connected_input");
     private static final ModelResourceLocation CONNECTED_INPUT_POWERED =
             standalone("carrier/logic/connected_input_powered");
-    /** 管道的搬运方向指示件：存入（把货送进面朝容器）/ 取出（从面朝容器取货）。 */
-    private static final ModelResourceLocation PIPE_INSERT = standalone("carrier/pipe/connected_insert");
-    private static final ModelResourceLocation PIPE_EXTRACT = standalone("carrier/pipe/connected_extract");
+    /** 物流的搬运方向指示件：存入（把货送进面朝容器）/ 取出（从面朝容器取货）。 */
+    private static final ModelResourceLocation LOGISTICS_INSERT = standalone("carrier/logistics/connected_insert");
+    private static final ModelResourceLocation LOGISTICS_EXTRACT = standalone("carrier/logistics/connected_extract");
 
     /** 需要在 {@code ModelEvent.RegisterAdditional} 中注册的模型。 */
     public static final List<ModelResourceLocation> MODELS = List.of(
             CONNECTED, CONNECTED_POWERED,
             CONNECTED_INPUT, CONNECTED_INPUT_POWERED,
-            PIPE_INSERT, PIPE_EXTRACT);
+            LOGISTICS_INSERT, LOGISTICS_EXTRACT);
 
     private static final RandomSource RANDOM = RandomSource.create();
 
     /**
-     * BER 部件的渲染类型：红石连接件与管道方向指示件都是 BER 专用几何（不参与区块渲染，
-     * 模型自己声明的 {@code render_type} 只作用于区块那趟），这里统一走镂空。
+     * BER 部件的渲染类型：红石连接件与物流方向指示件都是 BER 专用几何（不参与区块渲染，
+     * 模型自己声明的 {@code render_type} 只作用于区块那趟），这里统一走镂空。信道物品除外，见
+     * {@link #CHANNEL_ITEM_RENDER_TYPE}。
      */
     private static final RenderType PART_RENDER_TYPE = RenderType.cutout();
+
+    /**
+     * 信道物品的渲染类型：走半透明，让模型贴图的透明度通道生效（镂空只做 alpha 裁剪，半透明像素会被
+     * 当成不透明）。物品与通道部件同在方块图集上，因此直接用方块图集的 translucent 即可。
+     */
+    private static final RenderType CHANNEL_ITEM_RENDER_TYPE = RenderType.translucent();
 
     /** 判定准星命中部件所用射线长度（与交互 / HUD 一致）。 */
     private static final double RAY_LENGTH = 6.0;
@@ -114,20 +122,34 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         BlockPos pos = blockEntity.getBlockPos();
         BlockState state = blockEntity.getBlockState();
         BlockInlays inlays = BlockInlayManager.get(level, pos);
-        boolean pipe = state.getBlock() instanceof PipeCarrierBlock;
+        boolean logistics = state.getBlock() instanceof LogisticsCarrierBlock;
 
-        // 连接件与方向指示件都是同一种渲染类型，取一次缓冲连着画完即可：BufferSource 一被要求换成
-        // 别的类型就会把上一批结束掉，之后再往旧 consumer 里写会抛「Not building!」。
+        // 信道物品可能带半透明贴图，走 translucent：镂空只按 0.1 阈值做 alpha 裁剪，模型贴图的透明度通道
+        // 会失效（半透明像素被当成不透明）。连接件与方向指示件仍是镂空。
+        //
+        // BufferSource 一被要求换成别的类型就会把上一批结束掉，之后再往旧 consumer 里写会抛
+        // 「Not building!」，所以先把物品整批画完，再取镂空缓冲画其余部件。
+        VertexConsumer itemConsumer = buffer.getBuffer(CHANNEL_ITEM_RENDER_TYPE);
+        for (Direction face : Direction.values()) {
+            // 远程门面：方块状态那边把最小那层珍珠块做成了内翻的负块（凹槽），这里把信道物品摆进同一个凹槽。
+            if (inlays.getFace(face).isRemote()) {
+                renderChannelItem(poseStack, itemConsumer, level, pos, face, inlays.getChannel(face).item(),
+                        packedLight, packedOverlay);
+            }
+        }
+
         VertexConsumer consumer = buffer.getBuffer(PART_RENDER_TYPE);
         for (Direction face : Direction.values()) {
-            if (pipe) {
-                // 管道方向指示件：画在传输链的首尾，以及「相对两面角色相同」这种接线异常处（方便排查链路）。
-                // 管道面不参与红石，所以没有红石连接件。
+            if (logistics) {
+                // 物流方向指示件：画在传输链的首尾，以及「相对两面角色相同」这种接线异常处（方便排查链路）。
+                // 物流面不参与红石，所以没有红石连接件。
                 FaceMode mode = inlays.getFace(face);
                 if (mode == FaceMode.NONE) continue;
+                // 远程面没有搬运方向（它是接线柱，不是链上的取出 / 存入），不画方向指示件。
+                if (mode.isRemote()) continue;
                 if (!showsTransferArrow(level, pos, inlays, face, mode)) continue;
                 draw(poseStack, consumer, level, faceRotX(face), faceRotY(face),
-                        mode == FaceMode.INSERT ? PIPE_INSERT : PIPE_EXTRACT, packedLight, packedOverlay);
+                        mode == FaceMode.INSERT ? LOGISTICS_INSERT : LOGISTICS_EXTRACT, packedLight, packedOverlay);
                 continue;
             }
             // 连接件是通道的延伸：只在已镶嵌、且邻居是红石粉 / 红石导线的面上绘制。
@@ -150,20 +172,23 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         // 设定值 / 物流量只在准星指向该部件时渲染。
         Direction focused = focusedFace(pos, state);
         if (focused != null && isInlaid(state, focused)) {
-            if (pipe) {
-                // 管道「存入」面：过滤物品先画（在数字层之下），物流量数字压在其上层。
-                // 两者都要躲开通道棱件与搬运箭头，故用更大的横向偏移（见 PIPE_VALUE_SIDE_OFFSET）。
-                if (inlays.getFace(focused) == FaceMode.INSERT) {
+            FaceMode focusedMode = inlays.getFace(focused);
+            if (focusedMode.isRemote()) {
+                // 远程面：聚焦时只显示信道数字（信道物品由 BER 画在珍珠负块凹槽里，见 renderChannelItem）。
+                float channelOffset = logistics ? LOGISTICS_VALUE_SIDE_OFFSET : GATE_VALUE_SIDE_OFFSET;
+                renderGateValue(poseStack, buffer, focused, inlays.getChannel(focused).number(), packedLight,
+                        channelOffset);
+            } else if (logistics) {
+                // 物流「存入」面：过滤物品先画（在数字层之下），物流量数字压在其上层。
+                // 两者都要躲开通道棱件与搬运箭头，故用更大的横向偏移（见 LOGISTICS_VALUE_SIDE_OFFSET）。
+                if (focusedMode == FaceMode.INSERT) {
                     renderFilterItem(poseStack, buffer, level, focused, inlays.getFilter(focused),
                             packedLight, packedOverlay);
                     renderGateValue(poseStack, buffer, focused, inlays.getThroughput(focused), packedLight,
-                            PIPE_VALUE_SIDE_OFFSET);
+                            LOGISTICS_VALUE_SIDE_OFFSET);
                 }
-            } else {
-                FaceMode gateType = inlays.getFace(focused);
-                if (gateType.isSettable()) {
-                    renderGateValue(poseStack, buffer, focused, inlays.getValue(focused), packedLight);
-                }
+            } else if (focusedMode.isSettable()) {
+                renderGateValue(poseStack, buffer, focused, inlays.getValue(focused), packedLight);
             }
         }
     }
@@ -185,16 +210,16 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
     private static final float GATE_VALUE_SIDE_OFFSET = 0.128F;
 
     /**
-     * 管道「存入」面上物流量数字的横向偏移。
+     * 物流「存入」面上物流量数字的横向偏移。
      *
      * <p>横截面最外是棱件与搬运箭头，横向到 {@code 2.5/16} 格；数字与过滤物品都是垂直于该侧法线的
      * 平面，必须整个挪到那些几何之外，否则会被深度测试直接剔除（不会半透明混出来）。取 {@code 0.22}
      * 格，留出约 1 像素余量，且不越出该面。</p>
      */
-    private static final float PIPE_VALUE_SIDE_OFFSET = 0.16F;
+    private static final float LOGISTICS_VALUE_SIDE_OFFSET = 0.16F;
 
     /** 过滤物品比物流量数字再靠里一点：两者同向平行，靠这点深度差保证数字稳定压在物品之上。 */
-    private static final float PIPE_FILTER_SIDE_OFFSET = PIPE_VALUE_SIDE_OFFSET;
+    private static final float LOGISTICS_FILTER_SIDE_OFFSET = LOGISTICS_VALUE_SIDE_OFFSET;
 
     /** 把设定值绘制在通道部件垂直于通道方向的四个侧面上（每个面都朝向该侧外侧）。 */
     private static void renderGateValue(
@@ -206,7 +231,7 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         renderGateValue(poseStack, buffer, face, value, packedLight, GATE_VALUE_SIDE_OFFSET);
     }
 
-    /** 同上，但可指定横向偏移（管道面要躲开棱件 / 箭头，见 {@link #PIPE_VALUE_SIDE_OFFSET}）。 */
+    /** 同上，但可指定横向偏移（物流面要躲开棱件 / 箭头，见 {@link #LOGISTICS_VALUE_SIDE_OFFSET}）。 */
     private static void renderGateValue(
             PoseStack poseStack,
             MultiBufferSource buffer,
@@ -253,6 +278,188 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
 
     private static Vector3f axis(Direction direction) {
         return new Vector3f(direction.getStepX(), direction.getStepY(), direction.getStepZ());
+    }
+
+    /**
+     * 「最小珍珠块」凹槽的位置与边长。
+     *
+     * <p>取自 {@code carrier/*&#47;wire_remote} 里那层 2×2×2 的珍珠块——它在模型里被做成了内翻的负块
+     * （{@code from [9, 9, 3.001] → to [7, 7, 1.001]}，占 x/y 7..9、z 1.001..3.001，各轴 2/16 格），
+     * 居中于珍珠组的轴心。充当信道物品的凹槽。</p>
+     */
+    private static final float SOCKET_CENTER_X = 8 / 16.0F;
+    private static final float SOCKET_CENTER_Y = 8 / 16.0F;
+    private static final float SOCKET_CENTER_Z = 2.001F / 16.0F;
+
+    /** 凹槽边长（立方体，各轴相同）。 */
+    private static final float SOCKET_EXTENT = 2 / 16.0F;
+
+    /** 信道物品相对凹槽的留白：略小于负块的静态渲染。 */
+    private static final float SOCKET_ITEM_FIT = 0.9F;
+
+    /** {@code BakedQuad} 顶点在 {@code int[]} 里的步长（{@code DefaultVertexFormat.BLOCK} 每个顶点 8 个 int）。 */
+    private static final int VERTEX_STRIDE = 8;
+
+    /**
+     * 在远程门面的「珍珠负块」凹槽里渲染信道物品。
+     *
+     * <p>先按该面的朝向摆位姿（与 blockstate multipart 的旋转一致），挪到凹槽中心，再把模型中心挪到
+     * 位姿原点；然后定朝向——立体（方块感）物品沿用与物品栏一致的显示变换旋转 / 缩放（丢掉掉落物的抬高位
+     * 移），扁平贴图物品则做成 billboard 始终面朝玩家；最后量出物品模型实际的长宽高跨度，统一缩放到
+     * 「略小于凹槽」，保证三个轴都被钳在凹槽以内。</p>
+     */
+    private static void renderChannelItem(
+            PoseStack poseStack,
+            VertexConsumer consumer,
+            Level level,
+            BlockPos pos,
+            Direction face,
+            ItemStack item,
+            int packedLight,
+            int packedOverlay) {
+        if (item.isEmpty()) return;
+        ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
+        BakedModel model = itemRenderer.getModel(item, level, null, 0);
+        // 量出模型自己的包围盒：用来把它居中，并按跨度算缩放（不假设物品模型就是 0..1 居中的方块）。
+        float[] bounds = {
+                Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
+                -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+        if (!accumulateBounds(model, bounds)) return;
+
+        poseStack.pushPose();
+        // 与 blockstate multipart 同一套朝向旋转：把「朝北」的模型坐标摆到该面。
+        poseStack.translate(0.5, 0.5, 0.5);
+        applyRotation(poseStack, faceRotX(face), faceRotY(face));
+        poseStack.translate(-0.5, -0.5, -0.5);
+        poseStack.translate(SOCKET_CENTER_X, SOCKET_CENTER_Y, SOCKET_CENTER_Z);
+        if (model.isGui3d()) {
+            // 立体（方块感）物品：借「掉落物」（ground）那套显示变换的旋转与缩放，但**不要它的位移**
+            // ——那是让掉落物「站在地上」用的 3/16 抬高，凹槽里只会把物品顶偏。
+            ItemTransform ground = model.getTransforms().getTransform(ItemDisplayContext.GROUND);
+            poseStack.mulPose(new Quaternionf().rotationXYZ(
+                    (float) Math.toRadians(ground.rotation.x()),
+                    (float) Math.toRadians(ground.rotation.y()),
+                    (float) Math.toRadians(ground.rotation.z())));
+            poseStack.scale(ground.scale.x(), ground.scale.y(), ground.scale.z());
+        } else {
+            // 扁平贴图物品（{@code item/generated} 一类）：做成 billboard，贴图平面始终正对玩家相机。
+            //
+            // 先在局部抵消该面的朝向旋转：位姿把「与世界轴对齐」的模型坐标摆到该面，抵消之后局部坐标系
+            // 重新与世界轴对齐，随后给的才是「世界空间的朝向」。这一步对「位姿里是否已含相机旋转」两种
+            // 实现都成立，因此不依赖具体渲染管线。
+            if (faceRotX(face) != 0) poseStack.mulPose(Axis.XP.rotationDegrees(faceRotX(face)));
+            if (faceRotY(face) != 0) poseStack.mulPose(Axis.YP.rotationDegrees(faceRotY(face)));
+            poseStack.mulPose(facingCamera(pos));
+        }
+        // 统一缩放到「略小于凹槽」：凹槽是立方体，按三轴最大跨度缩，每轴都落在里面。
+        float scale = socketFitScale(poseStack, model);
+        poseStack.scale(scale, scale, scale);
+        // 物品模型的几何通常落在 0..1、原点在方块角上，而位姿原点此刻已在凹槽（负块）中心：不挪的话
+        // 只有模型的一个角落在中心。与 renderStatic 一样把模型中心挪到位姿原点（用实测包围盒，不假设
+        // 模型就是 0..1 居中）。
+        //
+        // 平移要放在**所有缩放之后**，且直接给模型空间的量：位姿右乘是对顶点先作用，放在缩放之前会差
+        // 一个缩放倍率（显示变换自带约 0.25 倍）；而按位姿矩阵去量中心又会把「方块相对相机」的位移算
+        // 进去，物品会随玩家移动而漂移。
+        poseStack.translate(
+                -(bounds[0] + bounds[3]) / 2.0F,
+                -(bounds[1] + bounds[4]) / 2.0F,
+                -(bounds[2] + bounds[5]) / 2.0F);
+        renderShaded(poseStack.last(), consumer, model, packedLight, packedOverlay, level);
+        poseStack.popPose();
+    }
+
+    /**
+     * 「面朝相机」的旋转：把模型面朝北时的法线（{@code +Z}）转到「方块中心 → 相机」的方向。
+     *
+     * <p>用最短弧，水平看时退化成绕竖直轴转（贴图保持竖直、转到正对你），俯视 / 仰视时才会跟着倾斜，
+     * 于是任何角度看过去都是一张正对屏幕的贴图。</p>
+     */
+    private static Quaternionf facingCamera(BlockPos pos) {
+        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        Vector3f toCamera = new Vector3f(
+                (float) (camera.x - pos.getX() - 0.5),
+                (float) (camera.y - pos.getY() - 0.5),
+                (float) (camera.z - pos.getZ() - 0.5));
+        if (toCamera.lengthSquared() < 1.0E-6F) return new Quaternionf();
+        toCamera.normalize();
+        Vector3f normal = new Vector3f(0.0F, 0.0F, 1.0F);
+        float dot = normal.dot(toCamera);
+        // 正对背面时最短弧不唯一（叉积为零），任取一条垂直轴转 180°。
+        if (dot < -0.99999F) {
+            return new Quaternionf().rotationAxis((float) Math.PI, new Vector3f(0.0F, 1.0F, 0.0F));
+        }
+        Vector3f axis = new Vector3f(normal).cross(toCamera);
+        return new Quaternionf(axis.x(), axis.y(), axis.z(), 1.0F + dot).normalize();
+    }
+
+    /**
+     * 把物品模型塞进凹槽所需的统一缩放。
+     *
+     * <p>取模型所有 quad 顶点的包围盒，按当前位姿（含显示变换自带的缩放 / 旋转）变换后量出三轴跨度，
+     * 用其中最大值统一缩放——凹槽是立方体，这样每个轴都钳在里面；再乘 {@link #SOCKET_ITEM_FIT} 留白。</p>
+     */
+    private static float socketFitScale(PoseStack poseStack, BakedModel model) {
+        float[] bounds = {
+                Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
+                -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+        if (!accumulateBounds(model, bounds)) return 1.0F;
+
+        Matrix4f matrix = poseStack.last().pose();
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float minZ = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        float maxZ = -Float.MAX_VALUE;
+        for (int corner = 0; corner < 8; corner++) {
+            Vector3f pos = new Vector3f(
+                    (corner & 1) == 0 ? bounds[0] : bounds[3],
+                    (corner & 2) == 0 ? bounds[1] : bounds[4],
+                    (corner & 4) == 0 ? bounds[2] : bounds[5]);
+            pos.mulPosition(matrix);
+            minX = Math.min(minX, pos.x());
+            minY = Math.min(minY, pos.y());
+            minZ = Math.min(minZ, pos.z());
+            maxX = Math.max(maxX, pos.x());
+            maxY = Math.max(maxY, pos.y());
+            maxZ = Math.max(maxZ, pos.z());
+        }
+        float span = Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ));
+        if (span <= 1.0E-5F) return 1.0F;
+        return SOCKET_EXTENT * SOCKET_ITEM_FIT / span;
+    }
+
+    /** 累积模型所有 quad 顶点的包围盒（minX,minY,minZ,maxX,maxY,maxZ）；没有 quad 时返回 {@code false}。 */
+    private static boolean accumulateBounds(BakedModel model, float[] bounds) {
+        boolean any = false;
+        for (Direction cull : Direction.values()) {
+            RANDOM.setSeed(42L);
+            any |= accumulateBounds(model.getQuads(null, cull, RANDOM), bounds);
+        }
+        RANDOM.setSeed(42L);
+        any |= accumulateBounds(model.getQuads(null, null, RANDOM), bounds);
+        return any;
+    }
+
+    private static boolean accumulateBounds(List<BakedQuad> quads, float[] bounds) {
+        boolean any = false;
+        for (BakedQuad quad : quads) {
+            int[] vertices = quad.getVertices();
+            for (int i = 0; i + 2 < vertices.length; i += VERTEX_STRIDE) {
+                float x = Float.intBitsToFloat(vertices[i]);
+                float y = Float.intBitsToFloat(vertices[i + 1]);
+                float z = Float.intBitsToFloat(vertices[i + 2]);
+                bounds[0] = Math.min(bounds[0], x);
+                bounds[1] = Math.min(bounds[1], y);
+                bounds[2] = Math.min(bounds[2], z);
+                bounds[3] = Math.max(bounds[3], x);
+                bounds[4] = Math.max(bounds[4], y);
+                bounds[5] = Math.max(bounds[5], z);
+                any = true;
+            }
+        }
+        return any;
     }
 
     /** 过滤物品图标的缩放（相对一格，已按显示变换归一化）：与数字（约 1.75/16 格高）相近。 */
@@ -312,9 +519,9 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             // 比数字（沿通道更靠外、横向也略外）更靠内，于是数字压在上层；
             // 横向偏移必须越过棱件 / 箭头，否则平面图标会被它们挡掉。
             poseStack.translate(
-                    0.5 + along.x() * 0.3F + normal.x() * PIPE_FILTER_SIDE_OFFSET,
-                    0.5 + along.y() * 0.3F + normal.y() * PIPE_FILTER_SIDE_OFFSET,
-                    0.5 + along.z() * 0.3F + normal.z() * PIPE_FILTER_SIDE_OFFSET);
+                    0.5 + along.x() * 0.3F + normal.x() * LOGISTICS_FILTER_SIDE_OFFSET,
+                    0.5 + along.y() * 0.3F + normal.y() * LOGISTICS_FILTER_SIDE_OFFSET,
+                    0.5 + along.z() * 0.3F + normal.z() * LOGISTICS_FILTER_SIDE_OFFSET);
             // 压扁是绕图标中心做的，这里先把中心记下来。
             Vector3f center = poseStack.last().pose().getTranslation(new Vector3f());
             poseStack.mulPose(rotation);
@@ -365,8 +572,8 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
      * <p>两种情况：</p>
      * <ul>
      *   <li><b>传输链的一端</b>：传输网的边是「本方存入面 ↔ 正邻格的取出面」，正邻格没有互补角色，
-     *       本面就没有下一条管道——取出面是从容器取货的链首，存入面是把货送进容器的链尾；</li>
-     *   <li><b>相对两面角色相同</b>：正常链里一个管道相对的两面必是一取一存（直行）或落在相邻两面
+     *       本面就没有下一条物流——取出面是从容器取货的链首，存入面是把货送进容器的链尾；</li>
+     *   <li><b>相对两面角色相同</b>：正常链里一个物流相对的两面必是一取一存（直行）或落在相邻两面
      *       （拐角），相对同角色说明这里接错了，一并画出来方便一眼找到链路的问题。</li>
      * </ul>
      */
@@ -511,9 +718,22 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             Vector3f n = new Vector3f(local.getStepX(), local.getStepY(), local.getStepZ());
             n.mul(pose.normal());
             Direction worldDir = Direction.getNearest(n.x(), n.y(), n.z());
-            float shade = level.getShade(worldDir, true);
-            consumer.putBulkData(pose, quad, shade, shade, shade, 1.0f, packedLight, packedOverlay);
+            // quad.isShade()：模型里 shade:false 的面不吃方向明暗（自发光件，如 cube_outline）。
+            float shade = level.getShade(worldDir, quad.isShade());
+            consumer.putBulkData(pose, quad, shade, shade, shade, 1.0f,
+                    bakedLight(quad, packedLight), packedOverlay);
         }
+    }
+
+    /**
+     * quad 顶点里烘的 {@code neoforge_data} 光照（{@code UV2} 槽）。
+     *
+     * <p>BER 这条路径不会替模型算光照，得自己把烘进去的那份读出来；没写 {@code neoforge_data}
+     * 的 quad 这里恒为 0（{@code LightTexture.pack(0, 0)}），此时回退到方块自身的光照。</p>
+     */
+    private static int bakedLight(BakedQuad quad, int fallback) {
+        int[] vertices = quad.getVertices();
+        return vertices.length > 6 && vertices[6] != 0 ? vertices[6] : fallback;
     }
 
     /** 与 blockstate multipart 相同的朝向旋转（{@code BlockModelRotation} 等效：rotateYXZ(-y, -x, 0)）。 */

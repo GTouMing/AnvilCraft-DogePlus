@@ -128,7 +128,7 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHo
     };
 
     /**
-     * 对外暴露给漏斗 / 溜槽 / 管道的代理（同前置加工台的 {@code proxy}）：可以放入材料，
+     * 对外暴露给漏斗 / 溜槽 / 物流的代理（同前置加工台的 {@code proxy}）：可以放入材料，
      * 但**一律拒绝抽取**——存储的材料只由镶嵌流程消耗或玩家手动取用，因此溜槽只会吸到
      * 从台下方掉出的产物，不会把材料槽里的材料吸走。
      */

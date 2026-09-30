@@ -54,10 +54,11 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.input", "Input: inputs redstone signals from this face");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.not_gate", "NOT Gate: outputs the inverted signal of the opposite face from this face");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.and_gate", "AND Gate: outputs the AND of adjacent inputs from this face (in order)");
-        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.or_gate", "OR Gate: outputs the OR of adjacent inputs from this face (in order)");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.counter_gate", "Counter Gate: counts input pulses and outputs a 1-tick redstone signal at the set count");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.latch_gate", "Latch Gate: records and outputs the received signal; a second input clears it");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.delay_gate", "Delay Gate: outputs the received signal for the set number of ticks");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.delay_input_gate", "Delayed Input Gate: records the input signal and feeds it to this block's other gates as a 1-tick input after the set number of ticks");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.remote", "Remote Gate: remote faces with the same channel form a bus; a bidirectional wire for redstone, remote extract lookup for items");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "Generator: produces 512 kW of power once placed");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.insert", "Insert: puts items into the container it faces");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.extract", "Extract: takes items from the container it faces");
@@ -80,6 +81,7 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inspection.line_gate", "%1$s: %2$s (%3$s)");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.signal", "Signal: %s");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.value", "Value: %s");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.channel", "Channel: %s");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.counted", "Counted: %s");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.elapsed", "Elapsed: %s");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.throughput", "Throughput: %s");
@@ -87,12 +89,13 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inspection.filter_none", "None");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.not_gate", "NOT");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.and_gate", "AND");
-        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.or_gate", "OR");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.output", "Output");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.input", "Input");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.counter_gate", "Counter");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.latch_gate", "Latch");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.delay_gate", "Delay");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.delay_input_gate", "Delayed Input");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.remote", "Remote");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.none", "Clear");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.insert", "Insert");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.extract", "Extract");
@@ -115,14 +118,15 @@ public class EnUsLangHandler {
         provider.add("wheel.anvilcraft_doge_plus.gate.none", "Clear");
         provider.add("wheel.anvilcraft_doge_plus.gate.not_gate", "NOT Gate");
         provider.add("wheel.anvilcraft_doge_plus.gate.and_gate", "AND Gate");
-        provider.add("wheel.anvilcraft_doge_plus.gate.or_gate", "OR Gate");
         provider.add("wheel.anvilcraft_doge_plus.gate.output", "Output");
         provider.add("wheel.anvilcraft_doge_plus.gate.input", "Input");
         provider.add("wheel.anvilcraft_doge_plus.gate.counter_gate", "Counter");
         provider.add("wheel.anvilcraft_doge_plus.gate.latch_gate", "Latch");
         provider.add("wheel.anvilcraft_doge_plus.gate.delay_gate", "Delay");
+        provider.add("wheel.anvilcraft_doge_plus.gate.delay_input_gate", "Delayed Input");
+        provider.add("wheel.anvilcraft_doge_plus.gate.remote", "Remote");
 
-        // ===== Pipe carrier wheel =====
+        // ===== Logistics carrier wheel =====
         provider.add("wheel.anvilcraft_doge_plus.transfer.none", "Clear");
         provider.add("wheel.anvilcraft_doge_plus.transfer.insert", "Insert");
         provider.add("wheel.anvilcraft_doge_plus.transfer.extract", "Extract");

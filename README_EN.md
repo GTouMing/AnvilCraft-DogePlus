@@ -12,7 +12,7 @@
 - **Inlay System**: hammer inlay materials into the **sockets** of a base material on the Inlay Table to grant properties — Fire-Proof, Magnetic, High Temp, Cold Forged, Eternal, Nirvana, Defense, Life, Attack, Enchant, Effect, Resonance, and more. Inlays survive being placed as blocks, and drops keep them.
 - **Inlay Crafting**: press a **fully inlaid base material** on the Inlay Crafting Table to produce a result, covering vanilla smithing, all 18 armor trims, Hollow Magnet Blocks, Neutronium, and silent inlaying.
 - **Logic-gate networks**: inlays grant **Input / Output / NOT / AND / OR / Counter / Latch / Delay** properties, forming a dimension-based directional logic-gate network; gate-chain gestures build and program a whole run at once.
-- **Carriers & pipes**: the Inlay Carrier (6 directional sockets), Logic Carrier, and Pipe Carrier are all face-programmable; the Pipe Carrier behaves as per-face **Insert / Extract** with throughput limits and item filtering.
+- **Carriers & logistics**: the Inlay Carrier (6 directional sockets), Logic Carrier, and Logistics Carrier are all face-programmable; the Logistics Carrier behaves as per-face **Insert / Extract** with throughput limits and item filtering.
 - **Quality of life**: chute dispenser/dropper hybrids (with filtering, slot disabling, comparator output, and up to 9× amounts) plus a wearable Mobile Silencer (Curios optional).
 
 ## Data-driven

@@ -18,9 +18,9 @@ Blocks added by this mod, grouped by function:
 - [Giant Doge Anvil](giant_doge_anvil.md): A 3×3×3 multiblock structure that inherits the functions of the Giant Anvil.
 - [Inlay Table](inlay_table.md): The workstation of the inlay system.
 - [Inlay Crafting Table](inlay_crafting_table.md): The workstation for inlay crafting recipes; it and the Inlay Table can be crafted into each other.
-- [Inlay Carrier Block](inlay_carrier_block.md): A block with 6 directional sockets.
+- [Inlay Carrier](inlay_carrier.md): A block with 6 directional sockets.
 - [Logic Carrier](logic_carrier.md): No sockets; the gate type of each of its six faces is programmable.
-- [Pipe Carrier](pipe_carrier.md): No sockets; the transfer mode of each of its six faces is programmable, with throughput and filter settings.
+- [Logistics Carrier](logistics_carrier.md): No sockets; the transfer mode of each of its six faces is programmable, with throughput and filter settings.
 - [Chute Dispenser](chute_dispenser.md): A Chute combined with a Dispenser.
 - [Chute Dropper](chute_dropper.md): A Chute combined with a Dropper.
 - [Magnetic Chute Dispenser](magnetic_chute_dispenser.md): A Magnetic Chute combined with a Dispenser.

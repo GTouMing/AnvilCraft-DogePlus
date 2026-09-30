@@ -1,0 +1,319 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/core",
+        "x": 90
+      },
+      "when": {
+        "down": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/core",
+        "x": 270
+      },
+      "when": {
+        "up": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/core"
+      },
+      "when": {
+        "north": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/core",
+        "y": 180
+      },
+      "when": {
+        "south": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/core",
+        "y": 270
+      },
+      "when": {
+        "west": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/core",
+        "y": 90
+      },
+      "when": {
+        "east": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote",
+        "x": 90
+      },
+      "when": {
+        "down": "remote",
+        "east": "none|unpowered|remote",
+        "north": "none|unpowered|remote",
+        "south": "none|unpowered|remote",
+        "up": "none|unpowered|remote",
+        "west": "none|unpowered|remote"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
+        "x": 90
+      },
+      "when": {
+        "down": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote",
+        "x": 270
+      },
+      "when": {
+        "down": "none|unpowered|remote",
+        "east": "none|unpowered|remote",
+        "north": "none|unpowered|remote",
+        "south": "none|unpowered|remote",
+        "up": "remote",
+        "west": "none|unpowered|remote"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
+        "x": 270
+      },
+      "when": {
+        "up": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote"
+      },
+      "when": {
+        "down": "none|unpowered|remote",
+        "east": "none|unpowered|remote",
+        "north": "remote",
+        "south": "none|unpowered|remote",
+        "up": "none|unpowered|remote",
+        "west": "none|unpowered|remote"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire"
+      },
+      "when": {
+        "north": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote",
+        "y": 180
+      },
+      "when": {
+        "down": "none|unpowered|remote",
+        "east": "none|unpowered|remote",
+        "north": "none|unpowered|remote",
+        "south": "remote",
+        "up": "none|unpowered|remote",
+        "west": "none|unpowered|remote"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
+        "y": 180
+      },
+      "when": {
+        "south": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote",
+        "y": 270
+      },
+      "when": {
+        "down": "none|unpowered|remote",
+        "east": "none|unpowered|remote",
+        "north": "none|unpowered|remote",
+        "south": "none|unpowered|remote",
+        "up": "none|unpowered|remote",
+        "west": "remote"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
+        "y": 270
+      },
+      "when": {
+        "west": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote",
+        "y": 90
+      },
+      "when": {
+        "down": "none|unpowered|remote",
+        "east": "remote",
+        "north": "none|unpowered|remote",
+        "south": "none|unpowered|remote",
+        "up": "none|unpowered|remote",
+        "west": "none|unpowered|remote"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
+        "y": 90
+      },
+      "when": {
+        "east": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge"
+      },
+      "when": {
+        "north": "none",
+        "up": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge",
+        "y": 90
+      },
+      "when": {
+        "east": "none",
+        "up": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge",
+        "y": 180
+      },
+      "when": {
+        "south": "none",
+        "up": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge",
+        "y": 270
+      },
+      "when": {
+        "up": "none",
+        "west": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge",
+        "x": 180
+      },
+      "when": {
+        "down": "none",
+        "south": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge",
+        "x": 180,
+        "y": 90
+      },
+      "when": {
+        "down": "none",
+        "west": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge",
+        "x": 180,
+        "y": 180
+      },
+      "when": {
+        "down": "none",
+        "north": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge",
+        "x": 180,
+        "y": 270
+      },
+      "when": {
+        "down": "none",
+        "east": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge_vertical"
+      },
+      "when": {
+        "east": "none",
+        "north": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge_vertical",
+        "y": 90
+      },
+      "when": {
+        "east": "none",
+        "south": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge_vertical",
+        "y": 180
+      },
+      "when": {
+        "south": "none",
+        "west": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/edge_vertical",
+        "y": 270
+      },
+      "when": {
+        "north": "none",
+        "west": "none"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/corner"
+      }
+    }
+  ]
+}

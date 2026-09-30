@@ -40,11 +40,11 @@ public class ModBlockEntities {
 
     public static final BlockEntityEntry<InlayCarrierBlockEntity> INLAY_CARRIER =
             AnvilCraftDogePlus.REGISTRUM.blockEntity(
-                    "inlay_carrier_block",
+                    "inlay_carrier",
                     InlayCarrierBlockEntity::new)
                     .validBlock(ModBlocks.INLAY_CARRIER)
-                    // 管道载体同样只需要「各面信号强度与运行时显示值」这类数据，复用同一种方块实体。
-                    .validBlock(ModBlocks.PIPE_CARRIER).register();
+                    // 物流载体同样只需要「各面信号强度与运行时显示值」这类数据，复用同一种方块实体。
+                    .validBlock(ModBlocks.LOGISTICS_CARRIER).register();
 
     /** 逻辑载体：复用载体的方块实体（只存各面信号强度与运行时显示值）。 */
     public static final BlockEntityEntry<InlayCarrierBlockEntity> LOGIC_CARRIER =

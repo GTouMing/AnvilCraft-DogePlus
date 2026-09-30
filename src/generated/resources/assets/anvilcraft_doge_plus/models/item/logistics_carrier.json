@@ -1,0 +1,4 @@
+{
+  "parent": "anvilcraft_doge_plus:block/carrier/logistics/item",
+  "render_type": "minecraft:translucent"
+}

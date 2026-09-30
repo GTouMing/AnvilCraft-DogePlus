@@ -74,7 +74,7 @@ public class ModRecipeHandler {
                 .pattern(" I ")
                 .define('I', ModItems.DOGE_STEEL_INGOT.get())
                 .unlockedBy("has_doge_steel_ingot", RegistrumRecipeProvider.has(ModItems.DOGE_STEEL_INGOT.get()))
-                .save(provider, AnvilCraftDogePlus.of("crafting_shaped/inlay_carrier_block"));
+                .save(provider, AnvilCraftDogePlus.of("crafting_shaped/inlay_carrier"));
     }
 
     // ==================== 无序合成 ====================

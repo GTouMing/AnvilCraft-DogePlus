@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "delay_input_gate"
+  ],
+  "ingredient": [
+    {
+      "item": "minecraft:clock"
+    }
+  ]
+}

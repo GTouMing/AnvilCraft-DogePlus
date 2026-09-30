@@ -30,13 +30,13 @@ public record InlayRecipeData(String inlay, String base) {
     }
 
     /**
-     * 镶嵌载体可镶入的全部材料：八个逻辑门 + 物品搬运用的溜槽 / 磁性溜槽。
+     * 镶嵌载体可镶入的全部材料：八个逻辑门 + 远程门 + 物品搬运用的溜槽 / 磁性溜槽。
      * <p>逻辑门材料原先镶入宝石块（红石/紫水晶等），现统一迁到两种镶嵌载体；
      * 溜槽给该面「存入」、磁性溜槽给该面「取出」（搬运行为由后续版本实现）。</p>
      */
     public static final List<String> CARRIER_INLAYS = List.of(
-            NOT_GATE, AND_GATE, OR_GATE, OUTPUT, INPUT,
-            COUNTER_GATE, LATCH_GATE, DELAY_GATE,
+            NOT_GATE, AND_GATE, OUTPUT, INPUT,
+            COUNTER_GATE, LATCH_GATE, DELAY_GATE, DELAY_INPUT_GATE, REMOTE,
             CHUTE, MAGNETIC_CHUTE
     );
 

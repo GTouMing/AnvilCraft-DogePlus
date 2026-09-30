@@ -108,6 +108,8 @@ public final class LogicGateNetworkManager {
         // 其余情况（跨网络的逻辑门、红石粉/中继器等外部方块）都只是让本网重采样输入。
         if (!network.overflow) {
             state.requestSignalUpdate(network);
+            // 同信道对端不相邻，收不到这次邻居变化：显式让它们重采样远程总线。
+            state.dirtyChannelPeers(network);
         }
     }
 
@@ -149,6 +151,18 @@ public final class LogicGateNetworkManager {
     public static int peekOutput(Level level, BlockPos pos, Direction direction) {
         LogicGateOutputData data = LogicGateOutputData.get(level);
         return data == null ? 0 : data.getSignal(pos, direction);
+    }
+
+    /**
+     * 读取某远程面当前所在总线的信号（只读，用于外观 / HUD 显示）。
+     *
+     * <p>物流载体的远程面归物品传输网，这里返回 0。</p>
+     */
+    public static int peekRemoteBus(Level level, BlockPos pos, Direction direction) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return 0;
+        }
+        return state(serverLevel).remoteBusSignal(pos, direction);
     }
 
     /**

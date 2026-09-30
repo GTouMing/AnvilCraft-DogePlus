@@ -3,7 +3,7 @@ package dev.anvilcraft.gtouming.doge_plus.event;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.PipeCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.MobileSilencerScreen;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.tooltip.CarrierInspectionProvider;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.wheel.CarrierWheelModel;
@@ -17,9 +17,11 @@ import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
 import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import dev.anvilcraft.gtouming.doge_plus.item.MobileSilencer;
 import dev.anvilcraft.gtouming.doge_plus.network.AdjustGateValuePacket;
-import dev.anvilcraft.gtouming.doge_plus.network.AdjustPipeThroughputPacket;
+import dev.anvilcraft.gtouming.doge_plus.network.AdjustLogisticsThroughputPacket;
+import dev.anvilcraft.gtouming.doge_plus.network.AdjustRemoteChannelPacket;
 import dev.anvilcraft.gtouming.doge_plus.network.SetCarrierFacePacket;
-import dev.anvilcraft.gtouming.doge_plus.network.SetPipeFilterPacket;
+import dev.anvilcraft.gtouming.doge_plus.network.SetLogisticsFilterPacket;
+import dev.anvilcraft.gtouming.doge_plus.network.SetRemoteChannelItemPacket;
 import dev.anvilcraft.lib.v2.wheel.api.WheelMenuModel;
 import dev.anvilcraft.lib.v2.wheel.client.input.WheelScreenController;
 import dev.dubhe.anvilcraft.api.tooltip.HudTooltipManager;
@@ -96,6 +98,9 @@ public class ClientEventHandler {
     private static Direction carrierWheelFace = null;
     private static boolean carrierWheelOpened = false;
 
+    /** 该次长按是否可能呼出轮盘（只有逻辑 / 物流载体有轮盘；普通载体只支持点按设信道）。 */
+    private static boolean carrierWheelCapable = false;
+
     /** lib 的轮盘控制器：负责打开 hold 轮盘、松手时触发选中项。 */
     private static final WheelScreenController WHEEL_CONTROLLER = new WheelScreenController();
 
@@ -115,9 +120,7 @@ public class ClientEventHandler {
 
             BlockPos pos = hit.getBlockPos();
             BlockState state = client.level.getBlockState(pos);
-            if (!(state.getBlock() instanceof LogicCarrierBlock) && !(state.getBlock() instanceof PipeCarrierBlock)) {
-                return;
-            }
+            if (!(state.getBlock() instanceof InlayCarrierBlock)) return;
 
             // 与交互 / HUD 同一套「按模型部件判定面」，仅命中中心体时退回方块面。
             Vec3 from = player.getEyePosition(1.0F);
@@ -127,21 +130,29 @@ public class ClientEventHandler {
             carrierWheelPressTick = client.level.getGameTime();
             carrierWheelPos = pos;
             carrierWheelFace = picked != null ? picked : hit.getDirection();
+            // 只有逻辑 / 物流载体能呼出轮盘；普通载体只支持点按设信道。
+            carrierWheelCapable = state.getBlock() instanceof LogicCarrierBlock
+                    || state.getBlock() instanceof LogisticsCarrierBlock;
             return;
         }
 
         if (event.getAction() == GLFW.GLFW_RELEASE) {
             // 松开右键 = 确认：交给 lib 的轮盘控制器触发选中项并收起轮盘。
             WHEEL_CONTROLLER.onHoldKeyReleased();
-            // 未开轮盘即为「点按」：管道载体的存入面用副手物品设置 / 替换过滤（副手空 = 清除）。
-            // 长按已把 carrierWheelOpened 置真，不会走到这里。
-            if (!carrierWheelOpened && carrierWheelPos != null && carrierWheelFace != null && client.level != null
-                    && client.level.getBlockState(carrierWheelPos).getBlock() instanceof PipeCarrierBlock
-                    && BlockInlayManager.get(client.level, carrierWheelPos).getFace(carrierWheelFace)
-                            == FaceMode.INSERT) {
+            // 未开轮盘即为「点按」：用副手物品设置该面的标识物（副手空 = 清除）。
+            // 远程面 → 信道标识物品；物流载体的存入面 → 过滤物品。长按已把 carrierWheelOpened 置真，不会走到这里。
+            if (!carrierWheelOpened && carrierWheelPos != null && carrierWheelFace != null && client.level != null) {
+                FaceMode mode = BlockInlayManager.get(client.level, carrierWheelPos).getFace(carrierWheelFace);
                 ItemStack offhand = player.getOffhandItem();
-                ItemStack filter = offhand.isEmpty() ? ItemStack.EMPTY : offhand.copyWithCount(1);
-                PacketDistributor.sendToServer(new SetPipeFilterPacket(carrierWheelPos, carrierWheelFace, filter));
+                ItemStack held = offhand.isEmpty() ? ItemStack.EMPTY : offhand.copyWithCount(1);
+                if (mode == FaceMode.REMOTE) {
+                    PacketDistributor.sendToServer(
+                            new SetRemoteChannelItemPacket(carrierWheelPos, carrierWheelFace, held));
+                } else if (mode == FaceMode.INSERT
+                        && client.level.getBlockState(carrierWheelPos).getBlock() instanceof LogisticsCarrierBlock) {
+                    PacketDistributor.sendToServer(
+                            new SetLogisticsFilterPacket(carrierWheelPos, carrierWheelFace, held));
+                }
             }
             resetCarrierWheel();
         }
@@ -172,6 +183,8 @@ public class ClientEventHandler {
             resetCarrierWheel();
             return;
         }
+        // 普通载体没有轮盘：只等松手做「点按设信道」。
+        if (!carrierWheelCapable) return;
         carrierWheelOpened = true;
         // 按方块类型构造选项清单，交给 lib 的 hold 轮盘。
         openFaceWheel(pos, face, client.level.getBlockState(pos));
@@ -179,7 +192,7 @@ public class ClientEventHandler {
     }
 
     /**
-     * 打开面属性轮盘：逻辑载体列红石类选项（各门 + 清除），管道载体列搬运类选项（存入 / 取出 / 清除）。
+     * 打开面属性轮盘：逻辑载体列红石类选项（各门 + 清除），物流载体列搬运类选项（存入 / 取出 / 清除）。
      *
      * <p>两者都把选项组装成 lib 的 {@link WheelMenuModel}（见 {@link CarrierWheelModel}），
      * 由 {@link WheelScreenController} 以 hold 手势打开；松手时发出同一个编程包
@@ -189,7 +202,7 @@ public class ClientEventHandler {
         List<FaceMode> options;
         if (state.getBlock() instanceof LogicCarrierBlock) {
             options = FaceMode.redstoneValues();
-        } else if (state.getBlock() instanceof PipeCarrierBlock) {
+        } else if (state.getBlock() instanceof LogisticsCarrierBlock) {
             options = FaceMode.transferValues();
         } else {
             return;
@@ -212,9 +225,10 @@ public class ClientEventHandler {
         carrierWheelPos = null;
         carrierWheelFace = null;
         carrierWheelOpened = false;
+        carrierWheelCapable = false;
     }
 
-    /** 铁砧锤指向面时，Ctrl + 滚轮调整该面的参数：管道存入面调物流量，逻辑门面调设定值（Shift 大步）。 */
+    /** 铁砧锤指向面时，Ctrl + 滚轮调整该面的参数：物流存入面调物流量，逻辑门面调设定值（Shift 大步）。 */
     @SubscribeEvent
     public static void onMouseScrolling(InputEvent.MouseScrollingEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -236,11 +250,20 @@ public class ClientEventHandler {
 
         BlockInlays inlays = BlockInlayManager.get(player.level(), pos);
 
-        // 管道载体的「存入」面：调节物流量。范围比门设定值大，Shift 步幅取 10。
-        if (state.getBlock() instanceof PipeCarrierBlock && inlays.getFace(face) == FaceMode.INSERT) {
+        // 物流载体的「存入」面：调节物流量。范围比门设定值大，Shift 步幅取 10。
+        if (state.getBlock() instanceof LogisticsCarrierBlock && inlays.getFace(face) == FaceMode.INSERT) {
             int step = (int) Math.signum(event.getScrollDeltaY()) * (Screen.hasShiftDown() ? 10 : 1);
             if (step == 0) return;
-            PacketDistributor.sendToServer(new AdjustPipeThroughputPacket(pos, face, step));
+            PacketDistributor.sendToServer(new AdjustLogisticsThroughputPacket(pos, face, step));
+            event.setCanceled(true);
+            return;
+        }
+
+        // 远程面：调节信道数字。
+        if (inlays.getFace(face) == FaceMode.REMOTE) {
+            int channelStep = (int) Math.signum(event.getScrollDeltaY()) * (Screen.hasShiftDown() ? 5 : 1);
+            if (channelStep == 0) return;
+            PacketDistributor.sendToServer(new AdjustRemoteChannelPacket(pos, face, channelStep));
             event.setCanceled(true);
             return;
         }
@@ -269,7 +292,7 @@ public class ClientEventHandler {
     @SubscribeEvent
     public static void registerBlockEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.INLAY_CARRIER.get(), InlayCarrierRenderer::new);
-        // 逻辑载体与管道载体复用载体的方块实体类型，因此共用这一个渲染器注册（棱角规则由渲染器分辨）。
+        // 逻辑载体与物流载体复用载体的方块实体类型，因此共用这一个渲染器注册（棱角规则由渲染器分辨）。
         event.registerBlockEntityRenderer(ModBlockEntities.LOGIC_CARRIER.get(), InlayCarrierRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.INLAY_TABLE.get(), InlayTableRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.INLAY_CRAFTING_TABLE.get(), InlayCraftingTableRenderer::new);

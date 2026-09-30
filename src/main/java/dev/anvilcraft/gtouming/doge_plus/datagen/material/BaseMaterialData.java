@@ -41,7 +41,7 @@ public record BaseMaterialData(String name, int sockets, JsonArray ingredient) {
     public static final String MULTIPHASE_MATTER_BLOCK = "multiphase_matter_block";
     public static final String TOOLS = "tools";
     public static final String DOGE_STEEL_BLOCK = "doge_steel_block";
-    public static final String INLAY_CARRIER_BLOCK = "inlay_carrier_block";
+    public static final String INLAY_CARRIER_BLOCK = "inlay_carrier";
     public static final String NETHERITE_UPGRADE_TEMPLATE = "netherite_upgrade_smithing_template";
     public static final String HOLLOW_MAGNET_BLOCK = "hollow_magnet_block";
     // 中子锭相关：这两个文件键同时被镶嵌材料与镶合配方引用，故集中定义在此，避免重复常量

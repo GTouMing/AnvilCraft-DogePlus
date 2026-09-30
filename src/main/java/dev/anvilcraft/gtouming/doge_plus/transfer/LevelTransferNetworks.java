@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.transfer;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
@@ -34,7 +35,7 @@ import javax.annotation.Nullable;
  * <p>节点 = 至少有一个面带「存入」或「取出」属性的方块；连接 = 「本方某面 ↔ 正邻格的互补面」
  * （存入的对面是取出），方向是「本方存入面 → 正邻格的取出面」。一张弱连通块即一张传输网。</p>
  *
- * <p>「存入 / 取出」是面属性 {@link FaceMode} 的两个取值：管道载体由轮盘编程写入，镶嵌载体由材料
+ * <p>「存入 / 取出」是面属性 {@link FaceMode} 的两个取值：物流载体由轮盘编程写入，镶嵌载体由材料
  * 自带的 {@code InlayProperty.INSERT / EXTRACT} 经 {@code BlockInlays#faceModeOf} 推导——两者最终都落在
  * {@code BlockInlays.faces} 这一张表里，这里读表即可。</p>
  *
@@ -76,6 +77,19 @@ final class LevelTransferNetworks {
 
     /** 位置 → 六个面的「可再次搬运」游戏刻，位下标同 {@link Direction#ordinal()}。 */
     private final Long2ObjectOpenHashMap<long[]> cooldowns = new Long2ObjectOpenHashMap<>();
+
+    /**
+     * 远程门信道 → 成员位置（仅物流载体的远程面）。
+     *
+     * <p>远程门不存储物品，只提供「远程查找取出」：某个「存入」节点能从同信道的远端「取出」面取货。
+     * 查找时由 {@link #sourcesOf} 沿反向边 BFS、在遇到远程成员时跳到同信道其它成员。</p>
+     */
+    private final Long2ObjectOpenHashMap<LongOpenHashSet> channelMembers = new Long2ObjectOpenHashMap<>();
+
+    /** 位置 → 其远程信道键（登记时记下，失效时据此精确移除）。 */
+    private final Long2ObjectOpenHashMap<long[]> nodeChannels = new Long2ObjectOpenHashMap<>();
+
+    private static final long[] NO_CHANNELS = new long[0];
 
     private boolean processingUpdates = false;
 
@@ -207,6 +221,29 @@ final class LevelTransferNetworks {
                 // 同一区块可能有大量节点，反向索引只登记一次网络对象。
                 this.byChunk.computeIfAbsent(chunkPos, key -> new ObjectOpenHashSet<>()).add(network);
             }
+            TransferNode node = network.nodes.get(packed);
+            if (node != null) this.addRemoteMembership(packed, node.remoteChannels());
+        }
+    }
+
+    /** 把该位置登记为其远程信道的成员。 */
+    private void addRemoteMembership(long packed, long[] channels) {
+        if (channels.length == 0) return;
+        this.nodeChannels.put(packed, channels);
+        for (long channel : channels) {
+            this.channelMembers.computeIfAbsent(channel, key -> new LongOpenHashSet()).add(packed);
+        }
+    }
+
+    /** 把该位置从其所有远程信道中移除。 */
+    private void removeRemoteMembership(long packed) {
+        long[] channels = this.nodeChannels.remove(packed);
+        if (channels == null) return;
+        for (long channel : channels) {
+            LongOpenHashSet members = this.channelMembers.get(channel);
+            if (members == null) continue;
+            members.remove(packed);
+            if (members.isEmpty()) this.channelMembers.remove(channel);
         }
     }
 
@@ -231,6 +268,7 @@ final class LevelTransferNetworks {
             if (this.byNode.get(packed) == network) {
                 this.byNode.remove(packed);
             }
+            this.removeRemoteMembership(packed);
             // 正在卸载的区块不再排进重建种子：它的方块已经读不到了，等它重新加载时再由
             // chunkLoaded 重新播种（否则会把已卸载的位置当成节点重新建进网络里）。
             long nodeChunk = ChunkPos.asLong(BlockPos.getX(packed) >> 4, BlockPos.getZ(packed) >> 4);
@@ -300,9 +338,9 @@ final class LevelTransferNetworks {
 
         while (!queue.isEmpty()) {
             long currentPacked = queue.dequeueLong();
-            TransferNode node = network.nodes.get(currentPacked);
+            TransferNode node = this.nodeAt(network, currentPacked);
             if (node == null) continue;
-            Direction face = this.firstValidExtract(network, currentPacked, node);
+            Direction face = this.firstValidExtract(currentPacked, node);
             if (face != null) found.add(new TransferSource(currentPacked, face));
 
             BlockPos pos = BlockPos.of(currentPacked);
@@ -314,16 +352,35 @@ final class LevelTransferNetworks {
                 if (!visited.add(upstreamPacked)) continue;
                 queue.enqueue(upstreamPacked);
             }
+            // 远程跳：本方有远程面时，跳到同信道的其它成员（远端「取出」货源由此可达）。
+            for (long channel : node.remoteChannels()) {
+                LongOpenHashSet members = this.channelMembers.get(channel);
+                if (members == null) continue;
+                for (LongIterator mit = members.iterator(); mit.hasNext(); ) {
+                    long memberPacked = mit.nextLong();
+                    if (!visited.add(memberPacked)) continue;
+                    queue.enqueue(memberPacked);
+                }
+            }
         }
         return found;
     }
 
-    /** 该节点的第一个「有效取出」面（已记在 {@link TransferNetwork#extracts} 里）；没有则返回 {@code null}。 */
+    /** 取网络内该位置的节点；远程成员可能在别的网络里，回退到现读该位置。 */
     @Nullable
-    private Direction firstValidExtract(TransferNetwork network, long packed, TransferNode node) {
+    private TransferNode nodeAt(TransferNetwork network, long packed) {
+        TransferNode node = network.nodes.get(packed);
+        if (node != null) return node;
+        return this.readNode(BlockPos.of(packed));
+    }
+
+    /** 该节点的第一个「有效取出」面（面朝容器确实存在）；没有则返回 {@code null}。 */
+    @Nullable
+    private Direction firstValidExtract(long packed, TransferNode node) {
+        BlockPos pos = BlockPos.of(packed);
         for (Direction dir : Direction.values()) {
             if (!node.isExtract(dir)) continue;
-            if (network.extracts.contains(new TransferSource(packed, dir))) return dir;
+            if (this.containerAt(pos, dir) != null) return dir;
         }
         return null;
     }
@@ -352,7 +409,10 @@ final class LevelTransferNetworks {
         long now = this.level.getGameTime();
         this.cooldowns.keySet().removeIf(packed -> !this.byNode.containsKey(packed));
 
-        for (TransferNetwork network : this.networks) {
+        // 取快照再遍历：搬运的副作用（物品入容器触发的方块更新）会重入 runUpdates 改写
+        // this.networks，直接遍历会被就地增删从而作废 fastutil 迭代器（NPE）。
+        ObjectOpenHashSet<TransferNetwork> snapshot = new ObjectOpenHashSet<>(this.networks);
+        for (TransferNetwork network : snapshot) {
             if (!network.valid) continue;
             for (int i = 0; i < network.servicePositions.size(); i++) {
                 long packed = network.servicePositions.getLong(i);
@@ -361,10 +421,18 @@ final class LevelTransferNetworks {
                 if (this.onCooldown(packed, face, now)) continue;
 
                 // 候选货源按需缓存：没算过就现算一次（空结果也缓存成负缓存），端点 / 拓扑变化时整体作废。
-                ObjectArrayList<TransferSource> sources = network.sources.get(packed);
-                if (sources == null) {
+                // 带远程面的节点例外：它的货源可能落在其它网络的同信道成员上，缓存无法可靠失效，故每 tick 现算。
+                TransferNode serviceNode = network.nodes.get(packed);
+                boolean remote = serviceNode != null && serviceNode.isRemote();
+                ObjectArrayList<TransferSource> sources;
+                if (remote) {
                     sources = this.sourcesOf(network, packed);
-                    network.sources.put(packed, sources);
+                } else {
+                    sources = network.sources.get(packed);
+                    if (sources == null) {
+                        sources = this.sourcesOf(network, packed);
+                        network.sources.put(packed, sources);
+                    }
                 }
                 if (sources.isEmpty()) continue;
                 BlockPos pos = BlockPos.of(packed);
@@ -372,13 +440,12 @@ final class LevelTransferNetworks {
                 if (target == null) continue;
                 // service 面本身就是一个「存入」面：物流量与过滤都按该面现场读。
                 BlockInlays data = BlockInlayManager.get(this.level, pos);
-                int limit = Math.clamp(data.getThroughput(face), 1, AnvilCraftDogePlus.CONFIG.pipeThroughputMax);
+                int limit = Math.clamp(data.getThroughput(face), 1, AnvilCraftDogePlus.CONFIG.logisticsThroughputMax);
                 ItemStack filter = data.getFilter(face);
 
                 // 按记录顺序（先近后远）逐个尝试：最近的取出取不到货就顺次改用次近的，
                 // 任一取出成功供货即结束本次搬运，该「存入」面随后进入冷却。
-                for (int s = 0; s < sources.size(); s++) {
-                    TransferSource source = sources.get(s);
+                for (TransferSource source : sources) {
                     // 货源容器是 «源节点朝 sourceFace 一格» 那个方块，不是再往外一格。
                     IItemHandler sourceHandler = this.handlerAt(source.containerPos(), source.containerSide());
                     if (sourceHandler == null) continue;
@@ -479,7 +546,7 @@ final class LevelTransferNetworks {
 
     // ==================== 节点读取 ====================
 
-    /** 该面是否算「存入」：管道载体编程的搬运角色，或镶嵌材料自带的方向性属性。 */
+    /** 该面是否算「存入」：物流载体编程的搬运角色，或镶嵌材料自带的方向性属性。 */
     private static boolean isInsertFace(BlockInlays data, Direction dir) {
         return data.getFace(dir) == FaceMode.INSERT;
     }
@@ -489,7 +556,7 @@ final class LevelTransferNetworks {
         return data.getFace(dir) == FaceMode.EXTRACT;
     }
 
-    /** 读取该位置的传输节点；六个面都没有传输属性时返回 {@code null}。 */
+    /** 读取该位置的传输节点；六个面都没有传输属性（含远程）时返回 {@code null}。 */
     @Nullable
     private TransferNode readNode(BlockPos pos) {
         BlockInlays data = BlockInlayManager.get(this.level, pos);
@@ -499,8 +566,31 @@ final class LevelTransferNetworks {
             if (isInsertFace(data, dir)) insertMask |= 1 << dir.ordinal();
             if (isExtractFace(data, dir)) extractMask |= 1 << dir.ordinal();
         }
-        if (insertMask == 0 && extractMask == 0) return null;
-        return new TransferNode(pos.asLong(), insertMask, extractMask);
+        long[] remoteChannels = this.remoteChannels(pos, data);
+        if (insertMask == 0 && extractMask == 0 && remoteChannels.length == 0) return null;
+        return new TransferNode(pos.asLong(), insertMask, extractMask, remoteChannels);
+    }
+
+    /** 该位置的物品远程信道（仅物流载体的远程面参与；去重），无则返回 {@link #NO_CHANNELS}。 */
+    private long[] remoteChannels(BlockPos pos, BlockInlays data) {
+        // 未加载时不强制加载区块：等它加载后由 chunkLoaded 重新播种。
+        if (!this.level.hasChunkAt(pos)) return NO_CHANNELS;
+        if (!(this.level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock)) return NO_CHANNELS;
+        long[] channels = new long[Direction.values().length];
+        int count = 0;
+        for (Direction dir : Direction.values()) {
+            if (data.getFace(dir) != FaceMode.REMOTE) continue;
+            long channel = data.getChannel(dir).key();
+            boolean seen = false;
+            for (int i = 0; i < count; i++) {
+                if (channels[i] == channel) {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen) channels[count++] = channel;
+        }
+        return count == 0 ? NO_CHANNELS : java.util.Arrays.copyOf(channels, count);
     }
 
     private boolean hasTransferFace(BlockPos pos) {
@@ -510,7 +600,7 @@ final class LevelTransferNetworks {
                 return true;
             }
         }
-        return false;
+        return this.remoteChannels(pos, data).length > 0;
     }
 
     // ==================== 区块管理 ====================

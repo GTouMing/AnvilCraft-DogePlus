@@ -7,7 +7,7 @@ import dev.anvilcraft.gtouming.doge_plus.block.GiantDogeAnvil;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCraftingTableBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayTableBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.PipeCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.ChuteDispenserBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.ChuteDropperBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.chute.MagneticChuteDispenserBlock;
@@ -158,7 +158,7 @@ public class ModBlocks {
                     .register();
 
     public static final BlockEntry<InlayCarrierBlock> INLAY_CARRIER =
-            REGISTRUM.block("inlay_carrier_block", InlayCarrierBlock::new)
+            REGISTRUM.block("inlay_carrier", InlayCarrierBlock::new)
                     .initialProperties(() -> Blocks.IRON_BLOCK)
                     .properties(p -> p.isValidSpawn(Blocks::never))
                     .blockstate(InlayCarrierBlockStateGenerator::generate)
@@ -189,22 +189,23 @@ public class ModBlocks {
                     .tag(ModBlockTags.HAMMER_REMOVABLE)
                     .register();
 
-    public static final BlockEntry<PipeCarrierBlock> PIPE_CARRIER =
-            REGISTRUM.block("pipe_carrier", PipeCarrierBlock::new)
+    public static final BlockEntry<LogisticsCarrierBlock> LOGISTICS_CARRIER =
+            REGISTRUM.block("logistics_carrier", LogisticsCarrierBlock::new)
                     .initialProperties(() -> Blocks.IRON_BLOCK)
                     .properties(p -> p.isValidSpawn(Blocks::never))
-                    // 管道面不参与红石、永远不会通电：没有通电变体（相应模型名传 null）；中心体也不是
+                    // 物流面不参与红石、永远不会通电：没有通电变体（相应模型名传 null）；中心体也不是
                     // hub 那一支（恒渲染、由未编程面逐面画），贯通模型与贯通通电模型同样传 null。
                     .blockstate((context, provider) -> InlayCarrierBlockStateGenerator.generate(
                             context, provider,
-                            "carrier/pipe/core", null, null, null,
-                            "carrier/pipe/wire", null,
-                            "carrier/pipe/edge", null, "carrier/pipe/edge_vertical", null,
-                            "carrier/pipe/corner"))
+                            "carrier/logistics/core", null, null, null,
+                            // 物流载体的远程门也不分通电与否（它整块都不参与红石）：通电变体传 null。
+                            "carrier/logistics/wire", null, "carrier/logistics/wire_remote", null,
+                            "carrier/logistics/edge", null, "carrier/logistics/edge_vertical", null,
+                            "carrier/logistics/corner"))
                     .loot(ModBlocks::dropSelfLoot)
                     .item()
                     .model((context, provider) -> provider.withExistingParent(
-                                    context.getName(), AnvilCraftDogePlus.of("block/carrier/pipe/item"))
+                                    context.getName(), AnvilCraftDogePlus.of("block/carrier/logistics/item"))
                             // 方块物品的渲染层不看部件模型的 render_type（默认 solid），
                             // 必须写在物品模型自己身上才会走半透明通道
                             .renderType("minecraft:translucent"))

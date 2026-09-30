@@ -13,7 +13,7 @@ import java.util.function.Consumer;
  * <p>每个选项一个 action 扇区：图标由 {@link WheelOption#icon()} 绘制，名称走 label，选中时回调
  * {@code onSelect}。轮盘界面本身由前置的 {@code WheelScreen}（hold 手势）提供，本类只负责模型。</p>
  *
- * <p>逻辑载体的逻辑门类型与管道载体的存入 / 取出共用同一套组装逻辑（选项数决定扇区数，
+ * <p>逻辑载体的逻辑门类型与物流载体的存入 / 取出共用同一套组装逻辑（选项数决定扇区数，
  * {@code slotsPerPage} 取选项总数，因此不分页）。</p>
  */
 public final class CarrierWheelModel {

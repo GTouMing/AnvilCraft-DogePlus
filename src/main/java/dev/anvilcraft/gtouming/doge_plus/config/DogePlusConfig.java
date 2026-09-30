@@ -64,9 +64,13 @@ public class DogePlusConfig {
     @BoundedDiscrete(max = 200, min = 1)
     public int delayMaxTicks = 20;
 
-    @Comment("管道载体每个存入面单次搬运的物品数上限（各面可在 1 到该值之间设置）。")
+    @Comment("物流载体每个存入面单次搬运的物品数上限（各面可在 1 到该值之间设置）。")
     @BoundedDiscrete(max = 1024, min = 1)
-    public int pipeThroughputMax = 64;
+    public int logisticsThroughputMax = 64;
+
+    @Comment("远程门信道数字的上限（信道由「物品类型 + 数字」决定）。")
+    @BoundedDiscrete(max = 255, min = 1)
+    public int remoteChannelMax = 15;
 
     @Comment("门链手势一次可生成的最大方块数。")
     @BoundedDiscrete(max = 256, min = 1)

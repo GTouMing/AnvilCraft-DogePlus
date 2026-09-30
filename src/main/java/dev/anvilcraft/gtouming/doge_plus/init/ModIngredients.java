@@ -22,7 +22,7 @@ public class ModIngredients {
     /**
      * 按镶嵌属性匹配材料：
      * <pre>{@code
-     * { "type": "anvilcraft_doge_plus:inlay_property", "properties": ["and_gate", "or_gate"] }
+     * { "type": "anvilcraft_doge_plus:inlay_property", "properties": ["and_gate", "counter_gate"] }
      * }</pre>
      */
     public static final DeferredHolder<IngredientType<?>, IngredientType<InlayPropertyIngredient>> INLAY_PROPERTY =

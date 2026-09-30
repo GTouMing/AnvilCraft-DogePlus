@@ -80,7 +80,7 @@ public record AdjustGateValuePacket(BlockPos pos, Direction face, int delta) imp
     private static int maxValue(FaceMode mode) {
         return switch (mode) {
             case COUNTER_GATE -> AnvilCraftDogePlus.CONFIG.counterMaxCount;
-            case DELAY_GATE -> AnvilCraftDogePlus.CONFIG.delayMaxTicks;
+            case DELAY_GATE, DELAY_INPUT_GATE -> AnvilCraftDogePlus.CONFIG.delayMaxTicks;
             default -> BlockInlays.DEFAULT_VALUE;
         };
     }

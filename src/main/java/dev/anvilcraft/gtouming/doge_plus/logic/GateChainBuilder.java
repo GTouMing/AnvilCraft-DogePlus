@@ -3,7 +3,7 @@ package dev.anvilcraft.gtouming.doge_plus.logic;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.PipeCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
@@ -61,8 +61,8 @@ public final class GateChainBuilder {
         if (isTooFarAway(player, originPos)) return;
 
         ItemStack held = player.getMainHandItem();
-        boolean pipe = held.is(ModBlocks.PIPE_CARRIER.asItem());
-        if (!pipe && !held.is(ModBlocks.LOGIC_CARRIER.asItem())) return;
+        boolean logistics = held.is(ModBlocks.LOGISTICS_CARRIER.asItem());
+        if (!logistics && !held.is(ModBlocks.LOGIC_CARRIER.asItem())) return;
 
         FaceMode gate = gateType == FaceMode.NONE ? FaceMode.OUTPUT : gateType;
 
@@ -74,14 +74,14 @@ public final class GateChainBuilder {
         if (placeable <= 0) return;
         chain = chain.subList(0, placeable);
 
-        BlockState carrier = (pipe ? ModBlocks.PIPE_CARRIER : ModBlocks.LOGIC_CARRIER)
+        BlockState carrier = (logistics ? ModBlocks.LOGISTICS_CARRIER : ModBlocks.LOGIC_CARRIER)
                 .get().defaultBlockState();
         for (BlockPos pos : chain) {
             level.setBlock(pos, carrier, Block.UPDATE_CLIENTS);
         }
 
-        if (pipe) {
-            InlayCarrierBlock.programFaces(level, planPipeFaces(level, originPos, originFace, chain, finalFace));
+        if (logistics) {
+            InlayCarrierBlock.programFaces(level, planLogisticsFaces(level, originPos, originFace, chain, finalFace));
         } else {
             InlayCarrierBlock.programFaces(
                     level, planFaces(level, originPos, originFace, chain, gate, finalFace));
@@ -104,22 +104,22 @@ public final class GateChainBuilder {
 
         int max = AnvilCraftDogePlus.CONFIG.maxGateChainLength;
         boolean creative = player.getAbilities().instabuild;
-        // 链首决定这次拆的是哪一族载体（管道 / 逻辑），后续逐格按同一族校验并返还。
-        boolean pipe = level.getBlockState(requested.getFirst()).getBlock() instanceof PipeCarrierBlock;
+        // 链首决定这次拆的是哪一族载体（物流 / 逻辑），后续逐格按同一族校验并返还。
+        boolean logistics = level.getBlockState(requested.getFirst()).getBlock() instanceof LogisticsCarrierBlock;
         BlockPos prev = null;
         int removed = 0;
         for (BlockPos pos : requested) {
             if (removed >= max) break;
             if (prev != null && directionBetween(prev, pos) == null) break;                          // 非相邻：停止
             BlockState state = level.getBlockState(pos);
-            if (pipe ? !(state.getBlock() instanceof PipeCarrierBlock)
+            if (logistics ? !(state.getBlock() instanceof LogisticsCarrierBlock)
                      : !(state.getBlock() instanceof LogicCarrierBlock)) {
                 break;                                                                              // 非同类载体：停止
             }
             level.removeBlock(pos, false);
             if (!creative) {
                 player.getInventory().placeItemBackInInventory(new ItemStack(
-                        (pipe ? ModBlocks.PIPE_CARRIER : ModBlocks.LOGIC_CARRIER).asItem()));
+                        (logistics ? ModBlocks.LOGISTICS_CARRIER : ModBlocks.LOGIC_CARRIER).asItem()));
             }
             prev = pos;
             removed++;
@@ -228,7 +228,7 @@ public final class GateChainBuilder {
     }
 
     /**
-     * 规划管道链各元素与两端面的搬运角色。
+     * 规划物流链各元素与两端面的搬运角色。
      *
      * <p>每个元素「朝上一格 = 取出」（从上一格取货）、「朝下一格 = 存入」（把货交给下一格），于是有向边
      * 从链首一路连到链尾。链首朝起始方块的面本身就是货源（从源容器取货），链尾朝最终点击面的是终点
@@ -238,12 +238,12 @@ public final class GateChainBuilder {
      * 才收得到货源。若按邻格已有角色取补，邻格正巧是「取出」时就会把链首两面都写成「存入」——那种节点
      * 没有取出面，永远收不到货源，整条链是死的。</p>
      *
-     * <p>邻格若是尚未编程的管道载体，仍然替它写上接缝角色（链首那一侧写「存入」、链尾那一侧写「取出」）：
+     * <p>邻格若是尚未编程的物流载体，仍然替它写上接缝角色（链首那一侧写「存入」、链尾那一侧写「取出」）：
      * 这是为「拆掉半条链再重新接上」准备的，残留的接缝面标出了那一侧的方向，新链顺着它接才连得上边。
      * 邻格那一面已经带角色时不动它；若它的角色与接缝所需相反（取出 ↔ 取出、存入 ↔ 存入），这一侧就
      * 接不上边，渲染器会把这两面都当成链端画出来。</p>
      */
-    private static Map<BlockPos, Map<Direction, FaceMode>> planPipeFaces(
+    private static Map<BlockPos, Map<Direction, FaceMode>> planLogisticsFaces(
             Level level,
             BlockPos originPos,
             Direction originFace,
@@ -252,12 +252,12 @@ public final class GateChainBuilder {
         Map<BlockPos, Map<Direction, FaceMode>> changes = new HashMap<>();
 
         // 链首：邻格未编程时替它写「存入」（把货推给链首的取出面）。
-        linkPipeFace(level, changes, originPos, originFace, FaceMode.INSERT);
+        linkLogisticsFace(level, changes, originPos, originFace, FaceMode.INSERT);
 
         // 链尾：只有确实有出口面（手势结束时有最终点击面）才接外侧，否则那一面没有对端。
         if (finalFace != null) {
             Direction exitFace = finalFace.getOpposite();
-            linkPipeFace(level, changes, chain.getLast().relative(exitFace), exitFace.getOpposite(),
+            linkLogisticsFace(level, changes, chain.getLast().relative(exitFace), exitFace.getOpposite(),
                     FaceMode.EXTRACT);
         }
 
@@ -287,16 +287,16 @@ public final class GateChainBuilder {
     }
 
     /**
-     * 邻格若是管道载体、且那一面尚未编程，就替它写上接缝角色（本侧于是不必迁就它）。
-     * 非管道载体、或者那一面已经有角色时不动它。
+     * 邻格若是物流载体、且那一面尚未编程，就替它写上接缝角色（本侧于是不必迁就它）。
+     * 非物流载体、或者那一面已经有角色时不动它。
      */
-    private static void linkPipeFace(
+    private static void linkLogisticsFace(
             Level level,
             Map<BlockPos, Map<Direction, FaceMode>> changes,
             BlockPos pos,
             Direction face,
             FaceMode fill) {
-        if (!(level.getBlockState(pos).getBlock() instanceof PipeCarrierBlock)) return;
+        if (!(level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock)) return;
         if (BlockInlayManager.get(level, pos).getFace(face) != FaceMode.NONE) return;
         changes.computeIfAbsent(pos, key -> new HashMap<>()).putIfAbsent(face, fill);
     }

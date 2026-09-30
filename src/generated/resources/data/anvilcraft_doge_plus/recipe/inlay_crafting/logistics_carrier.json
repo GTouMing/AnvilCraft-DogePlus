@@ -1,0 +1,18 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "anvilcraft_doge_plus:inlay_carrier",
+  "inlays": [
+    {
+      "properties": "anvilcraft_doge_plus:insert"
+    },
+    {
+      "properties": "anvilcraft_doge_plus:extract"
+    }
+  ],
+  "results": [
+    {
+      "count": 4,
+      "item": "anvilcraft_doge_plus:logistics_carrier"
+    }
+  ]
+}

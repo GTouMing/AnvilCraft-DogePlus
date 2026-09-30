@@ -46,12 +46,12 @@ import java.util.Map;
  * <p>镶嵌材料存于 {@link BlockInlayManager}（按坐标的 SavedData），因此现有方块镶嵌属性
  * （永恒 / 耐火 / 磁性 / 发生器 / 方向逻辑门等）自动生效，并在破坏/放置时随掉落物往返。</p>
  *
- * <p>方块状态只保留静态几何与通道的通电外观：每面一个 3 值 {@link CarrierWire}
- * （{@code none / unpowered / powered}）+ {@code hub}（中心体是否绘制），共 {@code 3^6 × 2 = 1458} 个状态。
+ * <p>方块状态只保留静态几何与通道的通电外观：每面一个 4 值 {@link CarrierWire}
+ * （{@code none / unpowered / powered / remote}）+ {@code hub}（中心体是否绘制），共 {@code 4^6 × 2 = 8192} 个状态。
  * 通道、中心体与那批棱角（见 {@link #edgeStates}）都由 multipart 绘制，因此带逐顶点环境光遮蔽、
  * 与普通方块一致。通道与棱件的外观靠模型自己换贴图（未通电 / 通电两套合成材质）。
  * BER 只剩「邻居是不是红石导线」这种逐面布尔属性会把状态数撑爆的部件（连接件），
- * 以及管道的搬运方向指示件。</p>
+ * 以及物流的搬运方向指示件。</p>
  */
 public class InlayCarrierBlock extends Block implements EntityBlock {
 
@@ -116,7 +116,7 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
     public static boolean isFaceActive(
             Block block, @Nullable BlockInlays data, List<InlayEntry> inlays, Direction direction) {
         if (block instanceof InlayCarrierBlock carrier && !carrier.acceptsInlays()) {
-            // 逻辑 / 管道载体没有镶孔：编程（faces 里有非 NONE 的属性）即外显。
+            // 逻辑 / 物流载体没有镶孔：编程（faces 里有非 NONE 的属性）即外显。
             return data != null && data.getFace(direction) != FaceMode.NONE;
         }
         return isActiveSlot(inlays, direction.ordinal());
@@ -146,8 +146,8 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
     /** 中心体是否绘制。只有「恰好两个相对的有效面」才被通道贯通而隐藏中心体。 */
     public static boolean shouldDrawHub(Block block, List<Direction> active) {
-        // 管道载体的中心体恒渲染：它是被外壳包住的内芯，没有「对穿时隐藏」的语义。
-        if (block instanceof PipeCarrierBlock) return true;
+        // 物流载体的中心体恒渲染：它是被外壳包住的内芯，没有「对穿时隐藏」的语义。
+        if (block instanceof LogisticsCarrierBlock) return true;
         if (active.size() != 2) return true;
         return active.getFirst().getOpposite() != active.get(1);
     }
@@ -170,7 +170,7 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
             runtime[direction.ordinal()] = active
                     ? runtimeValue(gateState, pos, direction, mode, data.getValue(direction))
                     : 0;
-            newState = newState.setValue(property(direction), CarrierWire.of(active, signal > 0));
+            newState = newState.setValue(property(direction), CarrierWire.of(active, signal > 0, mode.isRemote()));
         }
         newState = newState.setValue(HUB, shouldDrawHub(state.getBlock(), data, inlays));
         if (newState != state) {
@@ -187,13 +187,13 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         }
     }
 
-    /** 该面的运行时显示值：计数门为已计数、延时门为已计时（搬运角色与其余为 0）。 */
+    /** 该面的运行时显示值：计数门为已计数、延时门 / 延时输入门为已计时（搬运角色与其余为 0）。 */
     private static int runtimeValue(
             @Nullable LogicGateStateData stateData, BlockPos pos, Direction direction, FaceMode mode, int value) {
         if (stateData == null) return 0;
         return switch (mode) {
             case COUNTER_GATE -> stateData.getCount(pos, direction);
-            case DELAY_GATE -> {
+            case DELAY_GATE, DELAY_INPUT_GATE -> {
                 int remaining = stateData.getRemaining(pos, direction);
                 yield remaining > 0 ? Math.max(0, value - remaining) : 0;
             }
@@ -201,11 +201,18 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         };
     }
 
-    /** 该面当前信号强度：输入门为收到的值，其余逻辑门为输出值，非红石面为 0。 */
+    /**
+     * 该面当前信号强度：远程面为总线信号，输入门 / 延时输入门为收到的值，
+     * 其余逻辑门为输出值，非红石面为 0。
+     */
     private static int signalStrength(Level level, BlockPos pos, Direction direction, FaceMode mode) {
+        if (mode.isRemote()) return LogicGateNetworkManager.peekRemoteBus(level, pos, direction);
         // 搬运角色不接红石：必须在这里挡掉，否则会误去查逻辑网的输出。
         if (!mode.isRedstone()) return 0;
-        if (mode == FaceMode.INPUT) return LogicGateNetworkManager.peekInput(level, pos, direction);
+        // 延时输入门与输入门一样是「读邻居」的输入侧：它不向外输出，外观该显示收到多少而不是输出多少。
+        if (mode == FaceMode.INPUT || mode == FaceMode.DELAY_INPUT_GATE) {
+            return LogicGateNetworkManager.peekInput(level, pos, direction);
+        }
         return LogicGateNetworkManager.peekOutput(level, pos, direction);
     }
 
@@ -237,8 +244,8 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
      * 批量编程多个位置的面属性：先把全部数据写入 {@link BlockInlayManager}，再统一刷新外观、
      * 按类别更新网络，避免逐面触发重复的网络重建。
      *
-     * <p>只有没有镶孔的载体（逻辑载体 / 管道载体）能被编程，且只能写入与方块类型相符的一类值——
-     * 逻辑载体收红石类（各门），管道载体收搬运类（存入 / 取出）；{@link FaceMode#NONE} 两类都收，
+     * <p>只有没有镶孔的载体（逻辑载体 / 物流载体）能被编程，且只能写入与方块类型相符的一类值——
+     * 逻辑载体收红石类（各门），物流载体收搬运类（存入 / 取出）；{@link FaceMode#NONE} 两类都收，
      * 用于清除。</p>
      *
      * @param changes 位置 → （面 → 面属性）
@@ -268,6 +275,7 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
                 Direction face = faceEntry.getKey();
                 FaceMode mode = faceEntry.getValue();
                 if (updated.getFace(face) == mode) continue;
+                // withFace 会清掉该面旧的信道标识（远程面回到默认信道，之后由轮盘 / 点按重新设置）。
                 updated = updated.withFace(face, mode);
                 // 换门后该面的设定值回到默认（旧设定对新门没有意义）；只有「存入」面有物流量与过滤，
                 // 换成别的角色（或清除）时一并清掉，避免残留参数在切回存入时突然生效。
@@ -310,11 +318,29 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         return !touched.isEmpty();
     }
 
-    /** 该方块是否接受这一批面属性：红石类只给逻辑载体，搬运类只给管道载体。 */
+    /**
+     * 远程门信道改变后重建对应网络并刷新外观。
+     *
+     * <p>信道就是远程总线 / 远端货源的拓扑：物流载体的远程面归物品传输网，其余（逻辑 / 普通载体）
+     * 归逻辑网。</p>
+     */
+    public static void channelChanged(Level level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        refreshState(level, pos);
+        if (state.getBlock() instanceof LogisticsCarrierBlock) {
+            ItemTransferNetworkManager.topologyChanged(level, pos);
+        } else {
+            LogicGateNetworkManager.topologyChanged(level, pos);
+            level.updateNeighborsAt(pos, state.getBlock());
+        }
+    }
+
+    /** 该方块是否接受这一批面属性：红石类只给逻辑载体，搬运类只给物流载体，远程类两者皆可。 */
     private static boolean acceptsModes(Block block, Map<Direction, FaceMode> faces) {
         for (FaceMode mode : faces.values()) {
+            if (mode.isRemote()) continue;
             if (mode.isRedstone() && !(block instanceof LogicCarrierBlock)) return false;
-            if (mode.isTransfer() && !(block instanceof PipeCarrierBlock)) return false;
+            if (mode.isTransfer() && !(block instanceof LogisticsCarrierBlock)) return false;
         }
         return true;
     }
@@ -331,12 +357,12 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
      * 该面没有镶嵌（没有通道/端口）时返回 {@code false}，避免空面被红石粉/导线错误连上。
      * {@code direction} 为 {@code null} 时表示原版斜下/下方探测，无法对应具体面，保持允许连接。</p>
      *
-     * <p>管道载体整块都不连：它的面是物品搬运角色而不是红石端口，红石粉 / 导线不该连上它，
+     * <p>物流载体整块都不连：它的面是物品搬运角色而不是红石端口，红石粉 / 导线不该连上它，
      * 也不该为它画连线。</p>
      */
     @Override
     public boolean canConnectRedstone(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {
-        if (state.getBlock() instanceof PipeCarrierBlock) return false;
+        if (state.getBlock() instanceof LogisticsCarrierBlock) return false;
         if (direction == null) return true;
         return state.getValue(property(direction.getOpposite())).isInlaid();
     }
@@ -347,8 +373,11 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         BlockState state = this.defaultBlockState();
         List<InlayEntry> inlays = InlayUtil.getInlays(context.getItemInHand());
         for (Direction direction : Direction.values()) {
-            state = state.setValue(property(direction),
-                    CarrierWire.of(isFaceActive(this, null, inlays, direction), false));
+            // 普通载体的面属性由材料推导：远程材料的面直接落 REMOTE，免得先闪一下普通通道。
+            int slot = direction.ordinal();
+            boolean active = isActiveSlot(inlays, slot);
+            boolean remote = active && BlockInlays.faceModeOf(inlays.get(slot)).isRemote();
+            state = state.setValue(property(direction), CarrierWire.of(active, false, remote));
         }
         return state.setValue(HUB, shouldDrawHub(this, null, inlays));
     }
@@ -369,17 +398,17 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
      */
     private static final List<AABB> CORE_CROSS_Z = List.of(
             new AABB(6 / 16.0, 6 / 16.0, 6 / 16.0, 10 / 16.0, 10 / 16.0, 10 / 16.0),
-            new AABB(5.5 / 16.0, 5.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 9.5 / 16.0),
-            new AABB(9.5 / 16.0, 5.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0, 9.5 / 16.0),
-            new AABB(9.5 / 16.0, 9.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 9.5 / 16.0),
-            new AABB(5.5 / 16.0, 9.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 9.5 / 16.0));
+            new AABB(5.5 / 16.0, 5.5 / 16.0, 5.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0),
+            new AABB(9.5 / 16.0, 5.5 / 16.0, 5.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0),
+            new AABB(9.5 / 16.0, 9.5 / 16.0, 5.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0),
+            new AABB(5.5 / 16.0, 9.5 / 16.0, 5.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0));
 
     /** 东-西贯通、上-下贯通的十字件。 */
     private static final List<AABB> CORE_CROSS_X = rotateAll(CORE_CROSS_Z, 0, 90);
     private static final List<AABB> CORE_CROSS_Y = rotateAll(CORE_CROSS_Z, 270, 0);
 
-    /** 管道载体的中心体（4×4×4，与 {@code carrier/pipe/core} 模型一致）。 */
-    private static final VoxelShape PIPE_CORE =
+    /** 物流载体的中心体：模型是逐面铺在未编程面上的 4×4 薄片，形状取其外接 4×4×4 立方。 */
+    private static final VoxelShape LOGISTICS_CORE =
             Shapes.box(6 / 16.0, 6 / 16.0, 6 / 16.0, 10 / 16.0, 10 / 16.0, 10 / 16.0);
 
     /**
@@ -391,35 +420,93 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
      */
     private static final List<AABB> LOGIC_WIRE_CANONICAL = List.of(
             new AABB(6 / 16.0, 6 / 16.0, 0.0, 10 / 16.0, 10 / 16.0, 6.0 / 16.0),
-            new AABB(5.5 / 16.0, 5.5 / 16.0, 0.0, 6.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0),
-            new AABB(9.5 / 16.0, 5.5 / 16.0, 0.0, 10.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0),
-            new AABB(9.5 / 16.0, 9.5 / 16.0, 0.0, 10.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0),
-            new AABB(5.5 / 16.0, 9.5 / 16.0, 0.0, 6.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0));
+            new AABB(5.5 / 16.0, 5.5 / 16.0, -0.025 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
+            new AABB(9.5 / 16.0, 5.5 / 16.0, -0.025 / 16.0, 10.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
+            new AABB(9.5 / 16.0, 9.5 / 16.0, -0.025 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
+            new AABB(5.5 / 16.0, 9.5 / 16.0, -0.025 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0));
 
-    private static final List<AABB> PIPE_WIRE_CANONICAL = List.of(
+    private static final List<AABB> LOGISTICS_WIRE_CANONICAL = List.of(
             new AABB(6 / 16.0, 6 / 16.0, 0.0, 10 / 16.0, 10 / 16.0, 6.0 / 16.0),
-            new AABB(5.5 / 16.0, 5.5 / 16.0, 0.0, 6.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0),
-            new AABB(9.5 / 16.0, 5.5 / 16.0, 0.0, 10.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0),
-            new AABB(9.5 / 16.0, 9.5 / 16.0, 0.0, 10.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0),
-            new AABB(5.5 / 16.0, 9.5 / 16.0, 0.0, 6.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0));
+            new AABB(5.5 / 16.0, 5.5 / 16.0, -0.025 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
+            new AABB(9.5 / 16.0, 5.5 / 16.0, -0.025 / 16.0, 10.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
+            new AABB(9.5 / 16.0, 9.5 / 16.0, -0.025 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
+            new AABB(5.5 / 16.0, 9.5 / 16.0, -0.025 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0));
+
+    /**
+     * 远程门面的通道形状（canonical，朝北；对应 {@code carrier/logic/wire_remote}）。
+     *
+     * <p>远程面不画整根通道，而是「一小段线头 + 贴在面上的珍珠辉光 + 绕中心体的装饰件」，
+     * 因此形状要单独描述（前四个是线头的四根短棱管，第五个是线头的中心短管，第六个是珍珠辉光的外层盒
+     * ——模型里的五层辉光都嵌在它里面，最后三个是绕中心体的实心十字：一根竖条 + 左右两条短臂，
+     * 三者只相接，取并后既不留空心、也不互相重叠）。</p>
+     */
+    private static final List<AABB> LOGIC_REMOTE_WIRE_CANONICAL = List.of(
+            new AABB(9.5 / 16.0, 5.5 / 16.0, 4.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
+            new AABB(5.5 / 16.0, 5.5 / 16.0, 4.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
+            new AABB(5.5 / 16.0, 9.5 / 16.0, 4.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
+            new AABB(9.5 / 16.0, 9.5 / 16.0, 4.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
+            new AABB(6 / 16.0, 6 / 16.0, 4.525 / 16.0, 10 / 16.0, 10 / 16.0, 6 / 16.0),
+            new AABB(6 / 16.0, 6 / 16.0, 0.001 / 16.0, 10 / 16.0, 10 / 16.0, 4.001 / 16.0),
+            new AABB(6.5 / 16.0, 5.5 / 16.0, 4.025 / 16.0, 9.5 / 16.0, 10.5 / 16.0, 5 / 16.0),
+            new AABB(5.5 / 16.0, 6.5 / 16.0, 4.025 / 16.0, 6.5 / 16.0, 9.5 / 16.0, 5 / 16.0),
+            new AABB(9.5 / 16.0, 6.5 / 16.0, 4.025 / 16.0, 10.5 / 16.0, 9.5 / 16.0, 5 / 16.0));
+
+    /**
+     * 物流载体的远程通道形状（几何与逻辑载体一致，对应 {@code carrier/logistics/wire_remote}）。
+     *
+     * <p>末尾同样是绕中心体的实心十字（「一根竖条 + 左右两条短臂」），只是换成物流自己的贴图。</p>
+     */
+    private static final List<AABB> LOGISTICS_REMOTE_WIRE_CANONICAL = List.of(
+            new AABB(9.5 / 16.0, 5.5 / 16.0, 4.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
+            new AABB(5.5 / 16.0, 5.5 / 16.0, 4.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
+            new AABB(5.5 / 16.0, 9.5 / 16.0, 4.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
+            new AABB(9.5 / 16.0, 9.5 / 16.0, 4.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
+            new AABB(6 / 16.0, 6 / 16.0, 4.525 / 16.0, 10 / 16.0, 10 / 16.0, 6 / 16.0),
+            new AABB(6 / 16.0, 6 / 16.0, 0.001 / 16.0, 10 / 16.0, 10 / 16.0, 4.001 / 16.0),
+            new AABB(6.5 / 16.0, 5.5 / 16.0, 4.025 / 16.0, 9.5 / 16.0, 10.5 / 16.0, 5 / 16.0),
+            new AABB(5.5 / 16.0, 6.5 / 16.0, 4.025 / 16.0, 6.5 / 16.0, 9.5 / 16.0, 5 / 16.0),
+            new AABB(9.5 / 16.0, 6.5 / 16.0, 4.025 / 16.0, 10.5 / 16.0, 9.5 / 16.0, 5 / 16.0));
 
     /** 逻辑载体上-北棱角件的块（canonical，与 {@code carrier/logic/edge} 模型一致）。 */
     private static final AABB LOGIC_EDGE =
             new AABB(6.5 / 16.0, 10 / 16.0, 5 / 16.0, 9.5 / 16.0, 11 / 16.0, 6 / 16.0);
 
-    /** 管道棱件的块（canonical，上-北棱；与 {@code carrier/pipe/edge} 模型一致）。 */
-    private static final AABB PIPE_EDGE =
-            new AABB(5.5 / 16.0, 9.5 / 16.0, 5.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0);
+    /** 物流棱件的块（canonical，上-北棱；与 {@code carrier/logistics/edge} 模型一致）。 */
+    private static final AABB LOGISTICS_EDGE =
+            new AABB(6.5 / 16.0, 9.5 / 16.0, 5.5 / 16.0, 9.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0);
 
-    /** 管道竖棱件的块（canonical，北-东棱；对应 {@code carrier/pipe/edge_vertical} 模型）。 */
-    private static final AABB PIPE_EDGE_VERTICAL =
+    /** 物流竖棱件的块（canonical，北-东棱；对应 {@code carrier/logistics/edge_vertical} 模型）。 */
+    private static final AABB LOGISTICS_EDGE_VERTICAL =
             new AABB(9.5 / 16.0, 5.5 / 16.0, 5.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0);
+
+    /**
+     * 物流固定框架的 8 个角块（对应 {@code carrier/logistics/corner}）：它们是外壳八个角的接头，
+     * 没有任何条件、恒绘制，与 {@link #LOGISTICS_EDGE_SHAPES} 的棱件一起把框架连起来。
+     */
+    private static final List<AABB> LOGISTICS_CORNER = List.of(
+            new AABB(5.5 / 16.0, 9.5 / 16.0, 5.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0),
+            new AABB(5.5 / 16.0, 5.5 / 16.0, 5.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0),
+            new AABB(9.5 / 16.0, 5.5 / 16.0, 5.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0),
+            new AABB(9.5 / 16.0, 9.5 / 16.0, 5.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0),
+            new AABB(5.5 / 16.0, 9.5 / 16.0, 9.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0),
+            new AABB(5.5 / 16.0, 5.5 / 16.0, 9.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0),
+            new AABB(9.5 / 16.0, 5.5 / 16.0, 9.5 / 16.0, 10.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0),
+            new AABB(9.5 / 16.0, 9.5 / 16.0, 9.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0));
+
+    /** 物流固定框架角件的形状（恒渲染，任何状态都计入）。 */
+    private static final VoxelShape LOGISTICS_CORNER_SHAPE = union(LOGISTICS_CORNER);
 
     /** 各面的通道形状（原始盒子取并集，碰撞用），下标同 {@link Direction#ordinal()}。 */
     private static final VoxelShape[] WIRE_SHAPES = new VoxelShape[6];
 
-    /** 各面的管线形状（管道载体用 {@link #PIPE_WIRE_CANONICAL}），下标同 {@link Direction#ordinal()}。 */
-    private static final VoxelShape[] PIPE_WIRE_SHAPES = new VoxelShape[6];
+    /** 各面的管线形状（物流载体用 {@link #LOGISTICS_WIRE_CANONICAL}），下标同 {@link Direction#ordinal()}。 */
+    private static final VoxelShape[] LOGISTICS_WIRE_SHAPES = new VoxelShape[6];
+
+    /** 各面远程门的形状（逻辑 / 普通载体用 {@link #LOGIC_REMOTE_WIRE_CANONICAL}）。 */
+    private static final VoxelShape[] REMOTE_WIRE_SHAPES = new VoxelShape[6];
+
+    /** 各面远程门的形状（物流载体用 {@link #LOGISTICS_REMOTE_WIRE_CANONICAL}）。 */
+    private static final VoxelShape[] LOGISTICS_REMOTE_WIRE_SHAPES = new VoxelShape[6];
 
     /**
      * 一条棱：相邻两面、它在 blockstate multipart 里的朝向旋转、以及对应的角件形状。
@@ -432,22 +519,30 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
     private static final List<Edge> EDGE_SHAPES = new ArrayList<>();
 
-    /** 管道载体的棱件形状：横棱用 {@link #PIPE_EDGE}、竖棱用 {@link #PIPE_EDGE_VERTICAL}。 */
-    private static final List<Edge> PIPE_EDGE_SHAPES = new ArrayList<>();
+    /** 物流载体的棱件形状：横棱用 {@link #LOGISTICS_EDGE}、竖棱用 {@link #LOGISTICS_EDGE_VERTICAL}。 */
+    private static final List<Edge> LOGISTICS_EDGE_SHAPES = new ArrayList<>();
 
-    /** 形状缓存：下标 = hub 位（bit6）+ 六面布尔位。 */
-    private static final VoxelShape[] SHAPE_CACHE = new VoxelShape[128];
+    /** 形状缓存下标里「远程面」那一段的起始位（bit6-11），bit0-5 是「已镶嵌」，bit12 是 hub。 */
+    private static final int SHAPE_INDEX_REMOTE_SHIFT = 6;
 
-    /** 管道载体的形状缓存（棱件规则与盒子都不同，不能与上者共用）。 */
-    private static final VoxelShape[] PIPE_SHAPE_CACHE = new VoxelShape[128];
+    /** 形状缓存下标里 hub 那一位。 */
+    private static final int SHAPE_INDEX_HUB = 1 << 12;
+
+    /** 形状缓存：下标 = hub 位 + 六面「已镶嵌」位 + 六面「远程门」位（共 13 位）。 */
+    private static final VoxelShape[] SHAPE_CACHE = new VoxelShape[1 << 13];
+
+    /** 物流载体的形状缓存（棱件规则与盒子都不同，不能与上者共用）。 */
+    private static final VoxelShape[] LOGISTICS_SHAPE_CACHE = new VoxelShape[1 << 13];
 
     static {
         // 通道 / 管线：与 blockstate 同一套旋转（上/下仅用 x，其余仅用 y）
         fillWires(WIRE_SHAPES, LOGIC_WIRE_CANONICAL);
-        fillWires(PIPE_WIRE_SHAPES, PIPE_WIRE_CANONICAL);
+        fillWires(LOGISTICS_WIRE_SHAPES, LOGISTICS_WIRE_CANONICAL);
+        fillWires(REMOTE_WIRE_SHAPES, LOGIC_REMOTE_WIRE_CANONICAL);
+        fillWires(LOGISTICS_REMOTE_WIRE_SHAPES, LOGISTICS_REMOTE_WIRE_CANONICAL);
 
         // 角件：8 条水平棱（x 先 y 后）+ 4 条竖棱（z 先 y 后），与 blockstate 对应。
-        // 管道用同一张表，只是换成管道自己的两个 canonical 盒子（竖棱不再需要 z 旋转）。
+        // 物流用同一张表，只是换成物流自己的两个 canonical 盒子（竖棱不再需要 z 旋转）。
         corner(Direction.UP, Direction.NORTH, 0, 0, 0);
         corner(Direction.UP, Direction.EAST, 0, 90, 0);
         corner(Direction.UP, Direction.SOUTH, 0, 180, 0);
@@ -461,18 +556,18 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         corner(Direction.SOUTH, Direction.WEST, 0, 180, 90);
         corner(Direction.NORTH, Direction.WEST, 0, 270, 90);
 
-        pipeCorner(Direction.UP, Direction.NORTH, 0, 0);
-        pipeCorner(Direction.UP, Direction.EAST, 0, 90);
-        pipeCorner(Direction.UP, Direction.SOUTH, 0, 180);
-        pipeCorner(Direction.UP, Direction.WEST, 0, 270);
-        pipeCorner(Direction.DOWN, Direction.SOUTH, 180, 0);
-        pipeCorner(Direction.DOWN, Direction.WEST, 180, 90);
-        pipeCorner(Direction.DOWN, Direction.NORTH, 180, 180);
-        pipeCorner(Direction.DOWN, Direction.EAST, 180, 270);
-        pipeCornerVertical(Direction.NORTH, Direction.EAST, 0);
-        pipeCornerVertical(Direction.SOUTH, Direction.EAST, 90);
-        pipeCornerVertical(Direction.SOUTH, Direction.WEST, 180);
-        pipeCornerVertical(Direction.NORTH, Direction.WEST, 270);
+        logisticsCorner(Direction.UP, Direction.NORTH, 0, 0);
+        logisticsCorner(Direction.UP, Direction.EAST, 0, 90);
+        logisticsCorner(Direction.UP, Direction.SOUTH, 0, 180);
+        logisticsCorner(Direction.UP, Direction.WEST, 0, 270);
+        logisticsCorner(Direction.DOWN, Direction.SOUTH, 180, 0);
+        logisticsCorner(Direction.DOWN, Direction.WEST, 180, 90);
+        logisticsCorner(Direction.DOWN, Direction.NORTH, 180, 180);
+        logisticsCorner(Direction.DOWN, Direction.EAST, 180, 270);
+        logisticsCornerVertical(Direction.NORTH, Direction.EAST, 0);
+        logisticsCornerVertical(Direction.SOUTH, Direction.EAST, 90);
+        logisticsCornerVertical(Direction.SOUTH, Direction.WEST, 180);
+        logisticsCornerVertical(Direction.NORTH, Direction.WEST, 270);
     }
 
     /** 按 canonical 朝北的原始盒子填出六个面的形状（与 blockstate 同款旋转）。 */
@@ -499,25 +594,25 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         EDGE_SHAPES.add(new Edge(a, b, xRot, yRot, zRot == 90, shape));
     }
 
-    /** 管道横棱：与载体同款旋转，只是盒子换成 {@link #PIPE_EDGE}。 */
-    private static void pipeCorner(Direction a, Direction b, int xRot, int yRot) {
-        PIPE_EDGE_SHAPES.add(new Edge(a, b, xRot, yRot, false, Shapes.create(rotate(PIPE_EDGE, xRot, yRot, 0))));
+    /** 物流横棱：与载体同款旋转，只是盒子换成 {@link #LOGISTICS_EDGE}。 */
+    private static void logisticsCorner(Direction a, Direction b, int xRot, int yRot) {
+        LOGISTICS_EDGE_SHAPES.add(new Edge(a, b, xRot, yRot, false, Shapes.create(rotate(LOGISTICS_EDGE, xRot, yRot, 0))));
     }
 
-    /** 管道竖棱：canonical 已是竖棱，只绕 y 旋转。 */
-    private static void pipeCornerVertical(Direction a, Direction b, int yRot) {
-        PIPE_EDGE_SHAPES.add(new Edge(a, b, 0, yRot, true, Shapes.create(rotate(PIPE_EDGE_VERTICAL, 0, yRot, 0))));
+    /** 物流竖棱：canonical 已是竖棱，只绕 y 旋转。 */
+    private static void logisticsCornerVertical(Direction a, Direction b, int yRot) {
+        LOGISTICS_EDGE_SHAPES.add(new Edge(a, b, 0, yRot, true, Shapes.create(rotate(LOGISTICS_EDGE_VERTICAL, 0, yRot, 0))));
     }
 
     /**
-     * 该棱是否要画棱件：普通载体 / 逻辑载体是「两面都外显」，管道载体正好相反——两面都未编程才画。
+     * 该棱是否要画棱件：普通载体 / 逻辑载体是「两面都外显」，物流载体正好相反——两面都未编程才画。
      *
-     * <p>管道是把没开通的边封上壳，所以规则取反。</p>
+     * <p>物流是把没开通的边封上壳，所以规则取反。</p>
      */
     private static boolean showsEdge(BlockState state, Edge edge) {
         boolean a = state.getValue(property(edge.a())).isInlaid();
         boolean b = state.getValue(property(edge.b())).isInlaid();
-        return state.getBlock() instanceof PipeCarrierBlock ? !a && !b : a && b;
+        return state.getBlock() instanceof LogisticsCarrierBlock ? !a && !b : a && b;
     }
 
     /**
@@ -525,31 +620,31 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
      * 它们的全套规则都由 blockstate 画（原版模型渲染会带上环境光遮蔽与 uv 旋转，BER 摆姿态只能拿到
      * 方向漫反射）。
      *
-     * <p>逻辑 / 普通载体取两档 {@link CarrierWire#UNPOWERED}、{@link CarrierWire#POWERED}，
-     * 合起来就是「两面都已镶嵌」；管道载体取 {@link CarrierWire#NONE}，即两面都未编程——它的棱件规则取反。</p>
+     * <p>逻辑 / 普通载体取 {@link CarrierWire#UNPOWERED}、{@link CarrierWire#POWERED}、{@link CarrierWire#REMOTE}，
+     * 合起来就是「两面都已镶嵌」；物流载体取 {@link CarrierWire#NONE}，即两面都未编程——它的棱件规则取反。</p>
      */
     public static CarrierWire[] edgeStates(Block block) {
-        return block instanceof PipeCarrierBlock
+        return block instanceof LogisticsCarrierBlock
                 ? new CarrierWire[] {CarrierWire.NONE}
-                : new CarrierWire[] {CarrierWire.UNPOWERED, CarrierWire.POWERED};
+                : new CarrierWire[] {CarrierWire.UNPOWERED, CarrierWire.POWERED, CarrierWire.REMOTE};
     }
 
     /** 该方块用哪张棱件形状表（带朝向旋转，渲染器与 blockstate 生成器共用）。 */
     public static List<Edge> edgeShapes(Block block) {
-        return block instanceof PipeCarrierBlock ? PIPE_EDGE_SHAPES : EDGE_SHAPES;
+        return block instanceof LogisticsCarrierBlock ? LOGISTICS_EDGE_SHAPES : EDGE_SHAPES;
     }
 
     /**
-     * 该方块是否要把中心体逐个画在未编程的面上：只有管道载体需要——未编程的面没有通道，用中心体
+     * 该方块是否要把中心体逐个画在未编程的面上：只有物流载体需要——未编程的面没有通道，用中心体
      * 按面朝向各画一份把开口堵上，条件与通道正好相反。逻辑 / 普通载体的中心体只由 {@code hub} 控制。
      */
     public static boolean showsCoreOnFace(Block block) {
-        return block instanceof PipeCarrierBlock;
+        return block instanceof LogisticsCarrierBlock;
     }
 
-    /** 该方块在该状态下用哪个中心体形状：逻辑载体贯通时换成十字件（管道载体的中心体恒为实心块）。 */
+    /** 该方块在该状态下用哪个中心体形状：逻辑载体贯通时换成十字件（物流载体的中心体恒为实心块）。 */
     private static VoxelShape coreShape(Block block, BlockState state) {
-        if (block instanceof PipeCarrierBlock) return PIPE_CORE;
+        if (block instanceof LogisticsCarrierBlock) return LOGISTICS_CORE;
         return state.getValue(HUB) ? LOGIC_CORE : union(coreCrossBoxes(state));
     }
 
@@ -581,7 +676,17 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
     /** 该方块用哪张通道 / 管线形状表。 */
     private static VoxelShape[] wireShapes(Block block) {
-        return block instanceof PipeCarrierBlock ? PIPE_WIRE_SHAPES : WIRE_SHAPES;
+        return block instanceof LogisticsCarrierBlock ? LOGISTICS_WIRE_SHAPES : WIRE_SHAPES;
+    }
+
+    /** 该面用哪张通道形状：远程门面用带珍珠辉光的远程形状（{@code wire_remote}），其余面用普通通道 / 管线形状。 */
+    private static VoxelShape wireShape(BlockState state, Direction direction) {
+        if (state.getValue(property(direction)) == CarrierWire.REMOTE) {
+            VoxelShape[] remote = state.getBlock() instanceof LogisticsCarrierBlock
+                    ? LOGISTICS_REMOTE_WIRE_SHAPES : REMOTE_WIRE_SHAPES;
+            return remote[direction.ordinal()];
+        }
+        return wireShapes(state.getBlock())[direction.ordinal()];
     }
 
     /** 按 blockstate 同款顺序旋转一个盒：先 z、再 x、后 y（仅 90 的整数倍）。 */
@@ -625,12 +730,16 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        int index = state.getValue(HUB) ? 64 : 0;
+        int index = state.getValue(HUB) ? SHAPE_INDEX_HUB : 0;
         for (Direction direction : Direction.values()) {
-            if (state.getValue(property(direction)).isInlaid()) index |= 1 << direction.ordinal();
+            CarrierWire wire = state.getValue(property(direction));
+            if (!wire.isInlaid()) continue;
+            index |= 1 << direction.ordinal();
+            // 远程门面的形状与普通通道不同，必须单独占一位，否则两种形状会共用同一份缓存。
+            if (wire == CarrierWire.REMOTE) index |= 1 << (SHAPE_INDEX_REMOTE_SHIFT + direction.ordinal());
         }
-        // 管道与普通载体的棱件规则相反、盒子也不同，因此两者各用一份缓存（同一下标含义不同）。
-        VoxelShape[] cache = state.getBlock() instanceof PipeCarrierBlock ? PIPE_SHAPE_CACHE : SHAPE_CACHE;
+        // 物流与普通载体的棱件规则相反、盒子也不同，因此两者各用一份缓存（同一下标含义不同）。
+        VoxelShape[] cache = state.getBlock() instanceof LogisticsCarrierBlock ? LOGISTICS_SHAPE_CACHE : SHAPE_CACHE;
         VoxelShape cached = cache[index];
         if (cached == null) {
             cached = buildShape(state);
@@ -651,22 +760,25 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
     /** 中心体与各面通道的并集。 */
     private static VoxelShape partShape(BlockState state) {
         VoxelShape shape = coreShape(state.getBlock(), state);
-        VoxelShape[] wires = wireShapes(state.getBlock());
         for (Direction direction : Direction.values()) {
             if (state.getValue(property(direction)).isInlaid()) {
-                shape = Shapes.or(shape, wires[direction.ordinal()]);
+                shape = Shapes.or(shape, wireShape(state, direction));
             }
         }
         return shape;
     }
 
-    /** 当前状态下可见部件的并集（含棱角件）。 */
+    /** 当前状态下可见部件的并集（含棱角件与物流固定框架）。 */
     private static VoxelShape buildShape(BlockState state) {
         VoxelShape shape = partShape(state);
         for (Edge edge : edgeShapes(state.getBlock())) {
             if (showsEdge(state, edge)) {
                 shape = Shapes.or(shape, edge.shape());
             }
+        }
+        if (state.getBlock() instanceof LogisticsCarrierBlock) {
+            // 固定框架的角块没有条件、恒绘制（见 blockstate 生成器的 cornerModel）。
+            shape = Shapes.or(shape, LOGISTICS_CORNER_SHAPE);
         }
         return shape;
     }
@@ -694,10 +806,9 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         Direction best = null;
         double bestDistance = Double.MAX_VALUE;
 
-        VoxelShape[] wires = wireShapes(state.getBlock());
         for (Direction direction : Direction.values()) {
             if (!state.getValue(property(direction)).isInlaid()) continue;
-            BlockHitResult hit = wires[direction.ordinal()].clip(from, to, pos);
+            BlockHitResult hit = wireShape(state, direction).clip(from, to, pos);
             if (hit == null) continue;
             double distance = hit.getLocation().distanceToSqr(from);
             if (distance < bestDistance) {

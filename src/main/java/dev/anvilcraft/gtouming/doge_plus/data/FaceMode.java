@@ -22,7 +22,7 @@ import java.util.Map;
  * 两者本来就是同一件事的两个取值域——都挂在某个 {@link Direction} 上、都以 {@link #NONE} 表示未编程、
  * 都能由镶嵌材料（{@code InlayProperty}）或轮盘编程写入。</p>
  *
- * <p>取值域按 {@link Kind} 分为红石 / 搬运两类且互斥：逻辑载体只收红石类，管道载体只收搬运类，
+ * <p>取值域按 {@link Kind} 分为红石 / 搬运两类且互斥：逻辑载体只收红石类，物流载体只收搬运类，
  * 由 {@code InlayCarrierBlock#programFace} 按方块类型校验。</p>
  */
 public enum FaceMode implements StringRepresentable, WheelOption {
@@ -35,9 +35,6 @@ public enum FaceMode implements StringRepresentable, WheelOption {
 
     /** 与门：min(输入1, 输入2) */
     AND_GATE(Kind.REDSTONE, "wheel.anvilcraft_doge_plus.gate.and_gate"),
-
-    /** 或门：max(输入1, 输入2) */
-    OR_GATE(Kind.REDSTONE, "wheel.anvilcraft_doge_plus.gate.or_gate"),
 
     /** 输出：最大输入值 */
     OUTPUT(Kind.REDSTONE, "wheel.anvilcraft_doge_plus.gate.output"),
@@ -54,6 +51,12 @@ public enum FaceMode implements StringRepresentable, WheelOption {
     /** 延时门：收到输入起输出该信号，持续设定 tick 数后停止。 */
     DELAY_GATE(Kind.REDSTONE, "wheel.anvilcraft_doge_plus.gate.delay_gate"),
 
+    /** 延时输入门：记录本面收到的输入信号，等待设定 tick 数后作为该面的输入向本方块的门送出 1 tick。 */
+    DELAY_INPUT_GATE(Kind.REDSTONE, "wheel.anvilcraft_doge_plus.gate.delay_input_gate"),
+
+    /** 远程门：同信道编号的远程面互连为一条总线；红石侧为双向导线，物品侧提供远程查找取出货源。 */
+    REMOTE(Kind.REMOTE, "wheel.anvilcraft_doge_plus.gate.remote"),
+
     /** 存入：把物品存入面朝的容器。 */
     INSERT(Kind.TRANSFER, "wheel.anvilcraft_doge_plus.transfer.insert"),
 
@@ -64,7 +67,9 @@ public enum FaceMode implements StringRepresentable, WheelOption {
     public enum Kind {
         NONE,
         REDSTONE,
-        TRANSFER
+        TRANSFER,
+        /** 远程：既服务红石（总线导线）也服务物品（远程取货），两端轮盘都列出。 */
+        REMOTE
     }
 
     public static final Codec<FaceMode> CODEC = StringRepresentable.fromEnum(FaceMode::values);
@@ -75,7 +80,7 @@ public enum FaceMode implements StringRepresentable, WheelOption {
     private static final List<FaceMode> REDSTONE_VALUES =
             Arrays.stream(values()).filter(mode -> !mode.isTransfer()).toList();
 
-    /** 管道载体的轮盘选项：{@link #NONE} + 存入 / 取出（顺序与拆分前相同）。 */
+    /** 物流载体的轮盘选项：{@link #NONE} + 存入 / 取出（顺序与拆分前相同）。 */
     private static final List<FaceMode> TRANSFER_VALUES =
             Arrays.stream(values()).filter(mode -> !mode.isRedstone()).toList();
 
@@ -101,12 +106,17 @@ public enum FaceMode implements StringRepresentable, WheelOption {
         return this.kind == Kind.TRANSFER;
     }
 
+    /** 是否是远程门（既服务红石总线也服务物品远程取货）。 */
+    public boolean isRemote() {
+        return this.kind == Kind.REMOTE;
+    }
+
     /** 逻辑载体轮盘的选项清单。 */
     public static List<FaceMode> redstoneValues() {
         return REDSTONE_VALUES;
     }
 
-    /** 管道载体轮盘的选项清单。 */
+    /** 物流载体轮盘的选项清单。 */
     public static List<FaceMode> transferValues() {
         return TRANSFER_VALUES;
     }
@@ -128,12 +138,13 @@ public enum FaceMode implements StringRepresentable, WheelOption {
             case NONE -> Items.BARRIER;
             case NOT_GATE -> Items.REDSTONE_TORCH;
             case AND_GATE -> Items.REPEATER;
-            case OR_GATE -> Items.COMPARATOR;
             case OUTPUT -> Items.REDSTONE;
             case INPUT -> ModBlocks.REDSTONE_WIRE.get().asItem();
             case COUNTER_GATE -> Items.STONE_BUTTON;
             case LATCH_GATE -> Items.LEVER;
             case DELAY_GATE -> Items.OAK_PRESSURE_PLATE;
+            case DELAY_INPUT_GATE -> Items.CLOCK;
+            case REMOTE -> Items.ENDER_PEARL;
             case INSERT -> ModBlocks.CHUTE.asItem();
             case EXTRACT -> ModBlocks.MAGNETIC_CHUTE.asItem();
         });
@@ -141,15 +152,15 @@ public enum FaceMode implements StringRepresentable, WheelOption {
 
     /** 该门是否有内部时序状态：输出由每 tick 驱动写入，而非输入面的纯函数。 */
     public boolean isStateful() {
-        return this == COUNTER_GATE || this == LATCH_GATE || this == DELAY_GATE;
+        return this == COUNTER_GATE || this == LATCH_GATE || this == DELAY_GATE || this == DELAY_INPUT_GATE;
     }
 
-    /** 该门是否消耗输入面（与门 / 或门 / 输出门 / 三种有状态门）。 */
+    /** 该门是否消耗输入面（与门 / 输出门 / 各状态门）。 */
     public boolean consumesInputFace() {
-        return this == AND_GATE || this == OR_GATE || this == OUTPUT || isStateful();
+        return this == AND_GATE || this == OUTPUT || isStateful();
     }
 
-    /** 该门的设定值是否可由玩家调整（输入门 / 输出门 / 三种有状态门）。 */
+    /** 该门的设定值是否可由玩家调整（输入门 / 输出门 / 各状态门）。 */
     public boolean isSettable() {
         return this == INPUT || this == OUTPUT || isStateful();
     }
@@ -173,7 +184,7 @@ public enum FaceMode implements StringRepresentable, WheelOption {
     public int calculate(Map<Direction, Integer> inputs, int value) {
         return switch (this) {
             // 搬运角色与无、以及有状态门（输出由 LevelNetworks 每 tick 驱动写入）都不经本方法。
-            case NONE, INSERT, EXTRACT, INPUT, COUNTER_GATE, LATCH_GATE, DELAY_GATE -> 0;
+            case NONE, INSERT, EXTRACT, INPUT, COUNTER_GATE, LATCH_GATE, DELAY_GATE, DELAY_INPUT_GATE, REMOTE -> 0;
             case NOT_GATE -> {
                 for (Map.Entry<Direction, Integer> face : inputs.entrySet()) {
                     if (face.getValue() > 0) yield 0;
@@ -188,14 +199,6 @@ public enum FaceMode implements StringRepresentable, WheelOption {
                     min = Math.min(min, face.getValue());
                 }
                 yield min;
-            }
-            case OR_GATE -> {
-                if (inputs.isEmpty()) yield 0;
-                int max = 0;
-                for (Map.Entry<Direction, Integer> face : inputs.entrySet()) {
-                    max = Math.max(max, face.getValue());
-                }
-                yield max;
             }
             case OUTPUT -> {
                 // 输出门：取最大输入，并按设定值取小截断

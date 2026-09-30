@@ -3,7 +3,7 @@ package dev.anvilcraft.gtouming.doge_plus.client.chain;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.PipeCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
@@ -58,8 +58,8 @@ public final class GateChainGesture {
     private static Direction originFace = null;
     private static FaceMode gateType = FaceMode.OUTPUT;
 
-    /** 本次手势作用于管道载体（物品传输）还是逻辑载体（红石门）；由手势开始时的手持物 / 点击方块决定。 */
-    private static boolean pipe = false;
+    /** 本次手势作用于物流载体（物品传输）还是逻辑载体（红石门）；由手势开始时的手持物 / 点击方块决定。 */
+    private static boolean logistics = false;
     private static final List<BlockPos> WAYPOINTS = new ArrayList<>();
 
     private GateChainGesture() {
@@ -70,9 +70,9 @@ public final class GateChainGesture {
         return active && mode == Mode.REMOVE;
     }
 
-    /** 本次手势是否作用于管道载体（预览据此选默认方块状态与判定）。 */
-    public static boolean isPipe() {
-        return active && pipe;
+    /** 本次手势是否作用于物流载体（预览据此选默认方块状态与判定）。 */
+    public static boolean isLogistics() {
+        return active && logistics;
     }
 
     /** 起始方块（第一个点击面所在方块）；未在手势中时为 {@code null}。预览据此补上链首那一格的连接面。 */
@@ -92,18 +92,18 @@ public final class GateChainGesture {
 
         ItemStack main = player.getMainHandItem();
         BlockPos pos = hit.getBlockPos().immutable();
-        if (main.is(ModBlocks.LOGIC_CARRIER.asItem()) || main.is(ModBlocks.PIPE_CARRIER.asItem())) {
+        if (main.is(ModBlocks.LOGIC_CARRIER.asItem()) || main.is(ModBlocks.LOGISTICS_CARRIER.asItem())) {
             mode = Mode.PLACE;
-            pipe = main.is(ModBlocks.PIPE_CARRIER.asItem());
+            logistics = main.is(ModBlocks.LOGISTICS_CARRIER.asItem());
             // 放置：链首为起始面外侧第一格，起始面属于未编程的载体时由服务端改为驱动端 / 源端。
             originPos = pos;
             originFace = pickedFace(player, level, hit, pos);
             gateType = resolveGateType(player.getOffhandItem());
         } else if (main.is(ModItemTags.ANVIL_HAMMER)
                 && (level.getBlockState(pos).getBlock() instanceof LogicCarrierBlock
-                    || level.getBlockState(pos).getBlock() instanceof PipeCarrierBlock)) {
+                    || level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock)) {
             mode = Mode.REMOVE;
-            pipe = level.getBlockState(pos).getBlock() instanceof PipeCarrierBlock;
+            logistics = level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock;
             // 移除：链首就是点击的载体本身，之后沿准星跟随相邻的同类载体。
             originPos = pos;
             originFace = pickedFace(player, level, hit, pos);
@@ -225,10 +225,10 @@ public final class GateChainGesture {
         if (mode == Mode.REMOVE) {
             return (from, step, next) -> {
                 Block block = level.getBlockState(next).getBlock();
-                if (pipe ? !(block instanceof PipeCarrierBlock) : !(block instanceof LogicCarrierBlock)) return false;
+                if (logistics ? !(block instanceof LogisticsCarrierBlock) : !(block instanceof LogicCarrierBlock)) return false;
                 // 链首是玩家点击的那个载体，没有「上一格」可比。
                 if (from == null || step == null) return true;
-                return pipe ? transferLinked(level, from, step, next) : signalLinked(level, from, step, next);
+                return logistics ? transferLinked(level, from, step, next) : signalLinked(level, from, step, next);
             };
         }
         // 与服务端 GateChainBuilder 的 isReplaceable 保持同一判定，避免预览与实际落地不一致。
@@ -281,8 +281,8 @@ public final class GateChainGesture {
     /** 手势进行中主手必须仍持有开始时的物品（否则取消）。 */
     private static boolean holdsGestureItem(LocalPlayer player) {
         if (mode == Mode.REMOVE) return player.getMainHandItem().is(ModItemTags.ANVIL_HAMMER);
-        return player.getMainHandItem().is(pipe
-                ? ModBlocks.PIPE_CARRIER.asItem()
+        return player.getMainHandItem().is(logistics
+                ? ModBlocks.LOGISTICS_CARRIER.asItem()
                 : ModBlocks.LOGIC_CARRIER.asItem());
     }
 

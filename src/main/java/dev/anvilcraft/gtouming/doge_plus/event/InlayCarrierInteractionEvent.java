@@ -4,7 +4,9 @@ import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
+import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
+import dev.anvilcraft.gtouming.doge_plus.data.RemoteChannel;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayRecipe;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
@@ -127,10 +129,16 @@ public class InlayCarrierInteractionEvent {
 
     private static void applyCarrier(Level level, BlockPos pos, Direction face, List<InlayEntry> inlays) {
         Block block = level.getBlockState(pos).getBlock();
+        BlockInlays previous = BlockInlayManager.get(level, pos);
         // 该面换料后设定值回到默认，其余面保留既有设定值。
-        Map<Direction, Integer> values = new HashMap<>(BlockInlayManager.get(level, pos).values());
+        Map<Direction, Integer> values = new HashMap<>(previous.values());
         values.remove(face);
-        BlockInlayManager.put(level, pos, BlockInlays.fromInlays(block, inlays).withValues(values));
+        BlockInlays rebuilt = BlockInlays.fromInlays(block, inlays).withValues(values);
+        // 其余已编程的远程面保留其信道标识（该面换料重置；不再是远程面的也清掉）。
+        Map<Direction, RemoteChannel> channels = new HashMap<>(previous.channels());
+        channels.remove(face);
+        channels.keySet().removeIf(dir -> rebuilt.getFace(dir) != FaceMode.REMOTE);
+        BlockInlayManager.put(level, pos, rebuilt.withChannels(channels));
         // 换料会改变该面的门类型：先抹掉旧门的输出与运行时状态，否则换成有状态门
         // （计数 / 锁存 / 延时）时旧门的输出会一直被持有，红石读数不更新。
         LogicGateNetworkManager.clearFaceSignal(level, pos, face);

@@ -46,6 +46,7 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     public static final String COUNTER_GATE = "counter_gate";
     public static final String DEFENSE = "defense";
     public static final String DELAY_GATE = "delay_gate";
+    public static final String DELAY_INPUT_GATE = "delay_input_gate";
     public static final String EFFECT = "effect";
     public static final String EFFECT1 = "effect1";
     public static final String EFFECT2 = "effect2";
@@ -60,8 +61,8 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     public static final String MAGNETIC = "magnetic";
     public static final String MAGNETIC_CHUTE = "magnetic_chute";
     public static final String NOT_GATE = "not_gate";
-    public static final String OR_GATE = "or_gate";
     public static final String OUTPUT = "output";
+    public static final String REMOTE = "remote";
     public static final String RESONANCE = "resonance";
     public static final String TOTEMS = "totems";
 
@@ -73,19 +74,19 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     public static final String IRON_INGOT = "iron_ingot";
 
     /**
-     * 六种「门」属性：非门 / 与门 / 或门 / 计数门 / 锁存门 / 延时门。
+     * 六种「门」属性：非门 / 与门 / 计数门 / 锁存门 / 延时门 / 延时输入门。
      *
      * <p>输入与输出不算在内——它们只是端口（文本上也不叫「门」），因此在逻辑载体的配方里
      * 不能顶替任何一种门。这份清单的条数正好等于镶嵌载体的镶孔数：配方按「和」匹配，
-     * 要求六个镶孔里这六种门各一个。</p>
+     * 要求六个镶孔里这六种门各一个。（或门已移除，其配方位由延时输入门顶替。）</p>
      */
     public static final List<InlayProperty> GATE_PROPERTIES = List.of(
             InlayProperty.NOT_GATE,
             InlayProperty.AND_GATE,
-            InlayProperty.OR_GATE,
             InlayProperty.COUNTER_GATE,
             InlayProperty.LATCH_GATE,
-            InlayProperty.DELAY_GATE
+            InlayProperty.DELAY_GATE,
+            InlayProperty.DELAY_INPUT_GATE
     );
 
     /** 下界合金升级 / 盔甲纹饰的材料不再定义：它们没有属性、也没有手写镶嵌配方，
@@ -114,6 +115,9 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
                     // 走方块标签 minecraft:pressure_plates（无对应物品标签；前置也往这里加压力板）
                     .blockTag(BlockTags.PRESSURE_PLATES)
                     .attributes(InlayProperty.DELAY_GATE).buildInlay(),
+            builder().name(DELAY_INPUT_GATE)
+                    .item(Items.CLOCK)
+                    .attributes(InlayProperty.DELAY_INPUT_GATE).buildInlay(),
             builder().name(DEFENSE)
                     .item(Items.NETHERITE_INGOT)
                     .attributes(InlayProperty.DEFENSE).buildInlay(),
@@ -151,12 +155,12 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
             builder().name(NOT_GATE)
                     .item(Items.REDSTONE_TORCH)
                     .attributes(InlayProperty.NOT_GATE).buildInlay(),
-            builder().name(OR_GATE)
-                    .item(Items.COMPARATOR)
-                    .attributes(InlayProperty.OR_GATE).buildInlay(),
             builder().name(OUTPUT)
                     .item(Items.REDSTONE)
                     .attributes(InlayProperty.OUTPUT).buildInlay(),
+            builder().name(REMOTE)
+                    .item(Items.ENDER_PEARL)
+                    .attributes(InlayProperty.REMOTE).buildInlay(),
             builder().name(RESONANCE)
                     .item(Items.AMETHYST_SHARD)
                     .attributes(InlayProperty.RESONANCE).buildInlay(),

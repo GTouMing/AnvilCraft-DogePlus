@@ -10,8 +10,8 @@ package dev.anvilcraft.gtouming.doge_plus.data;
  *   <li>{@link #IDLE}：已镶嵌但该面无信号（普通材料 / 输入门未收到信号 / 非门未输出）；</li>
  *   <li>{@link #SOURCE}：{@link FaceMode#INPUT} 输入门当前收到信号（通道点亮，表示收到信号）；</li>
  *   <li>{@link #SIGNAL}：非门等「不消耗输入面」的门当前有输出（通道点亮）；</li>
- *   <li>{@link #GATE_OFF}：与门 / 或门 / 输出门当前无输出；</li>
- *   <li>{@link #GATE_ON}：与门 / 或门 / 输出门当前有输出。</li>
+ *   <li>{@link #GATE_OFF}：与门 / 输出门当前无输出；</li>
+ *   <li>{@link #GATE_ON}：与门 / 输出门当前有输出。</li>
  * </ul>
  *
  * <p>区分 {@link #SOURCE}（收到信号）与 {@link #SIGNAL}（有输出）是为了棱角件：只有
@@ -25,7 +25,7 @@ public enum CarrierFace {
     GATE_OFF,
     GATE_ON;
 
-    /** 该面是否是「消耗输入面」的逻辑门（与门 / 或门 / 输出门）。 */
+    /** 该面是否是「消耗输入面」的逻辑门（与门 / 输出门 / 各状态门）。 */
     public boolean consumesInput() {
         return this == GATE_OFF || this == GATE_ON;
     }

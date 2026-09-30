@@ -27,9 +27,9 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("block.anvilcraft_doge_plus.inlay_table", "镶嵌台");
         add("block.anvilcraft_doge_plus.inlay_crafting_table", "镶合台");
         add("block.anvilcraft_doge_plus.doge_steel_block", "Doge 钢块");
-        add("block.anvilcraft_doge_plus.inlay_carrier_block", "镶嵌载体");
+        add("block.anvilcraft_doge_plus.inlay_carrier", "镶嵌载体");
         add("block.anvilcraft_doge_plus.logic_carrier", "逻辑载体");
-        add("block.anvilcraft_doge_plus.pipe_carrier", "管道载体");
+        add("block.anvilcraft_doge_plus.logistics_carrier", "物流载体");
         // ===== 容器标题 =====
         add("container.anvilcraft_doge_plus.chute_dispenser", "溜槽发射器");
         add("container.anvilcraft_doge_plus.chute_dropper", "溜槽投掷器");
@@ -67,10 +67,11 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inlay_property.input", "输入：该面输入红石信号");
         add("tooltip.anvilcraft_doge_plus.inlay_property.not_gate", "非门：该面输出反面输入的反信号");
         add("tooltip.anvilcraft_doge_plus.inlay_property.and_gate", "与门：该面输出邻面输入的与信号（按序查找）");
-        add("tooltip.anvilcraft_doge_plus.inlay_property.or_gate", "或门：该面输出邻面输入的或信号（按序查找）");
         add("tooltip.anvilcraft_doge_plus.inlay_property.counter_gate", "计数门：累计输入脉冲，达到设定次数时输出 1 tick 的红石信号");
         add("tooltip.anvilcraft_doge_plus.inlay_property.latch_gate", "锁存门：收到输入则记录并输出该信号，再收到则清除");
         add("tooltip.anvilcraft_doge_plus.inlay_property.delay_gate", "延时门：收到输入起输出该信号，持续设定 tick 数");
+        add("tooltip.anvilcraft_doge_plus.inlay_property.delay_input_gate", "延时输入门：记录输入信号，等待设定 tick 数后作为本面的输入向本方块其它门送出 1 tick");
+        add("tooltip.anvilcraft_doge_plus.inlay_property.remote", "远程门：同信道编号的远程面互连为一条总线；红石侧为双向导线，物品侧提供远程取货");
         add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "发电：放置后产生 512 kW 电力");
         add("tooltip.anvilcraft_doge_plus.inlay_property.insert", "存入：将物品存入面朝的容器");
         add("tooltip.anvilcraft_doge_plus.inlay_property.extract", "取出：从面朝的容器取出物品");
@@ -93,6 +94,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inspection.line_gate", "%1$s：%2$s（%3$s）");
         add("tooltip.anvilcraft_doge_plus.inspection.signal", "信号：%s");
         add("tooltip.anvilcraft_doge_plus.inspection.value", "设定：%s");
+        add("tooltip.anvilcraft_doge_plus.inspection.channel", "信道：%s");
         add("tooltip.anvilcraft_doge_plus.inspection.counted", "已计数：%s");
         add("tooltip.anvilcraft_doge_plus.inspection.elapsed", "已计时：%s");
         add("tooltip.anvilcraft_doge_plus.inspection.throughput", "物流量：%s");
@@ -100,12 +102,13 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inspection.filter_none", "无");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.not_gate", "非门");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.and_gate", "与门");
-        add("tooltip.anvilcraft_doge_plus.inspection.gate.or_gate", "或门");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.output", "输出");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.input", "输入");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.counter_gate", "计数门");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.latch_gate", "锁存门");
         add("tooltip.anvilcraft_doge_plus.inspection.gate.delay_gate", "延时门");
+        add("tooltip.anvilcraft_doge_plus.inspection.gate.delay_input_gate", "延时输入门");
+        add("tooltip.anvilcraft_doge_plus.inspection.gate.remote", "远程门");
         add("tooltip.anvilcraft_doge_plus.inspection.transfer.none", "清除");
         add("tooltip.anvilcraft_doge_plus.inspection.transfer.insert", "存入");
         add("tooltip.anvilcraft_doge_plus.inspection.transfer.extract", "取出");
@@ -140,14 +143,15 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("wheel.anvilcraft_doge_plus.gate.none", "清除");
         add("wheel.anvilcraft_doge_plus.gate.not_gate", "非门");
         add("wheel.anvilcraft_doge_plus.gate.and_gate", "与门");
-        add("wheel.anvilcraft_doge_plus.gate.or_gate", "或门");
         add("wheel.anvilcraft_doge_plus.gate.output", "输出门");
         add("wheel.anvilcraft_doge_plus.gate.input", "输入门");
         add("wheel.anvilcraft_doge_plus.gate.counter_gate", "计数门");
         add("wheel.anvilcraft_doge_plus.gate.latch_gate", "锁存门");
         add("wheel.anvilcraft_doge_plus.gate.delay_gate", "延时门");
+        add("wheel.anvilcraft_doge_plus.gate.delay_input_gate", "延时输入门");
+        add("wheel.anvilcraft_doge_plus.gate.remote", "远程门");
 
-        // ===== 管道载体轮盘 =====
+        // ===== 物流载体轮盘 =====
         add("wheel.anvilcraft_doge_plus.transfer.none", "清除");
         add("wheel.anvilcraft_doge_plus.transfer.insert", "存入");
         add("wheel.anvilcraft_doge_plus.transfer.extract", "取出");
