@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.transfer;
 
+import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import it.unimi.dsi.fastutil.bytes.ByteArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;

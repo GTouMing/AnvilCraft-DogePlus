@@ -39,6 +39,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.ClientHooks;
+import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -128,12 +129,12 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         // 会失效（半透明像素被当成不透明）。连接件与方向指示件仍是镂空。
         //
         // BufferSource 一被要求换成别的类型就会把上一批结束掉，之后再往旧 consumer 里写会抛
-        // 「Not building!」，所以先把物品整批画完，再取镂空缓冲画其余部件。
-        VertexConsumer itemConsumer = buffer.getBuffer(CHANNEL_ITEM_RENDER_TYPE);
+        // 「Not building!」；信道物品里若有自带 BEWLR 的物品（过滤器），它自己还会再切一次缓冲。所以这里
+        // 不预取 consumer，交给每次绘制现取（见 renderChannelItem），画完再取镂空缓冲画其余部件。
         for (Direction face : Direction.values()) {
             // 远程门面：方块状态那边把最小那层珍珠块做成了内翻的负块（凹槽），这里把信道物品摆进同一个凹槽。
             if (inlays.getFace(face).isRemote()) {
-                renderChannelItem(poseStack, itemConsumer, level, pos, face, inlays.getChannel(face).item(),
+                renderChannelItem(poseStack, buffer, level, face, inlays.getChannel(face).item(),
                         packedLight, packedOverlay);
             }
         }
@@ -307,12 +308,14 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
      * 位姿原点；然后定朝向——立体（方块感）物品沿用与物品栏一致的显示变换旋转 / 缩放（丢掉掉落物的抬高位
      * 移），扁平贴图物品则做成 billboard 始终面朝玩家；最后量出物品模型实际的长宽高跨度，统一缩放到
      * 「略小于凹槽」，保证三个轴都被钳在凹槽以内。</p>
+     *
+     * <p>自带 {@code BlockEntityWithoutLevelRenderer} 的物品（过滤器）改走它自己的自定义渲染器，才会把
+     * 内容 / 拒绝屏障一并画出来；位姿仍是上面那套（模型已居中），渲染器自会补上内容。</p>
      */
     private static void renderChannelItem(
             PoseStack poseStack,
-            VertexConsumer consumer,
+            MultiBufferSource buffer,
             Level level,
-            BlockPos pos,
             Direction face,
             ItemStack item,
             int packedLight,
@@ -345,11 +348,12 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             // 扁平贴图物品（{@code item/generated} 一类）：做成 billboard，贴图平面始终正对玩家相机。
             //
             // 先在局部抵消该面的朝向旋转：位姿把「与世界轴对齐」的模型坐标摆到该面，抵消之后局部坐标系
-            // 重新与世界轴对齐，随后给的才是「世界空间的朝向」。这一步对「位姿里是否已含相机旋转」两种
-            // 实现都成立，因此不依赖具体渲染管线。
+            // 重新与世界轴对齐，随后给的才是「世界空间的朝向」。
             if (faceRotX(face) != 0) poseStack.mulPose(Axis.XP.rotationDegrees(faceRotX(face)));
             if (faceRotY(face) != 0) poseStack.mulPose(Axis.YP.rotationDegrees(faceRotY(face)));
-            poseStack.mulPose(facingCamera(pos));
+            // 直接套相机朝向（与粒子 billboard 同一套）：贴图正对屏幕，且「物品下方」恒朝屏幕下方。
+            // 若改成「+Z 指向相机」的最短弧旋转，俯视 / 仰视时贴图会跟着打滚，下方就不是屏幕下方了。
+            poseStack.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
         }
         // 统一缩放到「略小于凹槽」：凹槽是立方体，按三轴最大跨度缩，每轴都落在里面。
         float scale = socketFitScale(poseStack, model);
@@ -365,32 +369,15 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
                 -(bounds[0] + bounds[3]) / 2.0F,
                 -(bounds[1] + bounds[4]) / 2.0F,
                 -(bounds[2] + bounds[5]) / 2.0F);
-        renderShaded(poseStack.last(), consumer, model, packedLight, packedOverlay, level);
-        poseStack.popPose();
-    }
-
-    /**
-     * 「面朝相机」的旋转：把模型面朝北时的法线（{@code +Z}）转到「方块中心 → 相机」的方向。
-     *
-     * <p>用最短弧，水平看时退化成绕竖直轴转（贴图保持竖直、转到正对你），俯视 / 仰视时才会跟着倾斜，
-     * 于是任何角度看过去都是一张正对屏幕的贴图。</p>
-     */
-    private static Quaternionf facingCamera(BlockPos pos) {
-        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        Vector3f toCamera = new Vector3f(
-                (float) (camera.x - pos.getX() - 0.5),
-                (float) (camera.y - pos.getY() - 0.5),
-                (float) (camera.z - pos.getZ() - 0.5));
-        if (toCamera.lengthSquared() < 1.0E-6F) return new Quaternionf();
-        toCamera.normalize();
-        Vector3f normal = new Vector3f(0.0F, 0.0F, 1.0F);
-        float dot = normal.dot(toCamera);
-        // 正对背面时最短弧不唯一（叉积为零），任取一条垂直轴转 180°。
-        if (dot < -0.99999F) {
-            return new Quaternionf().rotationAxis((float) Math.PI, new Vector3f(0.0F, 1.0F, 0.0F));
+        // 自带 BEWLR 的物品（过滤器）交给它自己的自定义渲染器，内容 / 拒绝屏障才画得出来；其余物品照旧。
+        if (model.isCustomRenderer()) {
+            IClientItemExtensions.of(item).getCustomRenderer().renderByItem(
+                    item, ItemDisplayContext.NONE, poseStack, buffer, packedLight, packedOverlay);
+        } else {
+            renderShaded(poseStack.last(), buffer.getBuffer(CHANNEL_ITEM_RENDER_TYPE), model,
+                    packedLight, packedOverlay, level);
         }
-        Vector3f axis = new Vector3f(normal).cross(toCamera);
-        return new Quaternionf(axis.x(), axis.y(), axis.z(), 1.0F + dot).normalize();
+        poseStack.popPose();
     }
 
     /**
@@ -476,9 +463,13 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
      * 只是位置更靠核心（数字沿面轴偏移 {@code 0.4}，这里取 {@code 0.3}），且先于数字绘制，
      * 于是物品这一层在物流量数字之下。
      *
-     * <p><b>表现</b>：用 {@code GUI} 显示变换（与物品栏一致），再沿图标法线压扁成平面，于是方块也是
-     * 一张平贴的方图而不是立体的方块。{@code gui} 自带缩放（方块 0.625、平坦物品 1），这里按它归一化，
-     * 各种过滤物品的图标一样大。</p>
+     * <p><b>表现</b>：用 {@code GUI} 显示变换（与物品栏一致），普通物品再沿图标法线压扁成平面，于是
+     * 方块也是一张平贴的方图而不是立体的方块。{@code gui} 自带缩放（方块 0.625、平坦物品 1），这里按它
+     * 归一化，各种过滤物品的图标一样大。</p>
+     *
+     * <p>自带 {@code BlockEntityWithoutLevelRenderer} 的物品（最关键的就是过滤器物品
+     * {@code anvilcraft:filter}，见 {@code FilterItemRenderer}）不压扁：它们只有走自己的自定义渲染才会
+     * 把「列表里轮播的物品」和「拒绝列表的屏障」画出来，压扁反而只得到一张空的过滤器贴图。</p>
      *
      * <p><b>光照</b>：不走物品渲染管线的着色——那套靠全局光照方向 uniform，而所有批次要到方块实体阶段
      * 结束才一起刷新，四个面共用同一份（剩下最后设置的那份）光照。这里和画棱件 / 箭头一样，
@@ -530,7 +521,16 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             BakedModel icon = ClientHooks.handleCameraTransforms(
                     poseStack, model, ItemDisplayContext.GUI, false);
             poseStack.translate(-0.5F, -0.5F, -0.5F);
-            renderShaded(flattened(poseStack, center, side), consumer, icon, packedLight, packedOverlay, level);
+            // 过滤器物品（AnvilCraft 的 filter）的自定义模型被包了一层、isCustomRenderer 为真：它自带
+            // BEWLR（FilterItemRenderer），除了本体还会把过滤器列表里轮播的物品、以及拒绝列表的屏障一起
+            // 画出来。这种物品必须交给它自己的自定义渲染，否则只画出一张空白过滤器贴图；普通物品没有
+            // 自定义渲染器，仍按老路径压扁成一张贴图。
+            if (icon.isCustomRenderer()) {
+                IClientItemExtensions.of(filter).getCustomRenderer().renderByItem(
+                        filter, ItemDisplayContext.GUI, poseStack, buffer, packedLight, packedOverlay);
+            } else {
+                renderShaded(flattened(poseStack, center, side), consumer, icon, packedLight, packedOverlay, level);
+            }
             poseStack.popPose();
         }
     }

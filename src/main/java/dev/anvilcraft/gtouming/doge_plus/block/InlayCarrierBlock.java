@@ -748,6 +748,19 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         return cached;
     }
 
+    /**
+     * 相邻方块也是镶嵌载体、且它朝向本方的面同样开通了通道时，两侧通道对接：剔除本面通道端盖，
+     * 免得两层端盖在方块交界处重叠闪烁。
+     *
+     * <p>通道模型本就给端盖标了 {@code cullface}，只是载体的形状不是满方，默认遮挡判定不会把它当实心，
+     * 所以相邻两个载体之间从不触发。相邻的是普通方块时交给默认判定，相邻面未开通通道时也保留端盖。</p>
+     */
+    @Override
+    public boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
+        return adjacentBlockState.getBlock() instanceof InlayCarrierBlock
+                && adjacentBlockState.getValue(property(side.getOpposite())).isInlaid();
+    }
+
     /** 一组原始盒子取并集（碰撞用）。 */
     private static VoxelShape union(List<AABB> boxes) {
         VoxelShape shape = Shapes.empty();
