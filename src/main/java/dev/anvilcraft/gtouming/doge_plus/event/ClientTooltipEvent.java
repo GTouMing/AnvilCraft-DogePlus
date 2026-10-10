@@ -15,6 +15,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
@@ -23,7 +25,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientTooltipComponentFactoriesEvent;
 import net.neoforged.neoforge.client.event.RenderTooltipEvent;
+import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -94,6 +98,30 @@ public class ClientTooltipEvent {
         } else {
             elements.add(Either.left(Component.translatable("tooltip.anvilcraft_doge_plus.inlay_details")
                     .withStyle(ChatFormatting.GRAY)));
+        }
+    }
+
+    /**
+     * 物品描述行：仿前置 {@code ItemTooltipManager#addTooltip}，为物品补一行
+     * {@code tooltip.<命名空间>.item.<路径>} 描述（灰色，插在物品名之后）。
+     *
+     * <p>与前置一致地只处理后置物：只处理本模组命名空间的物品，且仅在存在对应翻译时追加
+     * （{@link I18n#exists}）——描述完全由语言文件决定，不必在代码里再维护一张物品清单。</p>
+     */
+    @SubscribeEvent
+    public static void onItemTooltip(ItemTooltipEvent event) {
+        ItemStack stack = event.getItemStack();
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (!AnvilCraftDogePlus.MOD_ID.equals(id.getNamespace())) return;
+        String key = "tooltip.%s.item.%s".formatted(id.getNamespace(), id.getPath());
+        if (!I18n.exists(key)) return;
+        // 支持 \n 多行：倒序插到下标 1，保持原有顺序。
+        List<Component> lines = new ArrayList<>();
+        for (String line : Component.translatable(key).getString().split("\n")) {
+            lines.add(Component.literal(line).withStyle(ChatFormatting.GRAY));
+        }
+        for (int i = lines.size() - 1; i >= 0; i--) {
+            event.getToolTip().add(1, lines.get(i));
         }
     }
 

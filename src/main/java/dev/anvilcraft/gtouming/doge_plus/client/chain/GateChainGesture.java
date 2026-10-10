@@ -158,8 +158,16 @@ public final class GateChainGesture {
                     PacketDistributor.sendToServer(new RemoveGateChainPacket(List.copyOf(chain)));
                 } else if (originFace != null) {
                     // 最终点击面 = 松开瞬间准星命中的那个面；未命中（看向天空等）则为空。
-                    Direction finalFace = minecraft.hitResult instanceof BlockHitResult hit
-                            && hit.getType() == HitResult.Type.BLOCK ? hit.getDirection() : null;
+                    // 与起始面同款：命中载体时按模型部件判定「看着哪个通道」，而不是直接用方块面，
+                    // 否则从侧面看向链尾连接的载体时会把侧面的方块面当成连接面，链尾接不上。
+                    LocalPlayer player = minecraft.player;
+                    ClientLevel level = minecraft.level;
+                    Direction finalFace = null;
+                    if (player != null && level != null
+                            && minecraft.hitResult instanceof BlockHitResult hit
+                            && hit.getType() == HitResult.Type.BLOCK) {
+                        finalFace = pickedFace(player, level, hit, hit.getBlockPos());
+                    }
                     PacketDistributor.sendToServer(new BuildGateChainPacket(
                             originPos, originFace, List.copyOf(chain), gateType, finalFace));
                 }

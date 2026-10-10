@@ -1,13 +1,17 @@
 package dev.anvilcraft.gtouming.doge_plus.logic;
 
+import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
+import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 
+import javax.annotation.Nullable;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -225,7 +229,7 @@ public final class LogicGateNetworkManager {
         chunk.findBlocks(
                 (blockState) -> true,
                 (pos, blockState) -> {
-                    if (isLogicGate(level, pos))
+                    if (logicGateData(level, pos, blockState) != null)
                         state.topologySeeds.add(pos.asLong());
                 }
         );
@@ -248,12 +252,27 @@ public final class LogicGateNetworkManager {
     }
 
     public static boolean isLogicGate(Level level, BlockPos pos) {
-        if (level.getBlockState(pos).getBlock() instanceof ILogicGate gate) {
-            for (Direction dir : Direction.values()) {
-                if (gate.doge_plus$getGateType(level, pos, dir) != FaceMode.NONE) return true;
-            }
+        return logicGateData(level, pos, level.getBlockState(pos)) != null;
+    }
+
+    /**
+     * 该位置若是逻辑门，返回它的镶嵌数据；否则返回 {@code null}。
+     *
+     * <p>「是不是逻辑门」是<b>位置</b>的属性而不是方块类型的属性：任意方块只要镶上带方向性的门材料
+     * （例如镶嵌了输出门的石头）就参与逻辑网，所以判据只能是位置上的 {@link BlockInlays} 是否存在
+     * 非 {@link FaceMode#NONE} 的面，而不是「方块 instanceof 某个接口」。</p>
+     *
+     * <p>数据还必须属于当前方块：方块与镶嵌数据是两个独立的持久化源，崩溃后可能只存下其中一个。
+     * 「方块已被移除、数据还在」时若不校验，空气就会被当成幽灵门持续收发信号；「数据指向别的方块」同理。</p>
+     */
+    @Nullable
+    static BlockInlays logicGateData(Level level, BlockPos pos, BlockState state) {
+        BlockInlays data = BlockInlayManager.get(level, pos);
+        if (!BlockInlayManager.isConsistent(state.getBlock(), data)) return null;
+        for (Direction dir : Direction.values()) {
+            if (data.getFace(dir) != FaceMode.NONE) return data;
         }
-        return false;
+        return null;
     }
 }
 

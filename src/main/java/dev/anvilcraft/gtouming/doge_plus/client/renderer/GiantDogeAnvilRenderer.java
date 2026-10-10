@@ -2,7 +2,6 @@ package dev.anvilcraft.gtouming.doge_plus.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.GiantDogeAnvil;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
@@ -16,6 +15,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -29,47 +29,42 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
- * 巨型 Doge 砧中心那三个各自绕轴旋转的核心模型。
+ * 巨型 Doge 砧中心 {@code light} 组的呼吸灯。
  *
- * <p>没有方块实体，所以既没有现成的实例列表、也没有可以存转速的地方，两件事都在这里自己解决：</p>
+ * <p>没有方块实体，所以既没有现成的实例列表、也没有可以存相位的地方，都在这里自己解决：</p>
  * <ul>
  *   <li><b>位置</b>：整套巨型砧模型只由 {@code cube=center} 那一格承载（见
  *       {@code GiantAnvilBlock#getModelHolderState}），于是「一个成型的砧」就等于「一个 cube=center 的方块」。
  *       放置 / 拆除 / 落地重建由方块的状态变化回调当场增删（见 {@link #updateAnchor}），
  *       区块加载那类不走方块更新的情况由客户端扫描兜底：每 tick 按「离玩家最近的先扫」
  *       扫固定几个区块，渲染时再逐个校验方块还在不在。整条链路不需要方块实体，也不需要新增网络包。</li>
- *   <li><b>转速</b>：沿用原来方块实体的 +1°/tick，那本来就只是世界时间的函数，直接从
+ *   <li><b>相位</b>：呼吸亮度只是世界时间的函数，直接从
  *       {@link net.minecraft.world.level.Level#getGameTime()} 推出来即可，不需要任何状态。</li>
  * </ul>
  */
 @EventBusSubscriber(modid = AnvilCraftDogePlus.MOD_ID, value = Dist.CLIENT)
 public final class GiantDogeAnvilRenderer {
 
-    /** 三个核心模型（分别绕 X / Y / Z 轴旋转）与它们各自的轴。 */
-    private static final ModelResourceLocation[] CORES = {
-            ModelResourceLocation.standalone(AnvilCraftDogePlus.of("block/anvil_core")),
-            ModelResourceLocation.standalone(AnvilCraftDogePlus.of("block/anvil_core1")),
-            ModelResourceLocation.standalone(AnvilCraftDogePlus.of("block/anvil_core2"))};
-    private static final Axis[] AXES = {Axis.XP, Axis.YP, Axis.ZP};
+    /**
+     * 模型 {@code light} 组（一串同心发光立方体）的独立模型。
+     *
+     * <p>该组已从方块模型 {@code giant_doge_anvil} 中移除，由本渲染器以同等大小在锚点处绘制，
+     * 并按世界时间调制亮度做出呼吸灯——方块模型整体是 {@code emissiveRendering(always)}，
+     * 静态渲染里没法单独调 light 组的亮度。</p>
+     */
+    private static final ModelResourceLocation LIGHT =
+            ModelResourceLocation.standalone(AnvilCraftDogePlus.of("block/giant_doge_anvil_light"));
 
-    /** 扫描半径（区块）。核心只是砧中间一小块，超出可视距离本来也看不清。 */
+    /** 呼吸周期（tick）：约 6 秒。 */
+    private static final float LIGHT_PERIOD = 120.0F;
+
+    /** 扫描半径（区块）。light 只是砧中间一小块，超出可视距离本来也看不清。 */
     private static final int SCAN_RADIUS = 8;
     /** 每 tick 最多扫几个区块：整圈 (2R+1)² 块扫完约需这些 tick 数。 */
     private static final int CHUNKS_PER_TICK = 3;
-    /** 核心相对方块中心的缩放。 */
-    private static final float CORE_SCALE = 0.8F;
-    /**
-     * 竖直修正：锚点是 {@code cube=center} 那一格（3×3×3 的中层中心），而原方块实体挂在 TOP_CENTER 上、
-     * 把模型下移了 1.3——减掉两层之差就是现在该用的偏移，观感与原实现一致。
-     */
-    private static final float ANCHOR_OFFSET_Y = -0.3F;
 
     /** 已发现的锚点（{@code cube=center} 的方块位置）。 */
     private static final Set<BlockPos> ANCHORS = new HashSet<>();
@@ -121,8 +116,7 @@ public final class GiantDogeAnvilRenderer {
                     SCAN_ORDER.add(new BlockPos(dx, 0, dz));
                 }
             }
-            SCAN_ORDER.sort((a, b) -> Integer.compare(a.getX() * a.getX() + a.getZ() * a.getZ(),
-                    b.getX() * b.getX() + b.getZ() * b.getZ()));
+            SCAN_ORDER.sort(Comparator.comparingInt(a -> a.getX() * a.getX() + a.getZ() * a.getZ()));
         }
 
         for (int i = 0; i < CHUNKS_PER_TICK; i++) {
@@ -172,9 +166,9 @@ public final class GiantDogeAnvilRenderer {
         ClientLevel level = minecraft.level;
         if (level == null || ANCHORS.isEmpty()) return;
 
-        // 转速：原方块实体每 tick +1°，纯世界时间的函数。
-        float rotation = (level.getGameTime() % 360) * 1.0F
-                + event.getPartialTick().getGameTimeDeltaPartialTick(false);
+        // 呼吸灯亮度同样只是世界时间的函数，无需任何状态。
+        float breath = breathBrightness(
+                level.getGameTime() + event.getPartialTick().getGameTimeDeltaPartialTick(false));
 
         PoseStack poseStack = event.getPoseStack();
         Vec3 camera = event.getCamera().getPosition();
@@ -191,37 +185,115 @@ public final class GiantDogeAnvilRenderer {
                 iterator.remove();
                 continue;
             }
+
+            // 呼吸灯：light 组已从方块模型移除，这里以同等大小在方块局部空间绘制，亮度按时间脉动。
             poseStack.pushPose();
-            poseStack.translate(pos.getX(), pos.getY() + ANCHOR_OFFSET_Y, pos.getZ());
-            for (int i = 0; i < CORES.length; i++) {
-                renderCore(poseStack, consumer, CORES[i], AXES[i], rotation);
-            }
+            poseStack.translate(pos.getX(), pos.getY(), pos.getZ());
+            renderLight(poseStack, consumer, breath);
             poseStack.popPose();
         }
         poseStack.popPose();
         buffers.endBatch(RenderType.cutout());
     }
 
-    /** 绕指定轴旋转并渲染一个核心模型。 */
-    private static void renderCore(PoseStack poseStack, VertexConsumer consumer,
-                                   ModelResourceLocation model, Axis axis, float rotation) {
-        poseStack.pushPose();
-        poseStack.translate(0.5F, 0.5F, 0.5F);
-        poseStack.scale(CORE_SCALE, CORE_SCALE, CORE_SCALE);
-        poseStack.mulPose(axis.rotationDegrees(rotation));
-        poseStack.translate(-0.5F, -0.5F, -0.5F);
+    /**
+     * 在给定姿态下渲染一次 {@code light} 组呼吸灯，亮度同样只由世界时间推出，效果与
+     * {@link #onRenderLevelStage} 一致。
+     *
+     * <p>供坠落实体渲染器复用：巨型砧下落实体的方块模型同样以 {@code cube=center} 的局部空间绘制，
+     * 姿态定位到同一原点即可对齐。方块形态的呼吸灯仍由世界阶段事件负责。</p>
+     *
+     * @param poseStack   已定位到巨型砧中心格原点的姿态
+     * @param buffer      目标缓冲
+     * @param partialTick 当前渲染的插值 tick
+     */
+    public static void renderBreathingLight(PoseStack poseStack, MultiBufferSource buffer, float partialTick) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return;
+        float breath = breathBrightness(level.getGameTime() + partialTick);
+        VertexConsumer consumer = buffer.getBuffer(RenderType.cutout());
+        renderLight(poseStack, consumer, breath);
+        if (buffer instanceof MultiBufferSource.BufferSource buffers) buffers.endBatch(RenderType.cutout());
+    }
+
+    /**
+     * {@link #renderBreathingLight(PoseStack, MultiBufferSource, float)} 的便捷入口：用当前帧插值 tick
+     * 计算相位。物品渲染路径拿不到 partialTick，走这里。
+     */
+    public static void renderBreathingLight(PoseStack poseStack, MultiBufferSource buffer) {
+        renderBreathingLight(
+                poseStack, buffer, Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false));
+    }
+
+    /** 呼吸灯亮度：正弦在 0.7~1.0 之间脉动，周期约 6 秒。 */
+    private static float breathBrightness(float time) {
+        // 相位用取模后的时间算，避免世界时间很大时 float 精度损失让正弦跳变甚至冻结。
+        float phase = (time % LIGHT_PERIOD) * (float) (Math.PI * 2.0 / LIGHT_PERIOD);
+        float pulse = Mth.sin(phase) * 0.5F + 0.5F;
+        return 0.7F + 0.3F * pulse;
+    }
+
+    /**
+     * 渲染 light 组呼吸灯。
+     *
+     * <p>亮度用一层 {@link BrightnessVertexConsumer} 乘到顶点色上（不依赖 {@code renderModel}
+     * 的 r/g/b 参数是否生效）；顶点光取全亮，做自发光。</p>
+     */
+    private static void renderLight(PoseStack poseStack, VertexConsumer consumer, float brightness) {
         Minecraft.getInstance()
                 .getBlockRenderer()
                 .getModelRenderer()
                 .renderModel(
                         poseStack.last(),
-                        consumer,
+                        new BrightnessVertexConsumer(consumer, brightness),
                         null,
-                        Minecraft.getInstance().getModelManager().getModel(model),
+                        Minecraft.getInstance().getModelManager().getModel(LIGHT),
                         1.0F, 1.0F, 1.0F,
                         LightTexture.FULL_BLOCK,
                         OverlayTexture.NO_OVERLAY
                 );
-        poseStack.popPose();
+    }
+
+    /** 把顶点色整体乘上 {@code brightness}（保留模型自带的逐面明暗），透明度不变。 */
+    private record BrightnessVertexConsumer(VertexConsumer delegate, float brightness) implements VertexConsumer {
+        @Override
+        public VertexConsumer addVertex(float x, float y, float z) {
+            this.delegate.addVertex(x, y, z);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setColor(int red, int green, int blue, int alpha) {
+            this.delegate.setColor(
+                    Math.round(red * this.brightness),
+                    Math.round(green * this.brightness),
+                    Math.round(blue * this.brightness),
+                    alpha);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv(float u, float v) {
+            this.delegate.setUv(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv1(int u, int v) {
+            this.delegate.setUv1(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv2(int u, int v) {
+            this.delegate.setUv2(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setNormal(float x, float y, float z) {
+            this.delegate.setNormal(x, y, z);
+            return this;
+        }
     }
 }

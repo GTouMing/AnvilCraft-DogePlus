@@ -3,6 +3,7 @@ package dev.anvilcraft.gtouming.doge_plus.block;
 import com.mojang.serialization.MapCodec;
 import dev.anvilcraft.gtouming.doge_plus.client.renderer.GiantDogeAnvilRenderer;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
+import dev.anvilcraft.lib.v2.util.ShapeUtil;
 import dev.dubhe.anvilcraft.api.event.AnvilEvent;
 import dev.dubhe.anvilcraft.block.GiantAnvilBlock;
 import dev.dubhe.anvilcraft.block.state.Cube3x3PartHalf;
@@ -10,17 +11,16 @@ import dev.dubhe.anvilcraft.block.state.GiantAnvilCube;
 import dev.dubhe.anvilcraft.entity.FallingGiantAnvilEntity;
 import dev.dubhe.anvilcraft.init.ModSoundEvents;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.common.NeoForge;
@@ -35,6 +35,69 @@ import net.neoforged.neoforge.common.NeoForge;
  */
 public class GiantDogeAnvil extends GiantAnvilBlock {
 
+    // ==================== 碰撞形状 ====================
+    // 仿前置 GiantAnvilBlock：形状写成 0..16 的静态字段（初始化只算一次）；每层只定义「西北角」「北边」
+    // 「中心」三个 canonical，其余按 Y 轴 90°/180°/270° 旋转得到（模型 90° 对称）。
+    // 碰撞/遮挡走 getPartShape（前置 AbstractMultiPartBlock 的约定）；45° 的角柱 / 斜撑用外接盒概括即可——
+    // 贴合模型的斜面由「选中描边」负责（anvillib-cube 的 CubeSelection 直接按模型几何画，见 AnvilCraftDogePlusClient）。
+    // 三个 CENTER 部件取整块实心（同前置 Shapes.block()）：模型在中心留出了旋转核心的空腔，若碰撞也照模型留空，
+    // 从模型高度到 corner 就会有一段可站的空白，整块填实才与外观一致。
+
+    /** 底部：两层台基 + 四角 45° 柱（外接盒）。 */
+    private static final VoxelShape BOTTOM_WN = ShapeUtil.merge(
+            new AABB(4, 0, 4, 16, 8, 16),
+            new AABB(8, 8, 8, 16, 11, 16),
+            new AABB(12.757, 11, 12.757, 16, 16, 16));
+    private static final VoxelShape BOTTOM_N = ShapeUtil.merge(
+            new AABB(0, 0, 4, 16, 8, 16),
+            new AABB(0, 8, 8, 16, 11, 16),
+            new AABB(0, 11, 12.757, 5.243, 16, 16),
+            new AABB(10.757, 11, 12.757, 16, 16, 16));
+    private static final VoxelShape BOTTOM_CENTER = Shapes.block();
+    private static final VoxelShape BOTTOM_WS = ShapeUtil.rotate(Direction.Axis.Y, 90, BOTTOM_WN);
+    private static final VoxelShape BOTTOM_ES = ShapeUtil.rotate(Direction.Axis.Y, 180, BOTTOM_WN);
+    private static final VoxelShape BOTTOM_EN = ShapeUtil.rotate(Direction.Axis.Y, 270, BOTTOM_WN);
+    private static final VoxelShape BOTTOM_W = ShapeUtil.rotate(Direction.Axis.Y, 90, BOTTOM_N);
+    private static final VoxelShape BOTTOM_S = ShapeUtil.rotate(Direction.Axis.Y, 180, BOTTOM_N);
+    private static final VoxelShape BOTTOM_E = ShapeUtil.rotate(Direction.Axis.Y, 270, BOTTOM_N);
+
+    /** 中部：四角柱 + 十字梁 + 台面下沿 + 角撑（外接盒）。 */
+    private static final VoxelShape MID_WN = ShapeUtil.merge(
+            new AABB(1, 14, 1, 16, 16, 16),
+            new AABB(12.757, 0, 12.757, 16, 11, 16),
+            new AABB(11.172, 10, 11.172, 16, 14, 16));
+    private static final VoxelShape MID_N = ShapeUtil.merge(
+            new AABB(0, 14, 1, 16, 16, 16),
+            new AABB(0, 0, 12.757, 5.243, 11, 16),
+            new AABB(10.757, 0, 12.757, 16, 11, 16),
+            new AABB(0, 11, 9, 16, 14, 16),
+            new AABB(15.172, 10, 11.172, 16, 14, 16),
+            new AABB(0, 10, 11.172, 0.828, 14, 16));
+    private static final VoxelShape MID_CENTER = Shapes.block();
+    private static final VoxelShape MID_WS = ShapeUtil.rotate(Direction.Axis.Y, 90, MID_WN);
+    private static final VoxelShape MID_ES = ShapeUtil.rotate(Direction.Axis.Y, 180, MID_WN);
+    private static final VoxelShape MID_EN = ShapeUtil.rotate(Direction.Axis.Y, 270, MID_WN);
+    private static final VoxelShape MID_W = ShapeUtil.rotate(Direction.Axis.Y, 90, MID_N);
+    private static final VoxelShape MID_S = ShapeUtil.rotate(Direction.Axis.Y, 180, MID_N);
+    private static final VoxelShape MID_E = ShapeUtil.rotate(Direction.Axis.Y, 270, MID_N);
+
+    /** 顶部：三级台面，下窄上宽。 */
+    private static final VoxelShape TOP_WN = ShapeUtil.merge(
+            new AABB(0, 8, 0, 16, 16, 16),
+            new AABB(1, 0, 1, 16, 4, 16),
+            new AABB(4, 4, 4, 16, 8, 16));
+    private static final VoxelShape TOP_N = ShapeUtil.merge(
+            new AABB(0, 8, 0, 16, 16, 16),
+            new AABB(0, 0, 1, 16, 4, 16),
+            new AABB(0, 4, 4, 16, 8, 16));
+    private static final VoxelShape TOP_CENTER = Shapes.block();
+    private static final VoxelShape TOP_WS = ShapeUtil.rotate(Direction.Axis.Y, 90, TOP_WN);
+    private static final VoxelShape TOP_ES = ShapeUtil.rotate(Direction.Axis.Y, 180, TOP_WN);
+    private static final VoxelShape TOP_EN = ShapeUtil.rotate(Direction.Axis.Y, 270, TOP_WN);
+    private static final VoxelShape TOP_W = ShapeUtil.rotate(Direction.Axis.Y, 90, TOP_N);
+    private static final VoxelShape TOP_S = ShapeUtil.rotate(Direction.Axis.Y, 180, TOP_N);
+    private static final VoxelShape TOP_E = ShapeUtil.rotate(Direction.Axis.Y, 270, TOP_N);
+
     public GiantDogeAnvil(Properties properties) {
         super(properties);
     }
@@ -45,109 +108,42 @@ public class GiantDogeAnvil extends GiantAnvilBlock {
     }
 
     /**
-     * 按模型轮廓做碰撞：根据巨型 Doge 砧模型的 16 个元素（含旋转元素包围盒），
-     * 逐部件概括出碰撞形状。
+     * 按模型轮廓给出每个「部件」自身的碰撞 / 遮挡形状（仿前置 {@code GiantAnvilBlock#getPartShape}）。
+     *
+     * <p>前置 {@code AbstractMultiPartBlock} 用本方法作为 {@code getCollisionShape} 与 {@code getOcclusionShape}；
+     * 描边用的 {@code getShape} 则把所有部件的本形状按各自偏移并起来得到整套结构轮廓。所以这里覆写的是
+     * {@code getPartShape}，而不是 {@code getShape}。</p>
      */
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getPartShape(BlockState state) {
         return switch (state.getValue(HALF)) {
-            // ==================== 底部 (BOTTOM) ====================
-            case BOTTOM_WN -> Shapes.or(
-                    Block.box(4, 0, 4, 16, 8, 16),
-                    Block.box(8, 8, 8, 16, 11, 16),
-                    Block.box(10, 11, 10, 16, 16, 16));
-            case BOTTOM_N -> Shapes.or(
-                    Block.box(0, 0, 4, 16, 8, 16),
-                    Block.box(0, 8, 8, 16, 11, 16));
-            case BOTTOM_EN -> Shapes.or(
-                    Block.box(0, 0, 4, 12, 8, 16),
-                    Block.box(0, 8, 8, 8, 11, 16),
-                    Block.box(0, 11, 10, 6, 16, 16));
-            case BOTTOM_W -> Shapes.or(
-                    Block.box(4, 0, 0, 16, 8, 16),
-                    Block.box(8, 8, 0, 16, 11, 16));
-            case BOTTOM_E -> Shapes.or(
-                    Block.box(0, 0, 0, 12, 8, 16),
-                    Block.box(0, 8, 0, 8, 11, 16));
-            case BOTTOM_WS -> Shapes.or(
-                    Block.box(4, 0, 0, 16, 8, 12),
-                    Block.box(8, 8, 0, 16, 11, 8),
-                    Block.box(10, 11, 0, 16, 16, 6));
-            case BOTTOM_S -> Shapes.or(
-                    Block.box(0, 0, 0, 16, 8, 12),
-                    Block.box(0, 8, 0, 16, 11, 8));
-            case BOTTOM_ES -> Shapes.or(
-                    Block.box(0, 0, 0, 12, 8, 12),
-                    Block.box(0, 8, 0, 8, 11, 8),
-                    Block.box(0, 11, 0, 6, 16, 6));
-            case BOTTOM_CENTER, TOP_CENTER, MID_CENTER -> Shapes.or(Block.box(0, 0, 0, 16, 16, 16));
-
-            // ==================== 中部 (MID) ====================
-            // 角 (4个box): 柱(0-11) + 下梁(11-13) + 上梁(13-15) + 台(15-16)
-            case MID_WN -> Shapes.or(
-                    Block.box(10, 0, 10, 16, 11, 16),      // 柱
-                    Block.box(8, 11, 8, 16, 13, 16),       // 下梁
-                    Block.box(6, 13, 6, 16, 15, 16),       // 上梁
-                    Block.box(2, 15, 2, 16, 16, 16));      // 台
-            case MID_EN -> Shapes.or(
-                    Block.box(0, 0, 10, 6, 11, 16),        // 柱
-                    Block.box(0, 11, 8, 8, 13, 16),        // 下梁
-                    Block.box(0, 13, 6, 10, 15, 16),        // 上梁
-                    Block.box(0, 15, 2, 14, 16, 16));      // 台
-            case MID_WS -> Shapes.or(
-                    Block.box(10, 0, 0, 16, 11, 6),        // 柱
-                    Block.box(8, 11, 0, 16, 13, 8),        // 下梁
-                    Block.box(6, 13, 0, 16, 15, 10),        // 上梁
-                    Block.box(2, 15, 0, 16, 16, 14));      // 台
-            case MID_ES -> Shapes.or(
-                    Block.box(0, 0, 0, 6, 11, 6),          // 柱
-                    Block.box(0, 11, 0, 8, 13, 8),         // 下梁
-                    Block.box(0, 13, 0, 10, 15, 10),         // 上梁
-                    Block.box(0, 15, 0, 14, 16, 14));      // 台
-
-            // 边 (3个box): 下梁(11-13) + 上梁(13-15) + 台(15-16)，没有柱
-            case MID_N -> Shapes.or(
-                    Block.box(0, 11, 8, 16, 13, 16),       // 下梁
-                    Block.box(0, 13, 6, 16, 15, 16),       // 上梁
-                    Block.box(0, 15, 2, 16, 16, 16));      // 台
-            case MID_S -> Shapes.or(
-                    Block.box(0, 11, 0, 16, 13, 8),        // 下梁
-                    Block.box(0, 13, 0, 16, 15, 10),        // 上梁
-                    Block.box(0, 15, 0, 16, 16, 14));      // 台
-            case MID_W -> Shapes.or(
-                    Block.box(8, 11, 0, 16, 13, 16),       // 下梁
-                    Block.box(6, 13, 0, 16, 15, 16),       // 上梁
-                    Block.box(2, 15, 0, 16, 16, 16));      // 台
-            case MID_E -> Shapes.or(
-                    Block.box(0, 11, 0, 8, 13, 16),        // 下梁
-                    Block.box(0, 13, 0, 10, 15, 16),        // 上梁
-                    Block.box(0, 15, 0, 14, 16, 16));      // 台
-
-            // ==================== 顶部 (TOP) ====================
-            case TOP_WN -> Shapes.or(
-                    Block.box(2, 0, 2, 16, 9, 16),      // 下部分 檐 (y=0-9)
-                    Block.box(1, 9, 1, 16, 16, 16));    // 上部分 台面 (y=9-16)
-            case TOP_EN -> Shapes.or(
-                    Block.box(0, 0, 2, 14, 9, 16),      // 下部分 檐 (y=0-9)
-                    Block.box(0, 9, 1, 15, 16, 16));    // 上部分 台面 (y=9-16)
-            case TOP_WS -> Shapes.or(
-                    Block.box(2, 0, 0, 16, 9, 14),      // 下部分 檐 (y=0-9)
-                    Block.box(1, 9, 0, 16, 16, 15));    // 上部分 台面 (y=9-16)
-            case TOP_ES -> Shapes.or(
-                    Block.box(0, 0, 0, 14, 9, 14),      // 下部分 檐 (y=0-9)
-                    Block.box(0, 9, 0, 15, 16, 15));    // 上部分 台面 (y=9-16)
-            case TOP_N -> Shapes.or(
-                    Block.box(0, 0, 2, 16, 9, 16),      // 下部分 檐 (y=0-9)
-                    Block.box(0, 9, 1, 16, 16, 16));    // 上部分 台面 (y=9-16)
-            case TOP_S -> Shapes.or(
-                    Block.box(0, 0, 0, 16, 9, 14),      // 下部分 檐 (y=0-9)
-                    Block.box(0, 9, 0, 16, 16, 15));    // 上部分 台面 (y=9-16)
-            case TOP_W -> Shapes.or(
-                    Block.box(2, 0, 0, 16, 9, 16),      // 下部分 檐 (y=0-9)
-                    Block.box(1, 9, 0, 16, 16, 16));    // 上部分 台面 (y=9-16)
-            case TOP_E -> Shapes.or(
-                    Block.box(0, 0, 0, 14, 9, 16),      // 下部分 檐 (y=0-9)
-                    Block.box(0, 9, 0, 15, 16, 16));    // 上部分 台面 (y=9-16)
+            case BOTTOM_WN -> BOTTOM_WN;
+            case BOTTOM_N -> BOTTOM_N;
+            case BOTTOM_EN -> BOTTOM_EN;
+            case BOTTOM_W -> BOTTOM_W;
+            case BOTTOM_E -> BOTTOM_E;
+            case BOTTOM_WS -> BOTTOM_WS;
+            case BOTTOM_S -> BOTTOM_S;
+            case BOTTOM_ES -> BOTTOM_ES;
+            case BOTTOM_CENTER -> BOTTOM_CENTER;
+            case MID_WN -> MID_WN;
+            case MID_N -> MID_N;
+            case MID_EN -> MID_EN;
+            case MID_W -> MID_W;
+            case MID_E -> MID_E;
+            case MID_WS -> MID_WS;
+            case MID_S -> MID_S;
+            case MID_ES -> MID_ES;
+            case MID_CENTER -> MID_CENTER;
+            case TOP_WN -> TOP_WN;
+            case TOP_N -> TOP_N;
+            case TOP_EN -> TOP_EN;
+            case TOP_W -> TOP_W;
+            case TOP_E -> TOP_E;
+            case TOP_WS -> TOP_WS;
+            case TOP_S -> TOP_S;
+            case TOP_ES -> TOP_ES;
+            case TOP_CENTER -> TOP_CENTER;
         };
     }
 

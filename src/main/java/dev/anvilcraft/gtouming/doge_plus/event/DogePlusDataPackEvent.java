@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.event;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.attribute.AttributeManager;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -15,5 +16,6 @@ public class DogePlusDataPackEvent {
     @SubscribeEvent
     public static void onAddReloadListeners(AddReloadListenerEvent event) {
         event.addListener(MaterialManager.INSTANCE);
+        event.addListener(AttributeManager.INSTANCE);
     }
 }

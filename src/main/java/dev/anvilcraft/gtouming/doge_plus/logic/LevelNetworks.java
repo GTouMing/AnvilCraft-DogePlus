@@ -618,13 +618,13 @@ final class LevelNetworks {
             BlockPos pos = BlockPos.of(packedPos);
             BlockState state = level.getBlockState(pos);
 
-            if (!(state.getBlock() instanceof ILogicGate)) continue;
-
             LogicGateOutputData data = LogicGateOutputData.get(level);
             if (data == null) continue;
 
             // 记录有状态门的方向：其输出由每 tick 驱动持有，需从纯函数结算中豁免。
-            BlockInlays inlays = BlockInlayManager.get(level, pos);
+            // 数据必属于当前方块（否则视为非门）。
+            BlockInlays inlays = logicGateData(level, pos, state);
+            if (inlays == null) continue;
             int statefulMask = 0;
             for (Direction dir : Direction.values()) {
                 if (inlays.getFace(dir).isStateful()) statefulMask |= 1 << dir.ordinal();
@@ -902,10 +902,11 @@ final class LevelNetworks {
 
         BlockPos blockPos = BlockPos.of(packedPos);
         BlockState state = level.getBlockState(blockPos);
-        if (!(state.getBlock() instanceof ILogicGate)) return false;
 
         // 每节点只取一次镶嵌数据；各方向的输入与设定值直接从它读，避免逐方向重复查 SavedData。
-        BlockInlays inlays = BlockInlayManager.get(level, blockPos);
+        // 数据必须属于当前方块：方块已被移除 / 记录指向别的方块时不能再当作门求值。
+        BlockInlays inlays = logicGateData(level, blockPos, state);
+        if (inlays == null) return false;
         Map<Direction, Integer> inputMap = collectNodeInputs(network, blockPos, inlays);
 
         boolean changed = false;
@@ -946,9 +947,10 @@ final class LevelNetworks {
             GateNode node = entry.getValue();
             BlockPos blockPos = BlockPos.of(pos);
             BlockState state = level.getBlockState(blockPos);
-            if (!(state.getBlock() instanceof ILogicGate gate)) continue;
+            BlockInlays inlays = logicGateData(level, blockPos, state);
+            if (inlays == null) continue;
             for (Direction dir : Direction.values()) {
-                if (gate.doge_plus$getGateType(level, blockPos, dir) != FaceMode.NOT_GATE) continue;
+                if (inlays.getFace(dir) != FaceMode.NOT_GATE) continue;
                 if (node.getOutput(dir) != before[dir.ordinal()]) {
                     recordNotGateToggle(pos, now);
                     break;

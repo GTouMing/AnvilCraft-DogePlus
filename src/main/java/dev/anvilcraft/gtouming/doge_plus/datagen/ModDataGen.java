@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.datagen;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.datagen.attribute.AttributeValueProvider;
 import dev.anvilcraft.gtouming.doge_plus.datagen.lang.EnUsLangHandler;
 import dev.anvilcraft.gtouming.doge_plus.datagen.lang.ZhCnLanguageProvider;
 import dev.anvilcraft.gtouming.doge_plus.datagen.material.BaseMaterialData;
@@ -81,6 +82,9 @@ public class ModDataGen {
                     packOutput,
                     BaseMaterialData.all(smithing, jewel),
                     InlayMaterialData.all()));
+
+            // attributes（data/<ns>/attributes/<属性>）：等级属性的每级数值
+            generator.addProvider(event.includeServer(), new AttributeValueProvider(packOutput));
 
             // inlay（镶嵌）配方 —— 本 mod 自有配方类型，自写 provider 输出
             generator.addProvider(event.includeServer(),

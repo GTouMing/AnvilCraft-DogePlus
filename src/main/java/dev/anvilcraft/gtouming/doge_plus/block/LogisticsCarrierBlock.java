@@ -2,6 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.block;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -38,6 +39,20 @@ public class LogisticsCarrierBlock extends InlayCarrierBlock {
     @Override
     protected MapCodec<? extends InlayCarrierBlock> codec() {
         return CODEC;
+    }
+
+    /**
+     * 相邻方块也是镶嵌载体、且本面与它朝向本方的面都开通了通道时，两侧通道对接：剔除本面通道端盖，
+     * 免得两层端盖在方块交界处重叠闪烁。只要有一侧未开通通道，端盖就保留。
+     *
+     * <p>通道模型本就给端盖标了 {@code cullface}，只是载体的形状不是满方，默认遮挡判定不会把它当实心，
+     * 所以相邻两个载体之间从不触发。相邻的是普通方块时交给默认判定。</p>
+     */
+    @Override
+    public boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
+        return adjacentBlockState.getBlock() instanceof InlayCarrierBlock
+                && state.getValue(property(side)).isInlaid()
+                && adjacentBlockState.getValue(property(side.getOpposite())).isInlaid();
     }
 
     @Nullable

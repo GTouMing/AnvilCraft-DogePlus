@@ -19,6 +19,8 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -83,6 +85,41 @@ public class BlockInlayManager extends SavedData {
         manager.INLAID_BLOCKS.put(pos.immutable(), inlays);
         manager.setDirty();
         syncToClients((Level) level, pos, manager.INLAID_BLOCKS.get(pos));
+    }
+
+    /**
+     * 该记录是否仍然属于给定方块。
+     *
+     * <p>方块与镶嵌数据分属区块 / {@code SavedData} 两个独立持久化源，服务器崩溃时可能只存下其中一个，
+     * 于是出现「方块是空气但记录还在」或「记录指向别的方块」的不同步。这类记录不再代表任何真实情况，
+     * 网络建图必须把它们当成「没有记录」，否则空气会被当成幽灵门 / 传输节点。</p>
+     */
+    public static boolean isConsistent(Block block, BlockInlays data) {
+        return data.block() != Blocks.AIR && data.block() == block;
+    }
+
+    /**
+     * 清理某区块内「方块字段与当前方块不符」的陈旧记录（存档两个持久化源不同步时的自愈）。
+     *
+     * <p>在区块加载时调用：残留记录若不清掉，除了让网络把空气当成节点，还会被之后放回该坐标的
+     * 新方块误继承（记录里的方块字段可能又是同类载体，看起来「对得上」）。</p>
+     */
+    public static void purgeInconsistent(ServerLevel level, ChunkPos chunkPos) {
+        BlockInlayManager manager = get(level);
+        if (manager == null) return;
+        long packedChunk = chunkPos.toLong();
+        boolean changed = false;
+        Iterator<Map.Entry<BlockPos, BlockInlays>> it = manager.INLAID_BLOCKS.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<BlockPos, BlockInlays> entry = it.next();
+            BlockPos pos = entry.getKey();
+            if (ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4) != packedChunk) continue;
+            if (entry.getValue().block() == level.getBlockState(pos).getBlock()) continue;
+            it.remove();
+            changed = true;
+            syncToClients(level, pos, BlockInlays.nulls());
+        }
+        if (changed) manager.setDirty();
     }
 
     /** 清除坐标的镶嵌记录（幂等：无记录时无操作），并广播到客户端。 */
@@ -169,92 +206,101 @@ public class BlockInlayManager extends SavedData {
 
             // 位置
             entryTag.putLong("P", pos.asLong());
-
-            // 方块 ID
-            entryTag.putString("B", BuiltInRegistries.BLOCK.getKey(inlays.block()).toString());
-
-            // ===== 保存 InlayEntry 列表 =====
-            ListTag inlayList = new ListTag();
-            for (InlayEntry inlayEntry : inlays.inlays()) {
-                CompoundTag inlayTag = new CompoundTag();
-
-                // 保存 id
-                inlayTag.putString("id", inlayEntry.id().toString());
-
-                // extra 为带类型的数据（药水效果 / 附魔条数……），按 InlayExtra 编解码写成复合标签
-                ListTag extraList = new ListTag();
-                for (InlayExtra extra : inlayEntry.extra()) {
-                    InlayExtra.CODEC.encodeStart(NbtOps.INSTANCE, extra)
-                            .result().ifPresent(extraList::add);
-                }
-                inlayTag.put("extra", extraList);
-
-                ListTag attributesList = new ListTag();
-                for (ResourceLocation attribute : inlayEntry.attributes()) {
-                    attributesList.add(StringTag.valueOf(attribute.toString()));
-                }
-                inlayTag.put("attributes", attributesList);
-
-                inlayList.add(inlayTag);
-            }
-            entryTag.put("I", inlayList);
-
-            // 保存各面方向性属性（门种 / 搬运角色统一在一张表里）
-            ListTag faceList = new ListTag();
-            for (Map.Entry<Direction, FaceMode> faceEntry : inlays.faces().entrySet()) {
-                CompoundTag faceTag = new CompoundTag();
-                faceTag.putString("dir", faceEntry.getKey().getName());
-                faceTag.putString("mode", faceEntry.getValue().name());
-                faceList.add(faceTag);
-            }
-            entryTag.put("M", faceList);
-
-            // 保存各面逻辑门设定值
-            ListTag valueList = new ListTag();
-            for (Map.Entry<Direction, Integer> valueEntry : inlays.values().entrySet()) {
-                CompoundTag valueTag = new CompoundTag();
-                valueTag.putString("dir", valueEntry.getKey().getName());
-                valueTag.putInt("value", valueEntry.getValue());
-                valueList.add(valueTag);
-            }
-            entryTag.put("V", valueList);
-
-            // 保存各面物流量（物流载体的「存入」面）
-            ListTag throughputList = new ListTag();
-            for (Map.Entry<Direction, Integer> throughputEntry : inlays.throughputs().entrySet()) {
-                CompoundTag throughputTag = new CompoundTag();
-                throughputTag.putString("dir", throughputEntry.getKey().getName());
-                throughputTag.putInt("value", throughputEntry.getValue());
-                throughputList.add(throughputTag);
-            }
-            entryTag.put("Q", throughputList);
-
-            // 保存各面过滤物品（物流载体的「存入」面）
-            ListTag filterList = new ListTag();
-            for (Map.Entry<Direction, ItemStack> filterEntry : inlays.filters().entrySet()) {
-                CompoundTag filterTag = new CompoundTag();
-                filterTag.putString("dir", filterEntry.getKey().getName());
-                filterTag.put("item", filterEntry.getValue().save(registries));
-                filterList.add(filterTag);
-            }
-            entryTag.put("F", filterList);
-
-            // 保存各面远程门信道标识（物品类型 + 数字）
-            ListTag channelList = new ListTag();
-            for (Map.Entry<Direction, RemoteChannel> channelEntry : inlays.channels().entrySet()) {
-                CompoundTag channelTag = new CompoundTag();
-                channelTag.putString("dir", channelEntry.getKey().getName());
-                channelTag.put("item", channelEntry.getValue().item().save(registries));
-                channelTag.putInt("number", channelEntry.getValue().number());
-                channelList.add(channelTag);
-            }
-            entryTag.put("C", channelList);
+            writeInlays(entryTag, inlays, registries);
 
             list.add(entryTag);
         }
 
         tag.put("InlaidBlocks", list);
         return tag;
+    }
+
+    /**
+     * 把单个方块记录（方块 ID + 镶嵌材料 + 各面编程 / 设定值 / 物流量 / 过滤 / 信道）写入 tag。
+     *
+     * <p>不含坐标：世界存档由 {@link #save} 额外写入 "P"，磁盘复制则直接把这段内容装进磁盘数据。
+     * 与 {@link #readInlays} 互为逆操作。</p>
+     */
+    public static void writeInlays(CompoundTag tag, BlockInlays inlays, HolderLookup.Provider registries) {
+        // 方块 ID
+        tag.putString("B", BuiltInRegistries.BLOCK.getKey(inlays.block()).toString());
+
+        // ===== 保存 InlayEntry 列表 =====
+        ListTag inlayList = new ListTag();
+        for (InlayEntry inlayEntry : inlays.inlays()) {
+            CompoundTag inlayTag = new CompoundTag();
+
+            // 保存 id
+            inlayTag.putString("id", inlayEntry.id().toString());
+
+            // extra 为带类型的数据（药水效果 / 附魔条数……），按 InlayExtra 编解码写成复合标签
+            ListTag extraList = new ListTag();
+            for (InlayExtra extra : inlayEntry.extra()) {
+                InlayExtra.CODEC.encodeStart(NbtOps.INSTANCE, extra)
+                        .result().ifPresent(extraList::add);
+            }
+            inlayTag.put("extra", extraList);
+
+            ListTag attributesList = new ListTag();
+            for (ResourceLocation attribute : inlayEntry.attributes()) {
+                attributesList.add(StringTag.valueOf(attribute.toString()));
+            }
+            inlayTag.put("attributes", attributesList);
+
+            inlayList.add(inlayTag);
+        }
+        tag.put("I", inlayList);
+
+        // 保存各面方向性属性（门种 / 搬运角色统一在一张表里）
+        ListTag faceList = new ListTag();
+        for (Map.Entry<Direction, FaceMode> faceEntry : inlays.faces().entrySet()) {
+            CompoundTag faceTag = new CompoundTag();
+            faceTag.putString("dir", faceEntry.getKey().getName());
+            faceTag.putString("mode", faceEntry.getValue().name());
+            faceList.add(faceTag);
+        }
+        tag.put("M", faceList);
+
+        // 保存各面逻辑门设定值
+        ListTag valueList = new ListTag();
+        for (Map.Entry<Direction, Integer> valueEntry : inlays.values().entrySet()) {
+            CompoundTag valueTag = new CompoundTag();
+            valueTag.putString("dir", valueEntry.getKey().getName());
+            valueTag.putInt("value", valueEntry.getValue());
+            valueList.add(valueTag);
+        }
+        tag.put("V", valueList);
+
+        // 保存各面物流量（物流载体的「存入」面）
+        ListTag throughputList = new ListTag();
+        for (Map.Entry<Direction, Integer> throughputEntry : inlays.throughputs().entrySet()) {
+            CompoundTag throughputTag = new CompoundTag();
+            throughputTag.putString("dir", throughputEntry.getKey().getName());
+            throughputTag.putInt("value", throughputEntry.getValue());
+            throughputList.add(throughputTag);
+        }
+        tag.put("Q", throughputList);
+
+        // 保存各面过滤物品（物流载体的「存入」面）
+        ListTag filterList = new ListTag();
+        for (Map.Entry<Direction, ItemStack> filterEntry : inlays.filters().entrySet()) {
+            CompoundTag filterTag = new CompoundTag();
+            filterTag.putString("dir", filterEntry.getKey().getName());
+            filterTag.put("item", filterEntry.getValue().save(registries));
+            filterList.add(filterTag);
+        }
+        tag.put("F", filterList);
+
+        // 保存各面远程门信道标识（物品类型 + 数字）
+        ListTag channelList = new ListTag();
+        for (Map.Entry<Direction, RemoteChannel> channelEntry : inlays.channels().entrySet()) {
+            CompoundTag channelTag = new CompoundTag();
+            channelTag.putString("dir", channelEntry.getKey().getName());
+            channelTag.put("item", channelEntry.getValue().item().save(registries));
+            channelTag.putInt("number", channelEntry.getValue().number());
+            channelList.add(channelTag);
+        }
+        tag.put("C", channelList);
     }
 
     // ==================== 加载 ====================
@@ -269,129 +315,135 @@ public class BlockInlayManager extends SavedData {
             // 读取位置
             BlockPos pos = BlockPos.of(entryTag.getLong("P"));
 
-            // 读取方块 ID
-            String blockId = entryTag.getString("B");
-            Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(blockId));
-
-            // ===== 读取 InlayEntry 列表 =====
-            List<InlayEntry> inlayEntries = new ArrayList<>();
-            ListTag inlayList = entryTag.getList("I", Tag.TAG_COMPOUND);
-
-            for (int j = 0; j < inlayList.size(); j++) {
-                CompoundTag inlayTag = inlayList.getCompound(j);
-
-                // 读取 id
-                String idStr = inlayTag.getString("id");
-                ResourceLocation id = ResourceLocation.parse(idStr);
-
-                // 读取 extra：新格式为复合标签，旧格式（纯药水 id 字符串）照旧兼容
-                List<InlayExtra> extra = new ArrayList<>();
-                ListTag extraList = inlayTag.getList("extra", Tag.TAG_COMPOUND);
-                for (int k = 0; k < extraList.size(); k++) {
-                    InlayExtra.CODEC.parse(NbtOps.INSTANCE, extraList.get(k))
-                            .result().ifPresent(extra::add);
-                }
-                if (extraList.isEmpty()) {
-                    ListTag legacyExtra = inlayTag.getList("extra", Tag.TAG_STRING);
-                    for (int k = 0; k < legacyExtra.size(); k++) {
-                        extra.add(new InlayExtra.Potion(ResourceLocation.parse(legacyExtra.getString(k))));
-                    }
-                }
-
-                List<ResourceLocation> attributes = new ArrayList<>();
-                ListTag attributesList = inlayTag.getList("attributes", Tag.TAG_STRING);
-                for (int k = 0; k < attributesList.size(); k++) {
-                    attributes.add(ResourceLocation.parse(attributesList.getString(k)));
-                }
-
-                inlayEntries.add(new InlayEntry(id, extra, attributes));
-            }
-
-            // 读取各面方向性属性。
-            // 新格式是统一表 "M"；旧数据分别存在 "D"（门种）与 "T"（搬运角色）里，读出来合并即可
-            // （两类按方块类型互斥，不会冲突）；更旧的数据连 "D" 都没有，退回从材料推导。
-            Map<Direction, FaceMode> faces = new HashMap<>();
-            ListTag faceList = entryTag.getList("M", Tag.TAG_COMPOUND);
-            if (!faceList.isEmpty()) {
-                for (int j = 0; j < faceList.size(); j++) {
-                    CompoundTag faceTag = faceList.getCompound(j);
-                    Direction dir = Direction.byName(faceTag.getString("dir"));
-                    if (dir == null) continue;
-                    faces.put(dir, parseFaceMode(faceTag.getString("mode")));
-                }
-            } else {
-                ListTag dirList = entryTag.getList("D", Tag.TAG_COMPOUND);
-                if (!dirList.isEmpty()) {
-                    for (int j = 0; j < dirList.size(); j++) {
-                        CompoundTag dirTag = dirList.getCompound(j);
-                        Direction dir = Direction.byName(dirTag.getString("dir"));
-                        if (dir == null) continue;
-                        faces.put(dir, parseFaceMode(dirTag.getString("type")));
-                    }
-                } else {
-                    faces = buildFacesFromInlays(inlayEntries);
-                }
-                ListTag transferList = entryTag.getList("T", Tag.TAG_COMPOUND);
-                for (int j = 0; j < transferList.size(); j++) {
-                    CompoundTag transferTag = transferList.getCompound(j);
-                    Direction dir = Direction.byName(transferTag.getString("dir"));
-                    if (dir == null) continue;
-                    faces.put(dir, parseFaceMode(transferTag.getString("mode")));
-                }
-            }
-
-            // 读取各面逻辑门设定值（旧数据无此 tag → 全部走默认值）
-            Map<Direction, Integer> values = new HashMap<>();
-            ListTag valueList = entryTag.getList("V", Tag.TAG_COMPOUND);
-            for (int j = 0; j < valueList.size(); j++) {
-                CompoundTag valueTag = valueList.getCompound(j);
-                Direction dir = Direction.byName(valueTag.getString("dir"));
-                if (dir != null) {
-                    values.put(dir, valueTag.getInt("value"));
-                }
-            }
-
-            // 读取各面物流量（旧数据无此 tag → 全部走默认值）
-            Map<Direction, Integer> throughputs = new HashMap<>();
-            ListTag throughputList = entryTag.getList("Q", Tag.TAG_COMPOUND);
-            for (int j = 0; j < throughputList.size(); j++) {
-                CompoundTag throughputTag = throughputList.getCompound(j);
-                Direction dir = Direction.byName(throughputTag.getString("dir"));
-                if (dir != null) {
-                    throughputs.put(dir, throughputTag.getInt("value"));
-                }
-            }
-
-            // 读取各面过滤物品（旧数据无此 tag → 全部无过滤）
-            Map<Direction, ItemStack> filters = new HashMap<>();
-            ListTag filterList = entryTag.getList("F", Tag.TAG_COMPOUND);
-            for (int j = 0; j < filterList.size(); j++) {
-                CompoundTag filterTag = filterList.getCompound(j);
-                Direction dir = Direction.byName(filterTag.getString("dir"));
-                if (dir == null) continue;
-                ItemStack filter = ItemStack.parseOptional(registries, filterTag.getCompound("item"));
-                if (!filter.isEmpty()) filters.put(dir, filter.copyWithCount(1));
-            }
-
-            // 读取各面远程门信道标识（旧数据无此 tag → 全部走默认信道）
-            Map<Direction, RemoteChannel> channels = new HashMap<>();
-            ListTag channelList = entryTag.getList("C", Tag.TAG_COMPOUND);
-            for (int j = 0; j < channelList.size(); j++) {
-                CompoundTag channelTag = channelList.getCompound(j);
-                Direction dir = Direction.byName(channelTag.getString("dir"));
-                if (dir == null) continue;
-                ItemStack item = ItemStack.parseOptional(registries, channelTag.getCompound("item"));
-                RemoteChannel channel = new RemoteChannel(item, channelTag.getInt("number")).normalized();
-                if (!channel.isDefault()) channels.put(dir, channel);
-            }
-
-            // 构建 BlockInlays 并存入
-            BlockInlays inlays =
-                    new BlockInlays(block, inlayEntries, faces, values, throughputs, filters, channels);
-            data.INLAID_BLOCKS.put(pos, inlays);
+            data.INLAID_BLOCKS.put(pos, readInlays(entryTag, registries));
         }
 
         return data;
+    }
+
+    /**
+     * 从 tag 读取单个方块记录；与 {@link #writeInlays} 互为逆操作。
+     *
+     * <p>兼容旧存档格式：面属性旧数据分别存在 "D"（门种）与 "T"（搬运角色）里，更旧的数据连 "D"
+     * 都没有，退回从材料推导；extra 也兼容旧的纯药水 id 字符串。</p>
+     */
+    public static BlockInlays readInlays(CompoundTag tag, HolderLookup.Provider registries) {
+        String blockId = tag.getString("B");
+        Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(blockId));
+
+        // ===== 读取 InlayEntry 列表 =====
+        List<InlayEntry> inlayEntries = new ArrayList<>();
+        ListTag inlayList = tag.getList("I", Tag.TAG_COMPOUND);
+
+        for (int j = 0; j < inlayList.size(); j++) {
+            CompoundTag inlayTag = inlayList.getCompound(j);
+
+            // 读取 id
+            String idStr = inlayTag.getString("id");
+            ResourceLocation id = ResourceLocation.parse(idStr);
+
+            // 读取 extra：新格式为复合标签，旧格式（纯药水 id 字符串）照旧兼容
+            List<InlayExtra> extra = new ArrayList<>();
+            ListTag extraList = inlayTag.getList("extra", Tag.TAG_COMPOUND);
+            for (int k = 0; k < extraList.size(); k++) {
+                InlayExtra.CODEC.parse(NbtOps.INSTANCE, extraList.get(k))
+                        .result().ifPresent(extra::add);
+            }
+            if (extraList.isEmpty()) {
+                ListTag legacyExtra = inlayTag.getList("extra", Tag.TAG_STRING);
+                for (int k = 0; k < legacyExtra.size(); k++) {
+                    extra.add(new InlayExtra.Potion(ResourceLocation.parse(legacyExtra.getString(k))));
+                }
+            }
+
+            List<ResourceLocation> attributes = new ArrayList<>();
+            ListTag attributesList = inlayTag.getList("attributes", Tag.TAG_STRING);
+            for (int k = 0; k < attributesList.size(); k++) {
+                attributes.add(ResourceLocation.parse(attributesList.getString(k)));
+            }
+
+            inlayEntries.add(new InlayEntry(id, extra, attributes));
+        }
+
+        // 读取各面方向性属性。
+        // 新格式是统一表 "M"；旧数据分别存在 "D"（门种）与 "T"（搬运角色）里，读出来合并即可
+        // （两类按方块类型互斥，不会冲突）；更旧的数据连 "D" 都没有，退回从材料推导。
+        Map<Direction, FaceMode> faces = new HashMap<>();
+        ListTag faceList = tag.getList("M", Tag.TAG_COMPOUND);
+        if (!faceList.isEmpty()) {
+            for (int j = 0; j < faceList.size(); j++) {
+                CompoundTag faceTag = faceList.getCompound(j);
+                Direction dir = Direction.byName(faceTag.getString("dir"));
+                if (dir == null) continue;
+                faces.put(dir, parseFaceMode(faceTag.getString("mode")));
+            }
+        } else {
+            ListTag dirList = tag.getList("D", Tag.TAG_COMPOUND);
+            if (!dirList.isEmpty()) {
+                for (int j = 0; j < dirList.size(); j++) {
+                    CompoundTag dirTag = dirList.getCompound(j);
+                    Direction dir = Direction.byName(dirTag.getString("dir"));
+                    if (dir == null) continue;
+                    faces.put(dir, parseFaceMode(dirTag.getString("type")));
+                }
+            } else {
+                faces = buildFacesFromInlays(inlayEntries);
+            }
+            ListTag transferList = tag.getList("T", Tag.TAG_COMPOUND);
+            for (int j = 0; j < transferList.size(); j++) {
+                CompoundTag transferTag = transferList.getCompound(j);
+                Direction dir = Direction.byName(transferTag.getString("dir"));
+                if (dir == null) continue;
+                faces.put(dir, parseFaceMode(transferTag.getString("mode")));
+            }
+        }
+
+        // 读取各面逻辑门设定值（旧数据无此 tag → 全部走默认值）
+        Map<Direction, Integer> values = new HashMap<>();
+        ListTag valueList = tag.getList("V", Tag.TAG_COMPOUND);
+        for (int j = 0; j < valueList.size(); j++) {
+            CompoundTag valueTag = valueList.getCompound(j);
+            Direction dir = Direction.byName(valueTag.getString("dir"));
+            if (dir != null) {
+                values.put(dir, valueTag.getInt("value"));
+            }
+        }
+
+        // 读取各面物流量（旧数据无此 tag → 全部走默认值）
+        Map<Direction, Integer> throughputs = new HashMap<>();
+        ListTag throughputList = tag.getList("Q", Tag.TAG_COMPOUND);
+        for (int j = 0; j < throughputList.size(); j++) {
+            CompoundTag throughputTag = throughputList.getCompound(j);
+            Direction dir = Direction.byName(throughputTag.getString("dir"));
+            if (dir != null) {
+                throughputs.put(dir, throughputTag.getInt("value"));
+            }
+        }
+
+        // 读取各面过滤物品（旧数据无此 tag → 全部无过滤）
+        Map<Direction, ItemStack> filters = new HashMap<>();
+        ListTag filterList = tag.getList("F", Tag.TAG_COMPOUND);
+        for (int j = 0; j < filterList.size(); j++) {
+            CompoundTag filterTag = filterList.getCompound(j);
+            Direction dir = Direction.byName(filterTag.getString("dir"));
+            if (dir == null) continue;
+            ItemStack filter = ItemStack.parseOptional(registries, filterTag.getCompound("item"));
+            if (!filter.isEmpty()) filters.put(dir, filter.copyWithCount(1));
+        }
+
+        // 读取各面远程门信道标识（旧数据无此 tag → 全部走默认信道）
+        Map<Direction, RemoteChannel> channels = new HashMap<>();
+        ListTag channelList = tag.getList("C", Tag.TAG_COMPOUND);
+        for (int j = 0; j < channelList.size(); j++) {
+            CompoundTag channelTag = channelList.getCompound(j);
+            Direction dir = Direction.byName(channelTag.getString("dir"));
+            if (dir == null) continue;
+            ItemStack item = ItemStack.parseOptional(registries, channelTag.getCompound("item"));
+            RemoteChannel channel = new RemoteChannel(item, channelTag.getInt("number")).normalized();
+            if (!channel.isDefault()) channels.put(dir, channel);
+        }
+
+        return new BlockInlays(block, inlayEntries, faces, values, throughputs, filters, channels);
     }
 
     /**

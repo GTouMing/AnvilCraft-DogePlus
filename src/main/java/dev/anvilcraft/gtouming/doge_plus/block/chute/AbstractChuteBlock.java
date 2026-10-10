@@ -74,7 +74,8 @@ public abstract class AbstractChuteBlock extends BetterBaseEntityBlock
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        Direction dir = context.getClickedFace().getOpposite();
+        // 点击面的法线正指着玩家，直接取它，出/入口就朝自己；按住 Shift 取反，退回朝外。
+        Direction dir = context.getClickedFace();
         if (context.getPlayer() != null && context.getPlayer().isShiftKeyDown()) dir = dir.getOpposite();
         Direction facing = canFaceUp() ? dir : (dir.getAxis() == Direction.Axis.Y ? Direction.DOWN : dir);
         BlockState result = getState(context.getLevel(), context.getClickedPos(), facing);

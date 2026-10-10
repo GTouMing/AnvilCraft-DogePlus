@@ -1,8 +1,12 @@
 package dev.anvilcraft.gtouming.doge_plus.block.entity;
 
+import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
+import dev.dubhe.anvilcraft.api.item.IDiskCloneable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -12,6 +16,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * 镶嵌载体方块实体。
@@ -20,7 +25,7 @@ import javax.annotation.Nullable;
  * 与运行时显示值（计数门的已计数 / 延时门的已计时），同步给客户端供 HUD 显示
  * （无需再回服务端查询）。同时作为连接件渲染器的挂载点。</p>
  */
-public class InlayCarrierBlockEntity extends BlockEntity {
+public class InlayCarrierBlockEntity extends BlockEntity implements IDiskCloneable {
 
     /** 各面的信号强度，下标同 {@link Direction#ordinal()}。 */
     private final int[] signals = new int[Direction.values().length];
@@ -66,6 +71,40 @@ public class InlayCarrierBlockEntity extends BlockEntity {
         }
         if (changed) this.setChanged();
         return changed;
+    }
+
+    // ==================== 磁盘复制 ====================
+
+    /**
+     * 把该坐标的镶嵌材料与各面编程（门种 / 设定值 / 物流量 / 过滤 / 信道）写入磁盘数据。
+     */
+    @Override
+    public void storeDiskData(CompoundTag tag) {
+        if (this.level == null) return;
+        BlockInlayManager.writeInlays(
+                tag, BlockInlayManager.get(this.level, this.worldPosition), this.level.registryAccess());
+    }
+
+    /**
+     * 把磁盘数据整体套用到该坐标，并重建网络与外观。
+     *
+     * <p>方块字段以本方块为准，来源只提供镶嵌内容与各面编程。兼容性由 {@link #getDiskCompatibleGroups()}
+     * 保证（只有同为逻辑载体 / 物流载体 / 普通载体的磁盘才会被套用）。</p>
+     */
+    @Override
+    public void applyDiskData(CompoundTag tag) {
+        if (this.level == null) return;
+        InlayCarrierBlock.replaceInlays(
+                this.level, this.worldPosition,
+                BlockInlayManager.readInlays(tag, this.level.registryAccess()));
+    }
+
+    /**
+     * 磁盘兼容组：按载体方块区分，逻辑 / 物流 / 普通载体的编程互不套用（取值域本就不同）。
+     */
+    @Override
+    public List<String> getDiskCompatibleGroups() {
+        return List.of(BuiltInRegistries.BLOCK.getKey(this.getBlockState().getBlock()).toString());
     }
 
     @Override

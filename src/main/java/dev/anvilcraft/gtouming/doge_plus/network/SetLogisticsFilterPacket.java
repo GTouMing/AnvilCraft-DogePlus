@@ -5,6 +5,7 @@ import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
+import dev.anvilcraft.gtouming.doge_plus.transfer.ItemTransferNetworkManager;
 import dev.anvilcraft.lib.v2.network.packet.IInsensitiveBiPacket;
 import dev.anvilcraft.lib.v2.network.packet.IPacket;
 import net.minecraft.core.BlockPos;
@@ -57,5 +58,8 @@ public record SetLogisticsFilterPacket(BlockPos pos, Direction face, ItemStack f
         if (inlays.getFace(face) != FaceMode.INSERT) return;
 
         BlockInlayManager.put(level, pos, inlays.withFilter(face, filter));
+        // 过滤可能属于链路中「存入」面：按需货源缓存里已固化沿途过滤，必须失效重算，
+        // 否则新过滤要等下次拓扑变化才生效。拓扑没变，但重建一次网络最省心（玩家操作，频率低）。
+        ItemTransferNetworkManager.topologyChanged(level, pos);
     }
 }

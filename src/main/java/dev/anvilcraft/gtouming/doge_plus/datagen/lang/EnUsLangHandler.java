@@ -73,6 +73,23 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_details", "Hold [Shift] for inlay info");
         provider.add("tooltip.anvilcraft_doge_plus.material_attributes", "Inlay attributes:");
 
+        // ===== Item descriptions (mirrors base tooltip.anvilcraft.item.<id>, looked up by item id) =====
+        provider.add("tooltip.anvilcraft_doge_plus.item.doge_steel_ingot", "A piece of iron with good malleability");
+        provider.add("tooltip.anvilcraft_doge_plus.item.doge_steel_block", "A large block of iron with good malleability");
+        provider.add("tooltip.anvilcraft_doge_plus.item.chute_dispenser", "A combination of a Chute/Magnetic Chute and a Dispenser/Dropper, dispensing/dropping up to nine times the amount");
+        provider.add("tooltip.anvilcraft_doge_plus.item.chute_dropper", "A combination of a Chute/Magnetic Chute and a Dispenser/Dropper, dispensing/dropping up to nine times the amount");
+        provider.add("tooltip.anvilcraft_doge_plus.item.magnetic_chute_dispenser", "A combination of a Chute/Magnetic Chute and a Dispenser/Dropper, dispensing/dropping up to nine times the amount");
+        provider.add("tooltip.anvilcraft_doge_plus.item.magnetic_chute_dropper", "A combination of a Chute/Magnetic Chute and a Dispenser/Dropper, dispensing/dropping up to nine times the amount");
+        provider.add("tooltip.anvilcraft_doge_plus.item.doge_anvil", "Try feeding it raw meat?");
+        provider.add("tooltip.anvilcraft_doge_plus.item.giant_doge_anvil", "Big doge anvil");
+        provider.add("tooltip.anvilcraft_doge_plus.item.doge_magnet", "A more powerful handheld magnet");
+        provider.add("tooltip.anvilcraft_doge_plus.item.mobile_silencer", "A head-mounted active silencer");
+        provider.add("tooltip.anvilcraft_doge_plus.item.inlay_carrier", "Material for logic and logistics carriers");
+        provider.add("tooltip.anvilcraft_doge_plus.item.logic_carrier", "Transmit redstone signals more conveniently");
+        provider.add("tooltip.anvilcraft_doge_plus.item.logistics_carrier", "Transfer items more conveniently");
+        provider.add("tooltip.anvilcraft_doge_plus.item.inlay_table", "Performs inlay recipes");
+        provider.add("tooltip.anvilcraft_doge_plus.item.inlay_crafting_table", "Performs inlay crafting recipes");
+
         // ===== Anvil-hammer inspection HUD =====
         provider.add("tooltip.anvilcraft_doge_plus.inspection.sockets", "Sockets: %1$s/%2$s");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.empty", "No inlays");

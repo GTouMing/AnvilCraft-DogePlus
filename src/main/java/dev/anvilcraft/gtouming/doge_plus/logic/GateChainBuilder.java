@@ -189,10 +189,15 @@ public final class GateChainBuilder {
             changes.put(pos, faces);
         }
 
-        // 起点面：属于尚未编程的逻辑载体时改为 G（成为驱动端），否则保持外部信号来源不变。
-        // 单元素链例外：它的输出指向点击面（见上），起点这一侧应当是接收端，留给下面的终点逻辑接成输入门。
+        // 起点面：链首以「输入」接住起始方块时，把该面编程为驱动端（源头），使已存在的载体驱动整条链。
+        // 判据用「链首朝向起点的面是否为 INPUT」，而不是「链长 > 1」——这样单元素链同样能接上起点
+        // （旧写法只在链长 > 1 时接起点，单元素链于是成了收不到信号的死链）。
+        // 单元素链若在松手时仍瞄准起始面，链尾会改为驱动该面（见上），此时链首朝向起点的面是输出
+        // 而非输入，便不再把起点也设成驱动端，免得两个输出门迎面相对、谁都不驱动谁。
+        Map<Direction, FaceMode> headFaces = changes.get(chain.getFirst());
         BlockState originState = level.getBlockState(originPos);
-        if (chain.size() > 1
+        if (headFaces != null
+                && headFaces.get(originFace.getOpposite()) == FaceMode.INPUT
                 && originState.getBlock() instanceof LogicCarrierBlock
                 && BlockInlayManager.get(level, originPos).getFace(originFace) == FaceMode.NONE) {
             changes.computeIfAbsent(originPos, key -> new HashMap<>()).putIfAbsent(originFace, gate);

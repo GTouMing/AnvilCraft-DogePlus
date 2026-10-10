@@ -2,7 +2,9 @@ package dev.anvilcraft.gtouming.doge_plus.client;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.client.markdown.DogePlusRecipeComponentFactories;
+import dev.anvilcraft.gtouming.doge_plus.client.selection.DogeBlockSelection;
 import dev.anvilcraft.gtouming.doge_plus.event.RegisterRecipeBookCategoriesEventHandler;
+import dev.anvilcraft.lib.v2.cube.client.CubeSelection;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -16,6 +18,9 @@ import net.neoforged.fml.common.Mod;
 @Mod(value = AnvilCraftDogePlus.MOD_ID, dist = Dist.CLIENT)
 public class AnvilCraftDogePlusClient {
     public AnvilCraftDogePlusClient(IEventBus modEventBus) {
+        // 启用 anvillib-cube 的立方体选中（与前置 AnvilCraftClient 一致），并按烘焙模型几何自备描边。
+        CubeSelection.enableNamespace(AnvilCraftDogePlus.MOD_ID);
+        modEventBus.addListener(DogeBlockSelection::bake);
         // 向 Ageratum 注册镶嵌配方渲染组件，使手册中的 inlay 配方可显示
         DogePlusRecipeComponentFactories.RECIPE_COMPONENT_FACTORIES.register(modEventBus);
         // 自定义配方类型（如镶合）注册为 UNKNOWN 配方书分类，避免客户端逐条告警

@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * 一张物品传输网：由「本方存入面 ↔ 正邻格的取出面」这条有向关系弱连通起来的全部传输节点。
@@ -29,13 +30,24 @@ final class TransferNetwork {
     boolean valid = true;
 
     /**
-     * 节点位置 → 该节点（的存入面）能到达的全部「取出」货源（顶点图里的出边），先近后远。
+     * 网络级共享冷却：下次可搬运的游戏刻。
+     *
+     * <p>整张网的「存入」面共用这一个冷却——冷却未到就整张网都不动；一轮真的搬动了物品才被重置，
+     * 没搬动则不冷却、下一 tick 立即重试。拓扑重建会重建本对象，冷却随之归零。</p>
+     */
+    long readyAt = 0;
+
+    /**
+     * 节点位置 → 该节点（的存入面）能到达的全部「取出」货源路线（顶点图里的出边），先近后远。
      *
      * <p>这是一份<b>按需缓存</b>（照前置流体管网的 reachability 缓存）：真正要搬运时才用一次反向
      * BFS 算出并填进来，空结果也缓存（负缓存）；有效取出集合一变就整体清空重算。
      * 因此没被搬运过的节点不占内存，也不会随取出数量线性膨胀。</p>
+     *
+     * <p>每条路线还带上沿途「存入」面的过滤（{@link SourceRoute}）。因此<i>设置过滤</i>本身也会让本缓存
+     * 过期，需要在过滤变化时一并失效（见 {@code SetLogisticsFilterPacket}）。</p>
      */
-    final Long2ObjectOpenHashMap<ObjectArrayList<TransferSource>> sources = new Long2ObjectOpenHashMap<>();
+    final Long2ObjectOpenHashMap<ObjectArrayList<SourceRoute>> sources = new Long2ObjectOpenHashMap<>();
 
     /**
      * 已记录的有效「取出」集合（顶点图里的取出顶点）。
@@ -104,4 +116,17 @@ record TransferSource(long sourcePos, Direction sourceFace) {
     Direction containerSide() {
         return this.sourceFace.getOpposite();
     }
+}
+
+/**
+ * 一条货源路线：一个「取出」源，以及从服务「存入」面到该源沿途每一道「存入」面的过滤。
+ *
+ * <p>链路里朝相邻载体、本身不收货的中间「存入」面，过滤同样是物品通往目标的闸门：物品要从源容器端到端
+ * 走到目标容器，必须依次通过沿途每一道「存入」面的过滤（逐级 AND），而不只是目标面那一道。
+ * 这里记下沿途这些面的过滤（不含服务面自身，服务面的过滤由搬运方另行校验）。</p>
+ *
+ * @param source       取出源
+ * @param chainFilters 沿途中间「存入」面的过滤（按路径顺序；可能为空）
+ */
+record SourceRoute(TransferSource source, ObjectArrayList<ItemStack> chainFilters) {
 }

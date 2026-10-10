@@ -13,7 +13,8 @@ import java.util.Map;
  * 物品传输网管理器（与 {@link dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager} 同构）。
  *
  * <p>按维度维护由「本方存入面 ↔ 正邻格的取出面」连起来的有向网络：拓扑变化时重建、重建时重算
- * 每个「存入」面的最近货源，每 server tick 按 7 游戏刻冷却把货物从货源容器搬到存入容器。</p>
+ * 每个「存入」面的最近货源，每 server tick 推进一次搬运——整张网共用一个 7 游戏刻冷却，
+ * 一轮里多个「存入」面从同一「取出」面取货时按各自物流量为权重分配该源取出的总量。</p>
  */
 public final class ItemTransferNetworkManager {
 

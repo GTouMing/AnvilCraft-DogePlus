@@ -1,6 +1,5 @@
 package dev.anvilcraft.gtouming.doge_plus.util;
 
-import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.init.ModDataComponentTypes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
@@ -8,12 +7,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.EquipmentSlotGroup;
-import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.*;
-import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -114,82 +108,7 @@ public final class InlayUtil {
         } else {
             result.set(ModDataComponentTypes.INLAY, inlays);
         }
-        return reapplyAttributeModifiers(result);
-    }
-
-    // ==================== 属性修饰器 ====================
-
-    public static ItemAttributeModifiers getCurrentModifiers(ItemStack stack) {
-        ItemAttributeModifiers fromComponent = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
-        if (fromComponent != null && fromComponent != ItemAttributeModifiers.EMPTY) {
-            return fromComponent;
-        }
-
-        Item item = stack.getItem();
-        if (item instanceof ArmorItem armorItem) {
-            return armorItem.getDefaultAttributeModifiers();
-        }
-        return ItemAttributeModifiers.EMPTY;
-    }
-
-    public static ItemStack reapplyAttributeModifiers(ItemStack stack) {
-        int defense = countProperty(stack, InlayProperty.DEFENSE);
-        int life = countProperty(stack, InlayProperty.LIFE);
-        int attack = countProperty(stack, InlayProperty.ATTACK);
-
-        ItemAttributeModifiers modifiers = getCurrentModifiers(stack);
-        EquipmentSlotGroup slotGroup = getSlotGroupForItem(stack);
-        double base = hasProperty(stack, InlayProperty.RESONANCE) ? 4.0 : 2.0;
-
-        modifiers = applyModifier(modifiers, Attributes.ARMOR, defense, "inlay_defense", base, slotGroup);
-        modifiers = applyModifier(modifiers, Attributes.MAX_HEALTH, life, "inlay_life", base, slotGroup);
-        modifiers = applyModifier(modifiers, Attributes.ATTACK_DAMAGE, attack, "inlay_attack", base, EquipmentSlotGroup.MAINHAND);
-
-        stack.set(DataComponents.ATTRIBUTE_MODIFIERS, modifiers);
-        return stack;
-    }
-
-    private static ItemAttributeModifiers applyModifier(ItemAttributeModifiers modifiers,
-                                                        Holder<Attribute> attribute,
-                                                        int count,
-                                                        String key,
-                                                        double base,
-                                                        EquipmentSlotGroup slot) {
-        ResourceLocation id = AnvilCraftDogePlus.of(key);
-        ItemAttributeModifiers.Builder builder = ItemAttributeModifiers.builder();
-
-        // 复制所有原有的修饰器（排除同名）
-        for (ItemAttributeModifiers.Entry entry : modifiers.modifiers()) {
-            if (!entry.modifier().is(id)) {
-                builder.add(entry.attribute(), entry.modifier(), entry.slot());
-            }
-        }
-
-        if (count > 0) {
-            builder.add(
-                    attribute,
-                    new AttributeModifier(id, base * count, AttributeModifier.Operation.ADD_VALUE),
-                    slot
-            );
-        }
-
-        return builder.build();
-    }
-
-    private static EquipmentSlotGroup getSlotGroupForItem(ItemStack stack) {
-        Item item = stack.getItem();
-        return switch (item) {
-            case ArmorItem armor -> switch (armor.getEquipmentSlot()) {
-                case HEAD -> EquipmentSlotGroup.HEAD;
-                case CHEST -> EquipmentSlotGroup.CHEST;
-                case LEGS -> EquipmentSlotGroup.LEGS;
-                case FEET -> EquipmentSlotGroup.FEET;
-                default -> EquipmentSlotGroup.ANY;
-            };
-            case ShieldItem ignored -> EquipmentSlotGroup.OFFHAND;
-            case TieredItem ignored -> EquipmentSlotGroup.MAINHAND;
-            default -> EquipmentSlotGroup.ANY;
-        };
+        return result;
     }
 
     // ==================== 附魔操作 ====================

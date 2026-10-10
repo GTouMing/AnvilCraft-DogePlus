@@ -160,7 +160,9 @@ public class ModBlocks {
     public static final BlockEntry<InlayCarrierBlock> INLAY_CARRIER =
             REGISTRUM.block("inlay_carrier", InlayCarrierBlock::new)
                     .initialProperties(() -> Blocks.IRON_BLOCK)
-                    .properties(p -> p.isValidSpawn(Blocks::never))
+                    // 载体的碰撞盒只是中心体等薄件，形状判定的 isSolid() 为 false，水流会把这种
+                    // 「非实心」方块冲掉；强制判为实心后水流不再灌入，载体就不会被冲走。
+                    .properties(p -> p.isValidSpawn(Blocks::never).forceSolidOn())
                     .blockstate(InlayCarrierBlockStateGenerator::generate)
                     .loot(ModBlocks::dropSelfLoot)
                     // 方块状态是 multipart，Registrum 取不到「默认变体的模型」，只能自己指定物品模型。
@@ -177,7 +179,9 @@ public class ModBlocks {
     public static final BlockEntry<LogicCarrierBlock> LOGIC_CARRIER =
             REGISTRUM.block("logic_carrier", LogicCarrierBlock::new)
                     .initialProperties(() -> Blocks.IRON_BLOCK)
-                    .properties(p -> p.isValidSpawn(Blocks::never))
+                    // 载体的碰撞盒只是中心体等薄件，形状判定的 isSolid() 为 false，水流会把这种
+                    // 「非实心」方块冲掉；强制判为实心后水流不再灌入，载体就不会被冲走。
+                    .properties(p -> p.isValidSpawn(Blocks::never).forceSolidOn())
                     .blockstate(InlayCarrierBlockStateGenerator::generate)
                     .loot(ModBlocks::dropSelfLoot)
                     .item()
@@ -192,7 +196,9 @@ public class ModBlocks {
     public static final BlockEntry<LogisticsCarrierBlock> LOGISTICS_CARRIER =
             REGISTRUM.block("logistics_carrier", LogisticsCarrierBlock::new)
                     .initialProperties(() -> Blocks.IRON_BLOCK)
-                    .properties(p -> p.isValidSpawn(Blocks::never))
+                    // 载体的碰撞盒只是中心体等薄件，形状判定的 isSolid() 为 false，水流会把这种
+                    // 「非实心」方块冲掉；强制判为实心后水流不再灌入，载体就不会被冲走。
+                    .properties(p -> p.isValidSpawn(Blocks::never).forceSolidOn())
                     // 物流面不参与红石、永远不会通电：没有通电变体（相应模型名传 null）；中心体也不是
                     // hub 那一支（恒渲染、由未编程面逐面画），贯通模型与贯通通电模型同样传 null。
                     .blockstate((context, provider) -> InlayCarrierBlockStateGenerator.generate(

@@ -86,6 +86,23 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inlay_details", "按住 [Shift] 查看镶嵌信息");
         add("tooltip.anvilcraft_doge_plus.material_attributes", "镶嵌属性：");
 
+        // ===== 物品描述行（仿前置 tooltip.anvilcraft.item.<id>，代码按物品 id 自动查找） =====
+        add("tooltip.anvilcraft_doge_plus.item.doge_steel_ingot", "一块可塑性良好的铁");
+        add("tooltip.anvilcraft_doge_plus.item.doge_steel_block", "一大块可塑性良好的铁");
+        add("tooltip.anvilcraft_doge_plus.item.chute_dispenser", "溜槽/磁性溜槽与发射器/投掷器的结合体，最多九倍发射/投掷量");
+        add("tooltip.anvilcraft_doge_plus.item.chute_dropper", "溜槽/磁性溜槽与发射器/投掷器的结合体，最多九倍发射/投掷量");
+        add("tooltip.anvilcraft_doge_plus.item.magnetic_chute_dispenser", "溜槽/磁性溜槽与发射器/投掷器的结合体，最多九倍发射/投掷量");
+        add("tooltip.anvilcraft_doge_plus.item.magnetic_chute_dropper", "溜槽/磁性溜槽与发射器/投掷器的结合体，最多九倍发射/投掷量");
+        add("tooltip.anvilcraft_doge_plus.item.doge_anvil", "试试喂它生肉？");
+        add("tooltip.anvilcraft_doge_plus.item.giant_doge_anvil", "大狗砧");
+        add("tooltip.anvilcraft_doge_plus.item.doge_magnet", "更强大的手持磁铁");
+        add("tooltip.anvilcraft_doge_plus.item.mobile_silencer", "头戴式主动消音器");
+        add("tooltip.anvilcraft_doge_plus.item.inlay_carrier", "逻辑和物流载体的材料");
+        add("tooltip.anvilcraft_doge_plus.item.logic_carrier", "更方便地传递红石信号");
+        add("tooltip.anvilcraft_doge_plus.item.logistics_carrier", "更方便地传输物品");
+        add("tooltip.anvilcraft_doge_plus.item.inlay_table", "执行镶嵌配方");
+        add("tooltip.anvilcraft_doge_plus.item.inlay_crafting_table", "执行镶合配方");
+
         // ===== 头戴铁砧锤检查信息 =====
         add("tooltip.anvilcraft_doge_plus.inspection.sockets", "镶孔：%1$s/%2$s");
         add("tooltip.anvilcraft_doge_plus.inspection.empty", "未镶嵌");

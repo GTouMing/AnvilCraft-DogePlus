@@ -64,11 +64,11 @@ When **the base material is present and the material slot is empty**, it tries t
 | **Cold Forged**  | <ref item="anvilcraft:frost_metal_ingot"/>  | Slowly repairs durability in water or powder snow.                                         |
 | **Eternal**      | <ref item="anvilcraft:transcendium_ingot"/> | Indestructible, immune to fire, explosion, cactus, time and the void.                      |
 | **Nirvana**      | Totem                                       | Triggers a totem on death, then the inlay material shatters.                               |
-| **Defense**      | Netherite Ingot                             | Grants +2 armor when held or equipped.                                                     |
-| **Life**         | <ref item="anvilcraft:royal_steel_ingot"/>  | Grants +2 max health when held or equipped.                                                |
-| **Attack**       | <ref item="anvilcraft:cursed_gold_ingot"/>  | Grants +2 attack damage when held or equipped.                                             |
+| **Defense**      | Netherite Ingot                             | Scales with the total number of Defense inlays equipped (see Attribute Levels).            |
+| **Life**         | <ref item="anvilcraft:royal_steel_ingot"/>  | Scales with the total number of Life inlays equipped (see Attribute Levels).               |
+| **Attack**       | <ref item="anvilcraft:cursed_gold_ingot"/>  | Scales with the total number of Attack inlays equipped (see Attribute Levels).             |
 | **Enchant**      | Enchanted Book / Book                       | Merges enchantments when inlaid, extracts them when removed.                               |
-| **Effect**       | Potion                                      | Grants potion effects when held, equipped or placed.                                       |
+| **Effect**       | Potion                                      | Potion effects when equipped; inlay count sets the amplifier (see Attribute Levels).       |
 | **Output**       | Redstone                                    | Outputs redstone signals from this face.                                                   |
 | **Input**        | <ref item="anvilcraft:redstone_wire"/>      | Inputs redstone signals from this face.                                                    |
 | **NOT Gate**     | Redstone Torch                              | Outputs the inverted signal of the opposite face.                                          |
@@ -82,15 +82,24 @@ When **the base material is present and the material slot is empty**, it tries t
 | **Extract**      | <ref item="anvilcraft:magnetic_chute"/>     | Takes items from the container it faces.                                                   |
 | **Generator**    | <ref item="anvilcraft:supercapacitor"/>     | Produces 512 kW of power once placed.                                                      |
 
+### Attribute Levels
+
+**Defense**, **Life**, **Attack** and **Effect** are handled by the **attribute level system**: it counts the total inlay entries carrying that attribute across all your equipment, and **the count is the level**. The per-level value is defined by the datapack file `data/<namespace>/attributes/<attribute>.json`:
+
+- Use a function when the values are regular: `{"function": "2 * level"}`
+- Use an explicit table otherwise: `{"values": [2, 4, 6]}` (index 0 = level 1, clamped to the last entry)
+
+Equipping/unequipping, logging in and respawning all trigger a full recount; only changed levels update, and level 0 removes the bonus: armor / max health / attack damage are applied as entity attribute modifiers, and potion effects scale their amplifier.
+
 ### Resonance
 
 The **Resonance** property does nothing on its own; it enhances the other inlay properties:
 
 | Enhanced property | Resonance effect                                                                                              |
 |-------------------|---------------------------------------------------------------------------------------------------------------|
-| Defense           | Grants +4 armor when held or equipped.                                                                        |
-| Life              | Grants +4 max health when held or equipped.                                                                   |
-| Attack            | Grants +4 attack damage when held or equipped.                                                                |
+| Defense           | This item's inlays count double toward the matching attribute level.                                          |
+| Life              | This item's inlays count double toward the matching attribute level.                                          |
+| Attack            | This item's inlays count double toward the matching attribute level.                                          |
 | Enchant           | Merges enchantments with a 50% chance to raise the level by 1, and a 50% chance to extract them when removed. |
 | Nirvana           | Triggers a totem on death, then the material has a 50% chance to shatter.                                     |
 | High Temp         | The longer it stays in lava or fire, the more accumulated damage; attacking slowly consumes it.               |
@@ -164,5 +173,5 @@ Inlays **are not lost when a block is placed**. A block item that has been inlai
 - The transfer mode of each face can be programmed; hold an Anvil Hammer and long-press right-click to open the wheel.
 - Aim at an **Insert** logistics face and adjust the **throughput** with **Ctrl + scroll wheel**; with an item in the offhand and an Anvil Hammer in the main hand, right-click a logistics to set a **filter**.
 - **Throughput**: the number of items transported per trip; **filter**: only the specified items are allowed through, and filters are supported.
-- Logistics Carriers can be connected into a transport chain; an **Insert** end records all **Extract** ends, and no matter how long the chain is, items travel end-to-end with a 7gt cooldown.
+- Logistics Carriers chain into a transport network: an **Insert** end records all **Extract** ends and moves items end to end, the whole chain **sharing one 7gt cooldown**. When several **Insert** faces draw from one **Extract** face, the amount is split **weighted by each face's throughput** (zero-share faces fall through). **Every Insert face's filter along the chain applies** (cumulative AND).
 - The **Insert / Extract** target can be a block container or an entity container such as a [Doge Node](../entity/doge_node.md).

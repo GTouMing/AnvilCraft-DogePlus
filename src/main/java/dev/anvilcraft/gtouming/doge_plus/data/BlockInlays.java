@@ -222,6 +222,11 @@ public record BlockInlays(
         return new BlockInlays(block, inlays, faces, Map.copyOf(newValues), throughputs, filters, channels);
     }
 
+    /** 返回把方块字段替换为 {@code newBlock} 的新实例（面属性 / 设定值 / 物流量 / 信道原样保留）。 */
+    public BlockInlays withBlock(Block newBlock) {
+        return new BlockInlays(newBlock, inlays, faces, values, throughputs, filters, channels);
+    }
+
     /** 返回把各面信道标识整体替换为 {@code newChannels}（缺省的面走默认信道）的新实例。 */
     public BlockInlays withChannels(Map<Direction, RemoteChannel> newChannels) {
         return new BlockInlays(block, inlays, faces, values, throughputs, filters, Map.copyOf(newChannels));

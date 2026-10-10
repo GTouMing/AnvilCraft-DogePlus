@@ -12,7 +12,6 @@
 			"name": "ne",
 			"from": [10, 6.5, 5],
 			"to": [11, 9.5, 6],
-			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 8]},
 			"faces": {
 				"north": {"uv": [0, 5, 3, 6], "rotation": 90, "texture": "#0"},
 				"east": {"uv": [0, 5, 3, 6], "rotation": 90, "texture": "#0"},

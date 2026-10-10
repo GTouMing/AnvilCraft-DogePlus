@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.event;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.transfer.ItemTransferNetworkManager;
 import net.minecraft.server.level.ServerLevel;
@@ -27,6 +28,9 @@ public class LevelEventListener {
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load event) {
         if (event.getLevel() instanceof ServerLevel serverLevel) {
+            // 先自愈「方块与镶嵌数据不同步」的崩溃残留（方块是空气但记录还在等），再重建网络，
+            // 免得残留记录把空气当成幽灵门 / 传输节点，或被之后放回该坐标的新方块误继承。
+            BlockInlayManager.purgeInconsistent(serverLevel, event.getChunk().getPos());
             // 网络缓存不持久化，区块进入服务端内存时必须用其中的导线作为重建种子。
             LogicGateNetworkManager.chunkLoaded(serverLevel, event.getChunk());
             ItemTransferNetworkManager.chunkLoaded(serverLevel, event.getChunk());

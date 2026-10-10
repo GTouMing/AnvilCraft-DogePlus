@@ -23,6 +23,9 @@
     "SlidingRailMixin"
   ],
   "client": [
+    "FallingBlockRendererMixin",
+    "ModelBakeryAccessor",
+    "ModelBlockSelectionMixin",
     "ItemEntityRendererMixin",
     "ItemRendererMixin",
     "SoundEngineMixin"

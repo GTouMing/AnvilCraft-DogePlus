@@ -15,7 +15,6 @@
 			"to": [6.5, 1.5, -0.5],
 			"shade": false,
 			"neoforge_data": { "ambient_occlusion": false, "block_light": 15, "sky_light": 15 },
-			"rotation": {"angle": 0, "axis": "y", "origin": [8, 3, 1]},
 			"faces": {
 				"north": {"uv": [0, 0, 2, 2], "rotation": 180, "texture": "#lco"},
 				"east": {"uv": [0, 0, 2, 2], "rotation": 180, "texture": "#lco"},
@@ -28,7 +27,6 @@
 		{
 			"from": [7, 0, 0],
 			"to": [9, 4, 2],
-			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.5, 1]},
 			"faces": {
 				"north": {"uv": [12, 6, 14, 10], "texture": "#lc"},
 				"east": {"uv": [12, 6, 14, 10], "texture": "#lc"},

@@ -8,13 +8,12 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ModelEvent;
 
-@EventBusSubscriber(modid = AnvilCraftDogePlus.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = AnvilCraftDogePlus.MOD_ID, value = Dist.CLIENT,
+        bus = EventBusSubscriber.Bus.MOD)
 public class ClientModelEvent {
     @SubscribeEvent
     public static void onModelRegister(ModelEvent.RegisterAdditional event) {
         event.register(ModelResourceLocation.standalone(AnvilCraftDogePlus.of("item/mobile_silencer_3d")));
-        event.register(ModelResourceLocation.standalone(AnvilCraftDogePlus.of("block/anvil_core")));
-        event.register(ModelResourceLocation.standalone(AnvilCraftDogePlus.of("block/anvil_core1")));
-        event.register(ModelResourceLocation.standalone(AnvilCraftDogePlus.of("block/anvil_core2")));
+        event.register(ModelResourceLocation.standalone(AnvilCraftDogePlus.of("block/giant_doge_anvil_light")));
     }
 }

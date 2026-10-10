@@ -14,8 +14,12 @@ import dev.anvilcraft.gtouming.doge_plus.transfer.ItemTransferNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.dubhe.anvilcraft.block.RedstoneWireBlock;
 import dev.dubhe.anvilcraft.block.RedstoneWireNetworkManager;
+import dev.dubhe.anvilcraft.init.item.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -233,11 +237,9 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
      * 编程单个面的方向性属性（{@link FaceMode#NONE} 表示清除该面的编程）。
      *
      * <p>轮盘与门链放置都走这里，保证两条路径行为一致。</p>
-     *
-     * @return 是否实际发生了改动
      */
-    public static boolean programFace(Level level, BlockPos pos, Direction face, FaceMode mode) {
-        return programFaces(level, Map.of(pos, Map.of(face, mode)));
+    public static void programFace(Level level, BlockPos pos, Direction face, FaceMode mode) {
+        programFaces(level, Map.of(pos, Map.of(face, mode)));
     }
 
     /**
@@ -263,9 +265,10 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
             BlockInlays inlays = BlockInlayManager.get(level, pos);
             if (inlays.block() != state.getBlock()) {
-                // 该位置还没有镶嵌数据（无镶嵌物的载体放置时不会写入）：以当前方块重建记录，
-                // 否则会留下 BlockInlays.nulls() 里 minecraft:air 这样的旧方块字段。
-                inlays = BlockInlays.fromInlays(state.getBlock(), inlays.inlays()).withValues(inlays.values());
+                // 该位置还没有镶嵌数据（无镶嵌物的载体放置时不会写入，方块字段是 minecraft:air），
+                // 或存档里的方块字段与当前方块不同步：只订正方块字段，面属性 / 设定值 / 物流量 / 信道
+                // 一律原样保留，避免把已有的编程内容（尤其崩溃后残留的记录）误判成空记录而清掉。
+                inlays = inlays.withBlock(state.getBlock());
             }
 
             BlockInlays updated = inlays;
@@ -335,6 +338,47 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         }
     }
 
+    /**
+     * 整体替换某坐标的镶嵌材料与各面编程（磁盘复制套用路径），并重建网络与外观。
+     *
+     * <p>与逐面 {@link #programFaces} 不同：这里无法预知哪些面变了、也可能整表替换镶嵌材料，
+     * 因此先清掉旧门的输出与运行时状态，再刷新外观，最后把逻辑网与物品传输网都重建一次。</p>
+     *
+     * <p>写入数据的方块字段统一改为当前方块，来源磁盘只提供内容（其方块字段是来源方块）。</p>
+     */
+    public static void replaceInlays(Level level, BlockPos pos, BlockInlays inlays) {
+        if (level.isClientSide) return;
+        BlockState state = level.getBlockState(pos);
+        if (!(state.getBlock() instanceof InlayCarrierBlock)) return;
+        BlockInlayManager.put(level, pos, inlays.withBlock(state.getBlock()));
+        // 旧门的输出与运行时状态必须先抹掉，否则换成有状态门时旧读数会一直残留。
+        for (Direction face : Direction.values()) {
+            LogicGateNetworkManager.clearFaceSignal(level, pos, face);
+        }
+        refreshState(level, pos);
+        publishProgrammingChange(level, pos);
+    }
+
+    /**
+     * 整块重新编程后重建网络拓扑并刷新红石外观。
+     *
+     * <p>无法预知哪些面变了，所以逻辑网与物品传输网都重建一次；并让邻居（含红石导线）重新读取本方块
+     * ——载体的面开关变化会改变 {@code canConnectRedstone}。</p>
+     */
+    public static void publishProgrammingChange(Level level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (!(state.getBlock() instanceof InlayCarrierBlock)) return;
+        LogicGateNetworkManager.topologyChanged(level, pos);
+        ItemTransferNetworkManager.topologyChanged(level, pos);
+        level.updateNeighborsAt(pos, state.getBlock());
+        for (Direction face : Direction.values()) {
+            BlockPos wirePos = pos.relative(face);
+            if (level.getBlockState(wirePos).getBlock() instanceof RedstoneWireBlock) {
+                RedstoneWireNetworkManager.topologyChanged(level, wirePos);
+            }
+        }
+    }
+
     /** 该方块是否接受这一批面属性：红石类只给逻辑载体，搬运类只给物流载体，远程类两者皆可。 */
     private static boolean acceptsModes(Block block, Map<Direction, FaceMode> faces) {
         for (FaceMode mode : faces.values()) {
@@ -367,6 +411,35 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         return state.getValue(property(direction.getOpposite())).isInlaid();
     }
 
+    /**
+     * 手持磁盘右键：存储 / 套用该坐标的镶嵌材料与各面编程（见 {@code IDiskCloneable}）。
+     *
+     * <p>载体自身没有其它右键行为，非磁盘物品一律 {@code PASS_TO_DEFAULT_BLOCK_INTERACTION}
+     * 交回物品处理（放方块等）。只在服务端真正执行存储 / 套用，客户端返回成功不做预测。</p>
+     */
+    @Override
+    protected ItemInteractionResult useItemOn(
+            ItemStack stack,
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand,
+            BlockHitResult hit) {
+        if (!stack.is(ModItems.DISK.get())) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (level.isClientSide) return ItemInteractionResult.SUCCESS;
+        if (!(level.getBlockEntity(pos) instanceof InlayCarrierBlockEntity entity)) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        // 磁盘的存 / 取 / 清行为都由 IDiskCloneable#useDisk 统一实现，这里只做结果映射。
+        return switch (entity.useDisk(level, player, hand, stack, hit)) {
+            case SUCCESS -> ItemInteractionResult.SUCCESS;
+            case CONSUME -> ItemInteractionResult.CONSUME;
+            case FAIL -> ItemInteractionResult.FAIL;
+            default -> ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        };
+    }
+
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
@@ -386,7 +459,7 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
     /** 逻辑载体的中心体（与 {@code carrier/logic/core} 模型的外壳一致）。 */
     private static final VoxelShape LOGIC_CORE =
-            Shapes.box(5.475 / 16.0, 5.475 / 16.0, 5.475 / 16.0, 10.525 / 16.0, 10.525 / 16.0, 10.525 / 16.0);
+            Shapes.box(5.5 / 16.0, 5.5 / 16.0, 5.5 / 16.0, 10.525 / 16.0, 10.5 / 16.0, 10.5 / 16.0);
 
     /**
      * 逻辑载体贯通（{@code hub=false}）时的中心体，对应 {@code carrier/logic/core_cross} 模型：
@@ -445,8 +518,8 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
             new AABB(5.5 / 16.0, 5.5 / 16.0, 4.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
             new AABB(5.5 / 16.0, 9.5 / 16.0, 4.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
             new AABB(9.5 / 16.0, 9.5 / 16.0, 4.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
-            new AABB(6 / 16.0, 6 / 16.0, 4.525 / 16.0, 10 / 16.0, 10 / 16.0, 6 / 16.0),
-            new AABB(6 / 16.0, 6 / 16.0, 0.001 / 16.0, 10 / 16.0, 10 / 16.0, 4.001 / 16.0),
+            new AABB(6 / 16.0, 6 / 16.0, 4.5 / 16.0, 10 / 16.0, 10 / 16.0, 6 / 16.0),
+            new AABB(6 / 16.0, 6 / 16.0, 0 / 16.0, 10 / 16.0, 10 / 16.0, 4 / 16.0),
             new AABB(6.5 / 16.0, 5.5 / 16.0, 4.025 / 16.0, 9.5 / 16.0, 10.5 / 16.0, 5 / 16.0),
             new AABB(5.5 / 16.0, 6.5 / 16.0, 4.025 / 16.0, 6.5 / 16.0, 9.5 / 16.0, 5 / 16.0),
             new AABB(9.5 / 16.0, 6.5 / 16.0, 4.025 / 16.0, 10.5 / 16.0, 9.5 / 16.0, 5 / 16.0));
@@ -461,8 +534,8 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
             new AABB(5.5 / 16.0, 5.5 / 16.0, 4.5 / 16.0, 6.5 / 16.0, 6.5 / 16.0, 5.5 / 16.0),
             new AABB(5.5 / 16.0, 9.5 / 16.0, 4.5 / 16.0, 6.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
             new AABB(9.5 / 16.0, 9.5 / 16.0, 4.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 5.5 / 16.0),
-            new AABB(6 / 16.0, 6 / 16.0, 4.525 / 16.0, 10 / 16.0, 10 / 16.0, 6 / 16.0),
-            new AABB(6 / 16.0, 6 / 16.0, 0.001 / 16.0, 10 / 16.0, 10 / 16.0, 4.001 / 16.0),
+            new AABB(6 / 16.0, 6 / 16.0, 4.5 / 16.0, 10 / 16.0, 10 / 16.0, 6 / 16.0),
+            new AABB(6 / 16.0, 6 / 16.0, 0 / 16.0, 10 / 16.0, 10 / 16.0, 4 / 16.0),
             new AABB(6.5 / 16.0, 5.5 / 16.0, 4.025 / 16.0, 9.5 / 16.0, 10.5 / 16.0, 5 / 16.0),
             new AABB(5.5 / 16.0, 6.5 / 16.0, 4.025 / 16.0, 6.5 / 16.0, 9.5 / 16.0, 5 / 16.0),
             new AABB(9.5 / 16.0, 6.5 / 16.0, 4.025 / 16.0, 10.5 / 16.0, 9.5 / 16.0, 5 / 16.0));
@@ -746,19 +819,6 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
             cache[index] = cached;
         }
         return cached;
-    }
-
-    /**
-     * 相邻方块也是镶嵌载体、且它朝向本方的面同样开通了通道时，两侧通道对接：剔除本面通道端盖，
-     * 免得两层端盖在方块交界处重叠闪烁。
-     *
-     * <p>通道模型本就给端盖标了 {@code cullface}，只是载体的形状不是满方，默认遮挡判定不会把它当实心，
-     * 所以相邻两个载体之间从不触发。相邻的是普通方块时交给默认判定，相邻面未开通通道时也保留端盖。</p>
-     */
-    @Override
-    public boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
-        return adjacentBlockState.getBlock() instanceof InlayCarrierBlock
-                && adjacentBlockState.getValue(property(side.getOpposite())).isInlaid();
     }
 
     /** 一组原始盒子取并集（碰撞用）。 */

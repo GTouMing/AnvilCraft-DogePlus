@@ -1,0 +1,7 @@
+{
+  "disable_model_outline": [
+    "anvilcraft_doge_plus:inlay_carrier",
+    "anvilcraft_doge_plus:logic_carrier",
+    "anvilcraft_doge_plus:logistics_carrier"
+  ]
+}

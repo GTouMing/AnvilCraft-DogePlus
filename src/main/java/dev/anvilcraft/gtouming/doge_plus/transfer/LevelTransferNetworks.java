@@ -13,6 +13,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.core.BlockPos;
@@ -25,7 +27,10 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.annotation.Nullable;
 
@@ -47,8 +52,15 @@ import javax.annotation.Nullable;
  *
  * <p>搬运时逐个尝试缓存的取出，最近的那个取不到货就顺次改用次近的。</p>
  *
- * <p>7 游戏刻冷却只记在「存入」面上：「取出」本身没有冷却，因此多个「存入」向同一个「取出」
- * 取货时会各自立即响应，互不占位。记录与冷却都只在内存里，区块重载时会随拓扑重建一并重算。</p>
+ * <p>7 游戏刻冷却由<b>整张网共用</b>：一轮里所有「存入」面同时响应，一轮真的搬动了物品才进入冷却，
+ * 没搬动则下一 tick 立即重试。同一轮里多个「存入」面从同一个「取出」面取货时，按各面<b>物流量为权重</b>
+ * 分配该取出面取出的总量（总量 = min(该取出面物品数, 各竞争面物流量之和)，第 i 面得 总量·w_i/Σw）；
+ * 均分后份额为 0 的面顺延尝试它的下一个取出面。记录与冷却都只在内存里，区块重载时会随拓扑重建一并重算。</p>
+ *
+ * <p><b>链路过滤</b>：链路里朝相邻载体、本身不收货的中间「存入」面，其过滤同样是闸门——物品要从源容器
+ * 端到端走到目标容器，必须依次通过沿途<b>每一道「存入」面</b>的过滤（逐级 AND），而不只是目标面那一道。
+ * 沿途过滤在 {@link #sourcesOf} 里随反向 BFS 累积进每条 {@link SourceRoute}；因此<i>设置过滤</i>也会让按需
+ * 货源缓存过期，需要重建网络（见 {@code SetLogisticsFilterPacket}）。</p>
  */
 final class LevelTransferNetworks {
 
@@ -74,9 +86,6 @@ final class LevelTransferNetworks {
 
     /** 拓扑没变、只需重算货源记录的网络（端点容器出现 / 消失）。 */
     private final ObjectOpenHashSet<TransferNetwork> dirtyRecords = new ObjectOpenHashSet<>();
-
-    /** 位置 → 六个面的「可再次搬运」游戏刻，位下标同 {@link Direction#ordinal()}。 */
-    private final Long2ObjectOpenHashMap<long[]> cooldowns = new Long2ObjectOpenHashMap<>();
 
     /**
      * 远程门信道 → 成员位置（仅物流载体的远程面）。
@@ -321,27 +330,33 @@ final class LevelTransferNetworks {
     }
 
     /**
-     * 按需算出某个「存入」节点能到达的全部有效「取出」（顶点图里该节点的出边），先近后远。
+     * 按需算出某个「存入」节点能到达的全部有效「取出」路线（顶点图里该节点的出边），先近后远。
      *
      * <p>从该节点沿<b>反向边</b> BFS：我方「取出」面指向上一格、上一格用「存入」面接住我方——
      * 正是正向传播「本方存入面 → 正邻格的取出面」的逆边。BFS 先到者跳数更少，因此结果天然按距离排序。</p>
      *
+     * <p>BFS 同时把沿途经过的「存入」面的过滤累积进 {@link SourceRoute#chainFilters()}（不含起点服务面自身），
+     * 让搬运时能对整条链路的每一道「存入」面逐级校验过滤。</p>
+     *
      * <p>结果缓存在 {@code network.sources} 里（含「算出为空」的负缓存），
-     * 拓扑 / 端点变化时由 {@link #recomputeRecords} 整体作废。</p>
+     * 拓扑 / 端点 / 过滤变化时由 {@link #recomputeRecords} 或重建整体作废。</p>
      */
-    private ObjectArrayList<TransferSource> sourcesOf(TransferNetwork network, long packed) {
-        ObjectArrayList<TransferSource> found = new ObjectArrayList<>();
-        LongArrayFIFOQueue queue = new LongArrayFIFOQueue();
+    private ObjectArrayList<SourceRoute> sourcesOf(TransferNetwork network, long packed) {
+        ObjectArrayList<SourceRoute> found = new ObjectArrayList<>();
+        ArrayDeque<RouteStep> queue = new ArrayDeque<>();
         LongOpenHashSet visited = new LongOpenHashSet();
-        queue.enqueue(packed);
+        queue.addLast(new RouteStep(packed, new ObjectArrayList<>()));
         visited.add(packed);
 
         while (!queue.isEmpty()) {
-            long currentPacked = queue.dequeueLong();
+            RouteStep step = queue.pollFirst();
+            long currentPacked = step.packed();
             TransferNode node = this.nodeAt(network, currentPacked);
             if (node == null) continue;
             Direction face = this.firstValidExtract(currentPacked, node);
-            if (face != null) found.add(new TransferSource(currentPacked, face));
+            if (face != null) {
+                found.add(new SourceRoute(new TransferSource(currentPacked, face), step.chain()));
+            }
 
             BlockPos pos = BlockPos.of(currentPacked);
             for (Direction dir : Direction.values()) {
@@ -350,20 +365,36 @@ final class LevelTransferNetworks {
                 TransferNode upstream = network.nodes.get(upstreamPacked);
                 if (upstream == null || !upstream.isInsert(dir.getOpposite())) continue;
                 if (!visited.add(upstreamPacked)) continue;
-                queue.enqueue(upstreamPacked);
+                // 到达 upstream 经过的是它朝我方的「存入」面：把该面过滤并入链路（逐级 AND）。
+                ObjectArrayList<ItemStack> chain = new ObjectArrayList<>(step.chain());
+                ItemStack filter = this.faceFilter(upstreamPacked, dir.getOpposite());
+                if (!filter.isEmpty()) chain.add(filter);
+                queue.addLast(new RouteStep(upstreamPacked, chain));
             }
             // 远程跳：本方有远程面时，跳到同信道的其它成员（远端「取出」货源由此可达）。
+            // 跨信道不经过任何「存入」面，链路过滤不变。
             for (long channel : node.remoteChannels()) {
                 LongOpenHashSet members = this.channelMembers.get(channel);
                 if (members == null) continue;
                 for (LongIterator mit = members.iterator(); mit.hasNext(); ) {
                     long memberPacked = mit.nextLong();
                     if (!visited.add(memberPacked)) continue;
-                    queue.enqueue(memberPacked);
+                    queue.addLast(new RouteStep(memberPacked, step.chain()));
                 }
             }
         }
         return found;
+    }
+
+    /** 该位置某面的过滤物品（未设置时为空栈）。 */
+    private ItemStack faceFilter(long packed, Direction dir) {
+        BlockPos pos = BlockPos.of(packed);
+        if (!this.level.hasChunkAt(pos)) return ItemStack.EMPTY;
+        return BlockInlayManager.get(this.level, pos).getFilter(dir);
+    }
+
+    /** 反向 BFS 的一步：当前节点 + 从服务面走到这里沿途累积的「存入」面过滤。 */
+    private record RouteStep(long packed, ObjectArrayList<ItemStack> chain) {
     }
 
     /** 取网络内该位置的节点；远程成员可能在别的网络里，回退到现读该位置。 */
@@ -407,92 +438,250 @@ final class LevelTransferNetworks {
     void tick() {
         this.runUpdates();
         long now = this.level.getGameTime();
-        this.cooldowns.keySet().removeIf(packed -> !this.byNode.containsKey(packed));
 
         // 取快照再遍历：搬运的副作用（物品入容器触发的方块更新）会重入 runUpdates 改写
         // this.networks，直接遍历会被就地增删从而作废 fastutil 迭代器（NPE）。
         ObjectOpenHashSet<TransferNetwork> snapshot = new ObjectOpenHashSet<>(this.networks);
         for (TransferNetwork network : snapshot) {
             if (!network.valid) continue;
-            for (int i = 0; i < network.servicePositions.size(); i++) {
-                long packed = network.servicePositions.getLong(i);
-                Direction face = Direction.values()[network.serviceFaces.getByte(i)];
-                // 7 游戏刻冷却只记在「存入」面上；「取出」没有冷却，可被多个「存入」同时取用。
-                if (this.onCooldown(packed, face, now)) continue;
-
-                // 候选货源按需缓存：没算过就现算一次（空结果也缓存成负缓存），端点 / 拓扑变化时整体作废。
-                // 带远程面的节点例外：它的货源可能落在其它网络的同信道成员上，缓存无法可靠失效，故每 tick 现算。
-                TransferNode serviceNode = network.nodes.get(packed);
-                boolean remote = serviceNode != null && serviceNode.isRemote();
-                ObjectArrayList<TransferSource> sources;
-                if (remote) {
-                    sources = this.sourcesOf(network, packed);
-                } else {
-                    sources = network.sources.get(packed);
-                    if (sources == null) {
-                        sources = this.sourcesOf(network, packed);
-                        network.sources.put(packed, sources);
-                    }
-                }
-                if (sources.isEmpty()) continue;
-                BlockPos pos = BlockPos.of(packed);
-                IItemHandler target = this.containerAt(pos, face);
-                if (target == null) continue;
-                // service 面本身就是一个「存入」面：物流量与过滤都按该面现场读。
-                BlockInlays data = BlockInlayManager.get(this.level, pos);
-                int limit = Math.clamp(data.getThroughput(face), 1, AnvilCraftDogePlus.CONFIG.logisticsThroughputMax);
-                ItemStack filter = data.getFilter(face);
-
-                // 按记录顺序（先近后远）逐个尝试：最近的取出取不到货就顺次改用次近的，
-                // 任一取出成功供货即结束本次搬运，该「存入」面随后进入冷却。
-                for (TransferSource source : sources) {
-                    // 货源容器是 «源节点朝 sourceFace 一格» 那个方块，不是再往外一格。
-                    IItemHandler sourceHandler = this.handlerAt(source.containerPos(), source.containerSide());
-                    if (sourceHandler == null) continue;
-                    if (!moveOneStack(sourceHandler, target, limit, filter)) continue;
-                    this.markTransfer(packed, face, now);
-                    break;
-                }
+            // 网络级共享冷却：整张网所有「存入」面共用一个冷却，未到就整网不动。
+            if (now < network.readyAt) continue;
+            // 一轮真的搬动了物品才重置冷却；没搬动则不冷却、下一 tick 立即重试（与「成功才冷却」一致）。
+            if (this.runNetworkRound(network)) {
+                network.readyAt = now + TRANSFER_COOLDOWN;
             }
         }
     }
 
-    private boolean onCooldown(long packed, Direction face, long now) {
-        long[] ready = this.cooldowns.get(packed);
-        return ready != null && now < ready[face.ordinal()];
+    /**
+     * 一张网的一轮搬运：先为每个「存入」面认领一个取出源（先近后远），再按「物流量权重」把每个
+     * 取出源能给的量分给竞争该源的全部「存入」面。
+     *
+     * <p>分配口径：设某源共有 {@code k} 个竞争面、物流量权重为 {@code w_1..w_k}，则该源取出的总量为
+     * {@code pool = min(该源物品总数, Σw)}，第 i 个面分得 {@code pool * w_i / Σw}（除不尽的余数按顺序
+     * 补齐、不超各自物流量）。货源被抢空时各面按权重缩水；某面份额为 0 就顺延下一个取出面
+     * （不动点迭代，直到每个源的每个竞争面都能拿到 ≥ 1）。</p>
+     *
+     * @return 本轮是否真的搬动了物品（决定是否进入网络冷却）
+     */
+    private boolean runNetworkRound(TransferNetwork network) {
+        // 计数封顶：够大即可（≥ 所有竞争面物流量之和），把容器扫描成本封住。
+        int cap = Math.max(1, network.servicePositions.size()) * AnvilCraftDogePlus.CONFIG.logisticsThroughputMax;
+
+        // ---- 收集本轮所有「存入」面及其（先近后远的）货源 ----
+        List<RoundFace> faces = new ArrayList<>();
+        for (int i = 0; i < network.servicePositions.size(); i++) {
+            long packed = network.servicePositions.getLong(i);
+            Direction face = Direction.values()[network.serviceFaces.getByte(i)];
+            BlockPos pos = BlockPos.of(packed);
+            IItemHandler target = this.containerAt(pos, face);
+            if (target == null) continue;
+
+            // 候选货源按需缓存：没算过就现算一次（空结果也缓存成负缓存），端点 / 拓扑变化时整体作废。
+            // 带远程面的节点例外：它的货源可能落在其它网络的同信道成员上，缓存无法可靠失效，故每 tick 现算。
+            TransferNode serviceNode = network.nodes.get(packed);
+            boolean remote = serviceNode != null && serviceNode.isRemote();
+            ObjectArrayList<SourceRoute> sources;
+            if (remote) {
+                sources = this.sourcesOf(network, packed);
+            } else {
+                sources = network.sources.get(packed);
+                if (sources == null) {
+                    sources = this.sourcesOf(network, packed);
+                    network.sources.put(packed, sources);
+                }
+            }
+            if (sources.isEmpty()) continue;
+
+            // service 面本身就是一个「存入」面：物流量与过滤都按该面现场读。
+            BlockInlays data = BlockInlayManager.get(this.level, pos);
+            int limit = Math.clamp(data.getThroughput(face), 1, AnvilCraftDogePlus.CONFIG.logisticsThroughputMax);
+            faces.add(new RoundFace(target, limit, data.getFilter(face), sources));
+        }
+        if (faces.isEmpty()) return false;
+
+        // 本轮内源容器 / 物品总数的快照（搬运前同轮不变）。
+        Object2ObjectOpenHashMap<TransferSource, IItemHandler> handlers = new Object2ObjectOpenHashMap<>();
+        Object2ObjectOpenHashMap<TransferSource, Integer> totals = new Object2ObjectOpenHashMap<>();
+
+        // ---- 认领（不动点）：份额为 0 的面顺延，直到每个源的每个竞争面都拿得到 ≥ 1 ----
+        boolean progress = true;
+        while (progress) {
+            progress = false;
+            Object2ObjectOpenHashMap<TransferSource, List<RoundFace>> groups = new Object2ObjectOpenHashMap<>();
+            for (RoundFace rf : faces) {
+                // 跳过没有可搬运物品（并沿链路过滤逐级放行）的取出源。
+                while (rf.pointer < rf.sources.size()) {
+                    SourceRoute route = rf.sources.get(rf.pointer);
+                    IItemHandler handler = this.sourceHandler(handlers, route.source());
+                    if (handler != null && hasMatching(handler, rf.filter, route.chainFilters())) break;
+                    rf.pointer++;
+                    progress = true;
+                }
+                if (rf.pointer >= rf.sources.size()) continue;
+                groups.computeIfAbsent(rf.sources.get(rf.pointer).source(), key -> new ArrayList<>()).add(rf);
+            }
+            for (Object2ObjectMap.Entry<TransferSource, List<RoundFace>> entry : groups.object2ObjectEntrySet()) {
+                List<RoundFace> group = entry.getValue();
+                IItemHandler handler = this.sourceHandler(handlers, entry.getKey());
+                long sum = 0;
+                for (RoundFace rf : group) sum += rf.limit;
+                int pool = (int) Math.min(this.sourceTotal(totals, entry.getKey(), handler, cap), sum);
+                // 任一竞争面份额 < 1（pool * w_i < Σw）就让它顺延下一个取出源。
+                for (RoundFace rf : group) {
+                    if ((long) pool * rf.limit < sum) {
+                        rf.pointer++;
+                        progress = true;
+                    }
+                }
+            }
+        }
+
+        // ---- 分配并搬运：同源按物流量权重分「该源能给的量」 ----
+        Object2ObjectOpenHashMap<TransferSource, List<RoundFace>> finalGroups = new Object2ObjectOpenHashMap<>();
+        for (RoundFace rf : faces) {
+            if (rf.pointer < rf.sources.size()) {
+                finalGroups.computeIfAbsent(rf.sources.get(rf.pointer).source(), key -> new ArrayList<>()).add(rf);
+            }
+        }
+
+        boolean moved = false;
+        for (Object2ObjectMap.Entry<TransferSource, List<RoundFace>> entry : finalGroups.object2ObjectEntrySet()) {
+            IItemHandler handler = this.sourceHandler(handlers, entry.getKey());
+            if (handler == null) continue;
+            List<RoundFace> group = entry.getValue();
+            long sum = 0;
+            for (RoundFace rf : group) sum += rf.limit;
+            int pool = (int) Math.min(this.sourceTotal(totals, entry.getKey(), handler, cap), sum);
+
+            // 按权重 pool * w_i / Σw 取整；余数按顺序补齐（不超各自物流量），尽量不剩。
+            int[] shares = new int[group.size()];
+            int assigned = 0;
+            for (int i = 0; i < group.size(); i++) {
+                shares[i] = (int) ((long) pool * group.get(i).limit / sum);
+                assigned += shares[i];
+            }
+            int remainder = pool - assigned;
+            for (int i = 0; i < group.size() && remainder > 0; i++) {
+                int add = Math.min(group.get(i).limit - shares[i], remainder);
+                shares[i] += add;
+                remainder -= add;
+            }
+
+            for (int i = 0; i < group.size(); i++) {
+                if (shares[i] <= 0) continue;
+                RoundFace rf = group.get(i);
+                // 服务面自身的过滤 + 沿途每一道「存入」面的过滤，逐级校验。
+                ObjectArrayList<ItemStack> chain = rf.sources.get(rf.pointer).chainFilters();
+                if (moveOneStack(handler, rf.target, shares[i], rf.filter, chain)) moved = true;
+            }
+        }
+        return moved;
     }
 
-    private void markTransfer(long packed, Direction face, long now) {
-        long[] ready = this.cooldowns.get(packed);
-        if (ready == null) {
-            ready = new long[Direction.values().length];
-            this.cooldowns.put(packed, ready);
+    /** 取出源的物品处理器（本轮内缓存非空结果；源不存在则返回 {@code null}）。 */
+    @Nullable
+    private IItemHandler sourceHandler(
+            Object2ObjectOpenHashMap<TransferSource, IItemHandler> cache, TransferSource source) {
+        IItemHandler cached = cache.get(source);
+        if (cached != null) return cached;
+        IItemHandler handler = this.handlerAt(source.containerPos(), source.containerSide());
+        if (handler != null) cache.put(source, handler);
+        return handler;
+    }
+
+    /** 取出源的物品总数（本轮内缓存，封顶 {@code cap}）。 */
+    private int sourceTotal(
+            Object2ObjectOpenHashMap<TransferSource, Integer> cache, TransferSource source,
+            @Nullable IItemHandler handler, int cap) {
+        if (handler == null) return 0;
+        Integer cached = cache.get(source);
+        if (cached != null) return cached;
+        int total = countItems(handler, cap);
+        cache.put(source, total);
+        return total;
+    }
+
+    /** 源容器物品总数，封顶 {@code cap}。 */
+    private static int countItems(IItemHandler handler, int cap) {
+        int total = 0;
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            ItemStack stack = handler.getStackInSlot(slot);
+            if (stack.isEmpty()) continue;
+            total += stack.getCount();
+            if (total >= cap) return cap;
         }
-        ready[face.ordinal()] = now + TRANSFER_COOLDOWN;
+        return total;
+    }
+
+    /** 源容器里是否存在能通过「服务面过滤 + 链路过滤」的物品。 */
+    private static boolean hasMatching(IItemHandler handler, ItemStack serviceFilter, List<ItemStack> chain) {
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            ItemStack stack = handler.getStackInSlot(slot);
+            if (stack.isEmpty()) continue;
+            if (passesAll(stack, serviceFilter, chain)) return true;
+        }
+        return false;
+    }
+
+    /** 物品是否通过服务面过滤与沿途每一道「存入」面的过滤（逐级 AND）。 */
+    private static boolean passesAll(ItemStack item, ItemStack serviceFilter, List<ItemStack> chain) {
+        if (!serviceFilter.isEmpty() && !FilterItem.filter(serviceFilter, item)) return false;
+        for (int i = 0; i < chain.size(); i++) {
+            ItemStack filter = chain.get(i);
+            if (!filter.isEmpty() && !FilterItem.filter(filter, item)) return false;
+        }
+        return true;
+    }
+
+    /** 本轮里一个参与搬运的「存入」面：目标容器、物流量（权重）、过滤与货源游标。 */
+    private static final class RoundFace {
+        final IItemHandler target;
+        final int limit;
+        final ItemStack filter;
+        final ObjectArrayList<SourceRoute> sources;
+        int pointer;
+
+        RoundFace(IItemHandler target, int limit, ItemStack filter, ObjectArrayList<SourceRoute> sources) {
+            this.target = target;
+            this.limit = limit;
+            this.filter = filter;
+            this.sources = sources;
+        }
     }
 
     /**
-     * 从源容器搬出至多 {@code limit} 个物品，塞进目标容器；{@code filter} 非空时只搬能通过它的物品。
+     * 从源容器搬出至多 {@code limit} 个物品，塞进目标容器；物品需通过 {@code serviceFilter} 与该路线的
+     * {@code chainFilters}（沿途每一道「存入」面的过滤，逐级 AND）才放行。
      *
      * <p>先模拟取出、再模拟插入，只有目标确实能收下的部分才真正取走，避免物品被取出后塞不回去。</p>
      *
-     * <p>{@code limit} 是该「存入」面的物流量；{@code filter} 是该面的过滤物品，判定交给
-     * {@link FilterItem#filter}，因此普通物品、内嵌 {@code FilterContent} 的前置过滤器物品都成立。
-     * 一叠物品同质，按整叠判定即可。</p>
+     * <p>插入走 {@link ItemHandlerUtil#insertItem}：对前置的 {@code PollableFilteredItemStackHandler} 用
+     * 非轮询入口，避免搬运触发轮询副作用。个别容器（如储物抽屉）的模拟与实际容量可能不一致，故实际
+     * 塞不下的余量回灌源容器，不静默丢弃。</p>
+     *
+     * <p>{@code limit} 是该「存入」面的物流量；过滤判定交给 {@link FilterItem#filter}，因此普通物品、
+     * 内嵌 {@code FilterContent} 的前置过滤器物品都成立。一叠物品同质，按整叠判定即可。</p>
      *
      * @return 是否真的搬动了物品
      */
-    private static boolean moveOneStack(IItemHandler source, IItemHandler target, int limit, ItemStack filter) {
+    private static boolean moveOneStack(
+            IItemHandler source, IItemHandler target, int limit,
+            ItemStack serviceFilter, List<ItemStack> chainFilters) {
         for (int slot = 0; slot < source.getSlots(); slot++) {
             ItemStack available = source.extractItem(slot, limit, true);
             if (available.isEmpty()) continue;
-            if (!filter.isEmpty() && !FilterItem.filter(filter, available)) continue;
-            ItemStack leftover = ItemHandlerHelper.insertItem(target, available, true);
+            if (!passesAll(available, serviceFilter, chainFilters)) continue;
+            ItemStack leftover = ItemHandlerUtil.insertItem(target, available, true);
             int accepted = available.getCount() - leftover.getCount();
             if (accepted <= 0) continue;
             ItemStack taken = source.extractItem(slot, accepted, false);
             if (taken.isEmpty()) continue;
-            ItemHandlerHelper.insertItem(target, taken, false);
+            // 模拟与实际可能不一致（抽屉类容器尤其如此）：实际塞不下的余量回灌源容器，不静默丢弃。
+            ItemStack actualLeftover = ItemHandlerUtil.insertItem(target, taken, false);
+            if (!actualLeftover.isEmpty()) {
+                source.insertItem(slot, actualLeftover, false);
+            }
             return true;
         }
         return false;
@@ -559,7 +748,11 @@ final class LevelTransferNetworks {
     /** 读取该位置的传输节点；六个面都没有传输属性（含远程）时返回 {@code null}。 */
     @Nullable
     private TransferNode readNode(BlockPos pos) {
+        // 未加载时不强制加载区块：等它加载后由 chunkLoaded 重新播种。
+        if (!this.level.hasChunkAt(pos)) return null;
         BlockInlays data = BlockInlayManager.get(this.level, pos);
+        // 记录必须属于当前方块：方块已被移除、记录还在时不能把空气当成幽灵传输节点。
+        if (!BlockInlayManager.isConsistent(this.level.getBlockState(pos).getBlock(), data)) return null;
         int insertMask = 0;
         int extractMask = 0;
         for (Direction dir : Direction.values()) {
@@ -594,7 +787,10 @@ final class LevelTransferNetworks {
     }
 
     private boolean hasTransferFace(BlockPos pos) {
+        // 未加载时不强制加载区块：等它加载后由 chunkLoaded 重新播种。
+        if (!this.level.hasChunkAt(pos)) return false;
         BlockInlays data = BlockInlayManager.get(this.level, pos);
+        if (!BlockInlayManager.isConsistent(this.level.getBlockState(pos).getBlock(), data)) return false;
         for (Direction dir : Direction.values()) {
             if (isInsertFace(data, dir) || isExtractFace(data, dir)) {
                 return true;
@@ -629,7 +825,6 @@ final class LevelTransferNetworks {
         }
         // 容器随区块卸载后「有效取出」可能不再有效，相邻网络的记录要重算。
         this.markNetworksAroundChunkDirty(chunkPos);
-        this.cooldowns.keySet().removeIf(packed -> !this.byNode.containsKey(packed));
     }
 
     private void markNetworksAroundChunkDirty(long chunkPos) {

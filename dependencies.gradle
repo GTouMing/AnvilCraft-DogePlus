@@ -19,4 +19,8 @@ dependencies {
 
     // Jade（玉）— 仅开发环境测试用
     runtimeOnly(libs.jade)
+
+    // Storage Drawers（储物抽屉）— 开发环境软兼容与测试
+    compileOnly(libs.storagedrawers)
+    runtimeOnly(libs.storagedrawers)
 }

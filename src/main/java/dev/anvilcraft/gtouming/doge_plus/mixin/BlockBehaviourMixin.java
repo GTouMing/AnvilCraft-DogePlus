@@ -2,7 +2,6 @@ package dev.anvilcraft.gtouming.doge_plus.mixin;
 
 import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.*;
-import dev.anvilcraft.gtouming.doge_plus.logic.ILogicGate;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateStateData;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
@@ -34,7 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Mixin(BlockBehaviour.class)
-public abstract class BlockBehaviourMixin implements ILogicGate {
+public abstract class BlockBehaviourMixin {
 
     @Inject(method = "getDrops", at = @At("RETURN"), cancellable = true)
     private void onGetDrops(BlockState state, LootParams.Builder params, CallbackInfoReturnable<List<ItemStack>> cir) {
@@ -49,7 +48,6 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
         for (ItemStack drop : drops) {
             if (!drop.is(item)) continue;
             InlayUtil.setInlays(drop, new ArrayList<>(inlays));
-            InlayUtil.reapplyAttributeModifiers(drop);
             break;
         }
         cir.setReturnValue(drops);
@@ -197,15 +195,5 @@ public abstract class BlockBehaviourMixin implements ILogicGate {
         Level level = (Level) getter;
         if (level.isClientSide()) return;
         if (LogicGateNetworkManager.isLogicGate(level, pos)) cir.setReturnValue(0);
-    }
-
-    @Override
-    public FaceMode doge_plus$getGateType(Level level, BlockPos pos, Direction outputDir) {
-        return BlockInlayManager.get(level, pos).getFace(outputDir);
-    }
-
-    @Override
-    public int doge_plus$getValue(Level level, BlockPos pos, Direction outputDir) {
-        return BlockInlayManager.get(level, pos).getValue(outputDir);
     }
 }
