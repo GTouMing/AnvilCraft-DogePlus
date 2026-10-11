@@ -217,12 +217,20 @@ public final class GiantDogeAnvilRenderer {
     }
 
     /**
-     * {@link #renderBreathingLight(PoseStack, MultiBufferSource, float)} 的便捷入口：用当前帧插值 tick
-     * 计算相位。物品渲染路径拿不到 partialTick，走这里。
+     * 物品渲染路径专用：拿不到 partialTick，且<b>不能</b>在这里 {@code endBatch}。
+     *
+     * <p>物品在 GUI（背包 / JEI / 手册）里是画进调用方共享批次的，物品渲染中途 flush 会把同一批里
+     * 其它几何一起提交掉，表现为物品槽空白。这里只把 light 的顶点写进那个批次，交给调用方统一提交。</p>
+     *
+     * @param poseStack 已套用物品 display 变换、并定位到巨型砧中心格原点的姿态
+     * @param buffer    调用方的多缓冲源
      */
     public static void renderBreathingLight(PoseStack poseStack, MultiBufferSource buffer) {
-        renderBreathingLight(
-                poseStack, buffer, Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false));
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return;
+        float breath = breathBrightness(
+                level.getGameTime() + Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false));
+        renderLight(poseStack, buffer.getBuffer(RenderType.cutout()), breath);
     }
 
     /** 呼吸灯亮度：正弦在 0.7~1.0 之间脉动，周期约 6 秒。 */

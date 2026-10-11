@@ -21,7 +21,7 @@ public abstract class AbstractChuteDropperBlock extends AbstractChuteBlock {
     public AbstractChuteDropperBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(facingProperty(), Direction.DOWN)
+                .setValue(facingProperty(), Direction.WEST)
                 .setValue(TRIGGERED, false));
     }
 

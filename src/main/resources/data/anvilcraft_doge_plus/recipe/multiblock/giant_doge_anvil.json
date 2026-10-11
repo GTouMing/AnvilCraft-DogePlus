@@ -1,0 +1,31 @@
+{
+  "type": "anvilcraft:multiblock",
+  "pattern": {
+    "grid": [
+      [
+        "DDD",
+        "DDD",
+        "DDD"
+      ],
+      [
+        "   ",
+        " D ",
+        "   "
+      ],
+      [
+        "DDD",
+        "DDD",
+        "DDD"
+      ]
+    ],
+    "mapping": {
+      "D": {
+        "blocks": "anvilcraft_doge_plus:doge_steel_block"
+      }
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "anvilcraft_doge_plus:giant_doge_anvil"
+  }
+}

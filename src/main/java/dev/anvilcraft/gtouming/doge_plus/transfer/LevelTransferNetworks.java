@@ -50,7 +50,8 @@ import javax.annotation.Nullable;
  * 搬运时用一次反向 BFS 现算并缓存，集合一变缓存整体作废。于是没被搬运过的节点不占缓存，
  * 端点的出现 / 消失也只做一次集合求差，不会随取出数量线性膨胀。</p>
  *
- * <p>搬运时逐个尝试缓存的取出，最近的那个取不到货就顺次改用次近的。</p>
+ * <p>搬运时从缓存的取出列表（先近后远）队首开始轮转：某个源取不到货就顺次后移，取到货则把该源转到
+ * 队尾，下次换个队首——于是「多取出对一个存入」时会轮流从各个取出面取货，而不是一直压着最近的那个。</p>
  *
  * <p>7 游戏刻冷却由<b>整张网共用</b>：一轮里所有「存入」面同时响应，一轮真的搬动了物品才进入冷却，
  * 没搬动则下一 tick 立即重试。同一轮里多个「存入」面从同一个「取出」面取货时，按各面<b>物流量为权重</b>
@@ -331,6 +332,7 @@ final class LevelTransferNetworks {
 
     /**
      * 按需算出某个「存入」节点能到达的全部有效「取出」路线（顶点图里该节点的出边），先近后远。
+     * 每个节点上的<b>每一个</b>有效取出面都算一条独立路线；搬运时从队首轮转，见 {@link #runNetworkRound}。
      *
      * <p>从该节点沿<b>反向边</b> BFS：我方「取出」面指向上一格、上一格用「存入」面接住我方——
      * 正是正向传播「本方存入面 → 正邻格的取出面」的逆边。BFS 先到者跳数更少，因此结果天然按距离排序。</p>
@@ -353,12 +355,14 @@ final class LevelTransferNetworks {
             long currentPacked = step.packed();
             TransferNode node = this.nodeAt(network, currentPacked);
             if (node == null) continue;
-            Direction face = this.firstValidExtract(currentPacked, node);
-            if (face != null) {
-                found.add(new SourceRoute(new TransferSource(currentPacked, face), step.chain()));
+            BlockPos pos = BlockPos.of(currentPacked);
+            // 该节点的每个「有效取出」面都是一条独立货源：同一载体可以朝多个容器取货，都要算进来。
+            for (Direction extract : Direction.values()) {
+                if (!node.isExtract(extract)) continue;
+                if (this.containerAt(pos, extract) == null) continue;
+                found.add(new SourceRoute(new TransferSource(currentPacked, extract), step.chain()));
             }
 
-            BlockPos pos = BlockPos.of(currentPacked);
             for (Direction dir : Direction.values()) {
                 if (!node.isExtract(dir)) continue;
                 long upstreamPacked = pos.relative(dir).asLong();
@@ -405,17 +409,6 @@ final class LevelTransferNetworks {
         return this.readNode(BlockPos.of(packed));
     }
 
-    /** 该节点的第一个「有效取出」面（面朝容器确实存在）；没有则返回 {@code null}。 */
-    @Nullable
-    private Direction firstValidExtract(long packed, TransferNode node) {
-        BlockPos pos = BlockPos.of(packed);
-        for (Direction dir : Direction.values()) {
-            if (!node.isExtract(dir)) continue;
-            if (this.containerAt(pos, dir) != null) return dir;
-        }
-        return null;
-    }
-
     /** 重算需要搬运的「存入」面清单：面朝容器确实存在的「存入」面各一条。 */
     private void rebuildServices(TransferNetwork network) {
         network.servicePositions.clear();
@@ -454,8 +447,9 @@ final class LevelTransferNetworks {
     }
 
     /**
-     * 一张网的一轮搬运：先为每个「存入」面认领一个取出源（先近后远），再按「物流量权重」把每个
-     * 取出源能给的量分给竞争该源的全部「存入」面。
+     * 一张网的一轮搬运：先为每个「存入」面认领一个取出源（从轮转队列队首开始，取不到就顺次后移），
+     * 再按「物流量权重」把每个取出源能给的量分给竞争该源的全部「存入」面。搬运成功的面把用过的源转到
+     * 队尾，于是「多取出对一个存入」时轮流取货、不会一直压着最近的那个。
      *
      * <p>分配口径：设某源共有 {@code k} 个竞争面、物流量权重为 {@code w_1..w_k}，则该源取出的总量为
      * {@code pool = min(该源物品总数, Σw)}，第 i 个面分得 {@code pool * w_i / Σw}（除不尽的余数按顺序
@@ -573,7 +567,11 @@ final class LevelTransferNetworks {
                 RoundFace rf = group.get(i);
                 // 服务面自身的过滤 + 沿途每一道「存入」面的过滤，逐级校验。
                 ObjectArrayList<ItemStack> chain = rf.sources.get(rf.pointer).chainFilters();
-                if (moveOneStack(handler, rf.target, shares[i], rf.filter, chain)) moved = true;
+                if (!moveOneStack(handler, rf.target, shares[i], rf.filter, chain)) continue;
+                moved = true;
+                // 轮转：把刚用过的取出源转到队尾，下次先试新的队首。多取出对一个存入时才会轮流取货，
+                // 而不是一直压着最近的。缓存的那份列表本身就是轮转状态，端点 / 拓扑变化时随缓存一起作废。
+                if (rf.sources.size() > 1) rf.sources.add(rf.sources.remove(0));
             }
         }
         return moved;

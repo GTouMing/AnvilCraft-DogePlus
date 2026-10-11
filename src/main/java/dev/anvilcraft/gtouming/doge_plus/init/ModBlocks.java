@@ -67,7 +67,6 @@ public class ModBlocks {
                             .isViewBlocking(ModBlocks::never))
                     .item(SimpleMultiPartBlockItem<Cube3x3PartHalf>::new)
                     .properties(properties -> properties.stacksTo(16))
-                    .tag(ItemTags.ANVIL)
                     .build()
                     .blockstate(DataGenUtil::noExtraModelOrState)
                     .loot(ModBlocks::giantDogeAnvilLoot)

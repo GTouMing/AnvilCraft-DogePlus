@@ -27,7 +27,7 @@ public abstract class AbstractChuteDispenserBlock extends AbstractChuteBlock {
     public AbstractChuteDispenserBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(facingProperty(), Direction.NORTH)
+                .setValue(facingProperty(), Direction.WEST)
                 .setValue(TRIGGERED, false));
     }
 

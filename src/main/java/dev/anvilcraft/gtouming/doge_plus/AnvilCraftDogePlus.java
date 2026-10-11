@@ -1,11 +1,13 @@
 package dev.anvilcraft.gtouming.doge_plus;
 
+import dev.anvilcraft.gtouming.doge_plus.block.placement.GiantDogeAnvilPlacementRule;
 import dev.anvilcraft.gtouming.doge_plus.config.DogePlusConfig;
 import dev.anvilcraft.gtouming.doge_plus.datagen.ModDataGen;
 import dev.anvilcraft.gtouming.doge_plus.init.*;
 import dev.anvilcraft.lib.v2.config.ConfigManager;
 import dev.anvilcraft.lib.v2.network.register.NetworkRegistrar;
 import dev.anvilcraft.lib.v2.registrum.Registrum;
+import dev.dubhe.anvilcraft.api.block.BlockPlacementRules;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +36,10 @@ public class AnvilCraftDogePlus {
         ModMenuTypes.register();
         ModRecipeTypes.register(modEventBus);
         ModIngredients.register(modEventBus);
+
+        // 巨狗砧等多方块的「放置物」：前置默认规则对部件状态解析不出放置物，
+        // 会导致多方块转化配方在 JEI 里没有产物槽（对着物品按 R 查不到）。
+        BlockPlacementRules.registerFallback(GiantDogeAnvilPlacementRule.INSTANCE);
 
         // datagen：注册各类数据生成回调（非 datagen 环境下为空操作）
         ModDataGen.init();

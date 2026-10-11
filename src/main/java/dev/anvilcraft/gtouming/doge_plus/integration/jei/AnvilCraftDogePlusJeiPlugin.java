@@ -8,6 +8,7 @@ import dev.anvilcraft.gtouming.doge_plus.integration.jei.category.InlayCraftingR
 import dev.anvilcraft.gtouming.doge_plus.integration.jei.category.InlayRecipeCategory;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayRecipe;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay_crafting.InlayCraftingRecipe;
+import dev.dubhe.anvilcraft.integration.jei.AnvilCraftJeiPlugin;
 import dev.dubhe.anvilcraft.integration.jei.handlers.GhostIngredientHandler;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
@@ -87,6 +88,10 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
         registration.addRecipeCatalyst(ModBlocks.INLAY_CRAFTING_TABLE.get(), INLAY_SMITHING);
         registration.addRecipeCatalyst(ModBlocks.INLAY_TABLE.get(), INLAY_COPYING);
         registration.addRecipeCatalyst(ModBlocks.INLAY_CRAFTING_TABLE.get(), INLAY_COPYING);
+        // 巨狗砧是这两条配方（多方块转化 / 多方块合成）的产物，登记成对应分类的催化方块后，
+        // 对着它按 U（用途）就能翻到这两页配方；按 R（来源）则由产物槽给出。
+        registration.addRecipeCatalyst(ModBlocks.GIANT_DOGE_ANVIL.get(), AnvilCraftJeiPlugin.MULTIBLOCK_CONVERSION);
+        registration.addRecipeCatalyst(ModBlocks.GIANT_DOGE_ANVIL.get(), AnvilCraftJeiPlugin.MULTIBLOCK_CRAFTING);
     }
 
     @Override
