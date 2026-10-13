@@ -6,12 +6,14 @@ import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.transfer.ItemTransferNetworkManager;
+import dev.anvilcraft.gtouming.doge_plus.util.BeaconCorruptionUtil;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.anvilcraft.lib.v2.util.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -45,6 +47,13 @@ public abstract class BlockItemMixin {
         BlockPos mainPos = context.getClickedPos();
         BlockItem block = Util.cast(this);
         if (block.getBlock() instanceof IMultiPartBlock part) mainPos = part.doge_plus$getMainPos(mainPos, state);
+
+        // ===== 腐化信标：信标镶嵌诅咒金锭 → 放置时按诅咒金块金字塔层数概率转化 =====
+        if (state.getBlock() == Blocks.BEACON && BeaconCorruptionUtil.hasCursedGold(inlays)) {
+            // 已转化为腐化信标：不再为信标本体记录镶嵌（避免腐化信标掉落物被误加镶嵌）
+            if (BeaconCorruptionUtil.tryConvert(level, mainPos)) return;
+        }
+
         BlockInlayManager.put(level, mainPos, BlockInlays.fromInlays(state.getBlock(), inlays));
         LogicGateNetworkManager.topologyChanged(level, mainPos);
         ItemTransferNetworkManager.topologyChanged(level, mainPos);

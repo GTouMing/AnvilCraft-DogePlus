@@ -56,40 +56,35 @@ When **the base material is present and the material slot is empty**, it tries t
 
 ### Properties
 
-| Property         | Source material                             | Effect                                                                                     |
-|------------------|---------------------------------------------|--------------------------------------------------------------------------------------------|
-| **Fire-proof**   | Netherite Ingot                             | Cannot be burned.                                                                          |
-| **Magnetic**     | <ref item="anvilcraft:magnet_ingot"/>       | Has attraction, and repels when activated.                                                 |
-| **High Temp**    | <ref item="anvilcraft:ember_metal_ingot"/>  | The longer it stays in lava or fire, the more accumulated damage; attacking consumes it.   |
-| **Cold Forged**  | <ref item="anvilcraft:frost_metal_ingot"/>  | Slowly repairs durability in water or powder snow.                                         |
-| **Eternal**      | <ref item="anvilcraft:transcendium_ingot"/> | Indestructible, immune to fire, explosion, cactus, time and the void.                      |
-| **Nirvana**      | Totem                                       | Triggers a totem on death, then the inlay material shatters.                               |
-| **Defense**      | Netherite Ingot                             | Scales with the total number of Defense inlays equipped (see Attribute Levels).            |
-| **Life**         | <ref item="anvilcraft:royal_steel_ingot"/>  | Scales with the total number of Life inlays equipped (see Attribute Levels).               |
-| **Attack**       | <ref item="anvilcraft:cursed_gold_ingot"/>  | Scales with the total number of Attack inlays equipped (see Attribute Levels).             |
-| **Enchant**      | Enchanted Book / Book                       | Merges enchantments when inlaid, extracts them when removed.                               |
-| **Effect**       | Potion                                      | Potion effects when equipped; inlay count sets the amplifier (see Attribute Levels).       |
-| **Output**       | Redstone                                    | Outputs redstone signals from this face.                                                   |
-| **Input**        | <ref item="anvilcraft:redstone_wire"/>      | Inputs redstone signals from this face.                                                    |
-| **NOT Gate**     | Redstone Torch                              | Outputs the inverted signal of the opposite face.                                          |
-| **AND Gate**     | Repeater                                    | ANDs adjacent inputs in order.                                                             |
-| **Counter Gate** | Button                                      | Counts input pulses and outputs a 1-tick signal at the set count.                          |
-| **Latch Gate**   | Lever                                       | Records and outputs a received signal; a second input clears it.                           |
-| **Delay Gate**   | Pressure Plate                              | Outputs the received signal for the set number of ticks.                                   |
-| **Delayed Input Gate** | Clock                                 | Records the input signal and, after the set number of ticks, feeds it to this block's other gates as a 1-tick input on that face. |
-| **Remote Gate**  | <ref item="minecraft:ender_pearl"/>         | Remote faces with the same channel link up: forwards inputs on the redstone side, remote extract on the item side. |
-| **Insert**       | <ref item="anvilcraft:chute"/>              | Puts items into the container it faces.                                                    |
-| **Extract**      | <ref item="anvilcraft:magnetic_chute"/>     | Takes items from the container it faces.                                                   |
-| **Generator**    | <ref item="anvilcraft:supercapacitor"/>     | Produces 512 kW of power once placed.                                                      |
+| Property               | Source material                             | Effect                                                                                                                            |
+|------------------------|---------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| **Fire-proof**         | Netherite Ingot                             | Cannot be burned.                                                                                                                 |
+| **Magnetic**           | <ref item="anvilcraft:magnet_ingot"/>       | Has attraction, and repels when activated.                                                                                        |
+| **High Temp**          | <ref item="anvilcraft:ember_metal_ingot"/>  | The longer it stays in lava or fire, the more accumulated damage; attacking consumes it.                                          |
+| **Cold Forged**        | <ref item="anvilcraft:frost_metal_ingot"/>  | Slowly repairs durability in water or powder snow.                                                                                |
+| **Eternal**            | <ref item="anvilcraft:transcendium_ingot"/> | Indestructible, immune to fire, explosion, cactus, time and the void.                                                             |
+| **Nirvana**            | Totem                                       | Triggers a totem on death, then the inlay material shatters.                                                                      |
+| **Defense**            | Netherite Ingot                             | Scales with the total number of Defense inlays equipped (see Attribute Levels).                                                   |
+| **Life**               | <ref item="anvilcraft:royal_steel_ingot"/>  | Scales with the total number of Life inlays equipped (see Attribute Levels).                                                      |
+| **Attack**             | <ref item="anvilcraft:cursed_gold_ingot"/>  | Scales with the total number of Attack inlays equipped (see Attribute Levels).                                                    |
+| **Enchant**            | Enchanted Book / Book                       | Merges enchantments when inlaid, extracts them when removed.                                                                      |
+| **Effect**             | Potion                                      | Provides potion effects when held, equipped, or placed (see Attribute Levels).                                                    |
+| **Output**             | Redstone                                    | Outputs redstone signals from this face.                                                                                          |
+| **Input**              | <ref item="anvilcraft:redstone_wire"/>      | Inputs redstone signals from this face.                                                                                           |
+| **NOT Gate**           | Redstone Torch                              | Outputs the inverted signal of the opposite face.                                                                                 |
+| **AND Gate**           | Repeater                                    | ANDs adjacent inputs in order.                                                                                                    |
+| **Counter Gate**       | Button                                      | Counts input pulses and outputs a 1-tick signal at the set count.                                                                 |
+| **Latch Gate**         | Lever                                       | Records and outputs a received signal; a second input clears it.                                                                  |
+| **Delay Gate**         | Pressure Plate                              | Outputs the received signal for the set number of ticks.                                                                          |
+| **Delayed Input Gate** | Clock                                       | Records the input signal and, after the set number of ticks, feeds it to this block's other gates as a 1-tick input on that face. |
+| **Remote Gate**        | <ref item="minecraft:ender_pearl"/>         | Remote faces with the same channel link up: forwards inputs on the redstone side, remote extract on the item side.                |
+| **Insert**             | <ref item="anvilcraft:chute"/>              | Puts items into the container it faces.                                                                                           |
+| **Extract**            | <ref item="anvilcraft:magnetic_chute"/>     | Takes items from the container it faces.                                                                                          |
+| **Generator**          | <ref item="anvilcraft:supercapacitor"/>     | Produces 512 kW of power once placed.                                                                                             |
 
 ### Attribute Levels
 
-**Defense**, **Life**, **Attack** and **Effect** are handled by the **attribute level system**: it counts the total inlay entries carrying that attribute across all your equipment, and **the count is the level**. The per-level value is defined by the datapack file `data/<namespace>/attributes/<attribute>.json`:
-
-- Use a function when the values are regular: `{"function": "2 * level"}`
-- Use an explicit table otherwise: `{"values": [2, 4, 6]}` (index 0 = level 1, clamped to the last entry)
-
-Equipping/unequipping, logging in and respawning all trigger a full recount; only changed levels update, and level 0 removes the bonus: armor / max health / attack damage are applied as entity attribute modifiers, and potion effects scale their amplifier.
+**Defense**, **Life**, **Attack** and **Effect** are handled by the **attribute level system**: it counts the total number of inlay entries carrying that attribute across all your equipment, and the count determines the attribute level.
 
 ### Resonance
 

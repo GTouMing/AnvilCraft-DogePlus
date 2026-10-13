@@ -49,12 +49,17 @@ public record BaseMaterialData(String name, int sockets, JsonArray ingredient) {
     public static final String CHARGED_NEUTRONIUM_INGOT = "charged_neutronium_ingot";
     /** 约束仓：镶入充能中子锭后镶合为约束中子锭（前置 item_inject 配方的镶合版）。 */
     public static final String CONFINEMENT_CHAMBER = "confinement_chamber";
+    /** 信标：镶入诅咒金锭后，放置时按诅咒金块金字塔层数概率转化为腐化信标。 */
+    public static final String BEACON = "beacon";
 
     /** 超温余烬金属块镶孔数：1，镶入中子锭后由镶合按附魔条数出产物。 */
     public static final int OVERHEATED_EMBER_METAL_BLOCK_SOCKETS = 1;
 
     /** 约束仓镶孔数：1，镶入充能中子锭即镶合为约束中子锭。 */
     public static final int CONFINEMENT_CHAMBER_SOCKETS = 1;
+
+    /** 信标镶孔数：1，镶入诅咒金锭。 */
+    public static final int BEACON_SOCKETS = 1;
 
     /** 中子锭镶孔数：2（书 / 附魔书 / 紫水晶）。 */
     public static final int NEUTRONIUM_INGOT_SOCKETS = 2;
@@ -126,7 +131,10 @@ public record BaseMaterialData(String name, int sockets, JsonArray ingredient) {
                     .item(ModItems.CHARGED_NEUTRONIUM_INGOT).sockets(NEUTRONIUM_INGOT_SOCKETS).buildBase(),
             // 约束仓：1 镶孔，镶入充能中子锭后镶合为约束中子锭（基底不返还）
             builder().name(CONFINEMENT_CHAMBER)
-                    .item(ModBlocks.CONFINEMENT_CHAMBER).sockets(CONFINEMENT_CHAMBER_SOCKETS).buildBase()
+                    .item(ModBlocks.CONFINEMENT_CHAMBER).sockets(CONFINEMENT_CHAMBER_SOCKETS).buildBase(),
+            // 信标：1 镶孔，镶入诅咒金锭后放置时按诅咒金块金字塔层数概率转化为腐化信标
+            builder().name(BEACON)
+                    .item(Items.BEACON).sockets(BEACON_SOCKETS).buildBase()
     };
 
     /**

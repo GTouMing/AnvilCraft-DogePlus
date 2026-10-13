@@ -70,7 +70,9 @@ public record InlayRecipeData(String inlay, String base) {
             // 由「静默镶嵌」按 neutronium_transmutation 镶合条件放行
             // 充能中子锭：2 镶孔，可镶书 / 附魔书（enchant）与紫水晶（resonance）
             new InlayRecipeData(ENCHANT, CHARGED_NEUTRONIUM_INGOT),
-            new InlayRecipeData(RESONANCE, CHARGED_NEUTRONIUM_INGOT)
+            new InlayRecipeData(RESONANCE, CHARGED_NEUTRONIUM_INGOT),
+            // 信标：镶入诅咒金锭（attack 材料）；放置时按诅咒金块金字塔层数概率转化为腐化信标
+            new InlayRecipeData(ATTACK, BEACON)
     );
 
     /**
