@@ -1,0 +1,21 @@
+{
+  "type": "anvilcraft_doge_plus:inlay_crafting",
+  "base": "minecraft:shulker_box",
+  "inlays": [
+    {
+      "item": [
+        "minecraft:shulker_box",
+        "anvilcraft:void_matter_block"
+      ],
+      "shulker_count": {
+        "min": 3
+      },
+      "void_matter_count": {
+        "min": 1
+      }
+    }
+  ],
+  "results": [
+    "anvilcraft:space_overcompressor"
+  ]
+}

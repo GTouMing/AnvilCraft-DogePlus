@@ -65,6 +65,10 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     public static final String REMOTE = "remote";
     public static final String RESONANCE = "resonance";
     public static final String TOTEMS = "totems";
+    /** 潜影盒（作为镶嵌材料自套用）；与基材文件键同名，但落在 {@code material/inlay/} 下。 */
+    public static final String SHULKER_BOX_MATERIAL = "shulker_box";
+    /** 虚空物质块：凑成「3 潜影盒 + 1 虚空物质块」后镶合出空间超压器。 */
+    public static final String VOID_MATTER_BLOCK = "void_matter_block";
 
     // ===== 原版锻造兼容（无属性材料）=====
     // 说明：下界合金锭、钻石装备与纹饰材料已不再定义材料——它们没有属性、也没有手写镶嵌配方，
@@ -173,7 +177,11 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
             PotionKinds.potionInlay(EFFECT2, Items.LINGERING_POTION),
 
             // ===== 空心磁铁块镶合：铁锭（无属性材料，但它是手写镶嵌配方的材料键，故保留定义）=====
-            builder().name(IRON_INGOT).item(Items.IRON_INGOT).buildInlay()
+            builder().name(IRON_INGOT).item(Items.IRON_INGOT).buildInlay(),
+
+            // ===== 潜影盒嵌套：潜影盒（自套）与虚空物质块（均为无属性材料）=====
+            builder().name(SHULKER_BOX_MATERIAL).item(Items.SHULKER_BOX).buildInlay(),
+            builder().name(VOID_MATTER_BLOCK).item(ModBlocks.VOID_MATTER_BLOCK).buildInlay()
         ));
     }
 

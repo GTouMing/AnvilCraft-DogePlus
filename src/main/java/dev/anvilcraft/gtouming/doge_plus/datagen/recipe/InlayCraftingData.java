@@ -72,6 +72,12 @@ public record InlayCraftingData(
         return InlayMatcher.byItem(new InlayMatcher.EnchantRange(min, max), items);
     }
 
+    /** 按物品 + 潜影嵌套计数范围匹配（已镶潜影盒数 / 虚空物质块数）。 */
+    public static InlayMatcher itemWithNesting(
+            InlayMatcher.EnchantRange shulkers, InlayMatcher.EnchantRange voidMatter, Item... items) {
+        return InlayMatcher.byItemWithNesting(shulkers, voidMatter, items);
+    }
+
     // ==================== 产物构造辅助 ====================
 
     /** 固定产物：单件、概率 100%、无诅咒。 */
@@ -213,6 +219,19 @@ public record InlayCraftingData(
                 ModBlocks.CONFINEMENT_CHAMBER.asItem(),
                 List.of(item(ModItems.CHARGED_NEUTRONIUM_INGOT.asItem())),
                 List.of(fixed(ModBlocks.CONFINED_NEUTRONIUM_INGOT_BLOCK.asItem())),
+                InlayCraftingRecipe.Kind.CRAFTING
+        ));
+
+        // ===== 潜影盒：已镶 3 个潜影盒 + 1 个虚空物质块（计数记在条目额外数据里）后镶合出空间超压器 =====
+        // 只认计数、不看最后一次镶的是哪个：镶孔里放潜影盒或虚空物质块都行，只要计数对上。
+        VANILLA.add(new InlayCraftingData(
+                "space_overcompressor_from_shulker_box",
+                Items.SHULKER_BOX,
+                List.of(itemWithNesting(
+                        new InlayMatcher.EnchantRange(Optional.of(3), Optional.empty()),
+                        new InlayMatcher.EnchantRange(Optional.of(1), Optional.empty()),
+                        Items.SHULKER_BOX, ModBlocks.VOID_MATTER_BLOCK.asItem())),
+                List.of(fixed(ModBlocks.SPACE_OVERCOMPRESSOR.asItem())),
                 InlayCraftingRecipe.Kind.CRAFTING
         ));
 

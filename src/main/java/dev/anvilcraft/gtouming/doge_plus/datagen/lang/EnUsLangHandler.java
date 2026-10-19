@@ -36,6 +36,8 @@ public class EnUsLangHandler {
         provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.enchantments_at_least", "%s+");
         provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.amount", "Amount: enchantment count × %s");
         provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.probability", "Chance: (%s × enchantment count) / 100");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.shulker_count", "Required shulker boxes: %s");
+        provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.void_matter_count", "Required void matter blocks: %s");
 
         // ===== Tooltips =====
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.fire_proof", "Fire-proof: cannot be burned");
@@ -59,7 +61,7 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.delay_gate", "Delay Gate: outputs the received signal for the set number of ticks");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.delay_input_gate", "Delayed Input Gate: records the input signal and feeds it to this block's other gates as a 1-tick input after the set number of ticks");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.remote", "Remote Gate: remote faces with the same channel form a bus; a bidirectional wire for redstone, remote extract lookup for items");
-        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "Generator: produces 512 kW of power once placed");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "Generator: produces %s kW of power once placed");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.insert", "Insert: puts items into the container it faces");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.extract", "Extract: takes items from the container it faces");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance", "Resonance: enhances some properties of materials in other sockets");
@@ -71,6 +73,7 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.attack", "✦ Attack: grants +4 attack damage when held or equipped");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.enchant", "✦ Enchant: merges enchantments with a 50% chance to boost the level by 1, and a 50% chance to extract them when removed");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_details", "Hold [Shift] for inlay info");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_sockets_truncated", "…%1$s more sockets not shown (%2$s total)");
         provider.add("tooltip.anvilcraft_doge_plus.material_attributes", "Inlay attributes:");
 
         // ===== Item descriptions (mirrors base tooltip.anvilcraft.item.<id>, looked up by item id) =====

@@ -49,6 +49,8 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.enchantments_at_least", "%s 及以上");
         add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.amount", "数量为魔咒数量 × %s");
         add("gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.probability", "概率：(%s × (魔咒数量)) / 100");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.shulker_count", "已镶潜影盒数为 %s");
+        add("gui.anvilcraft_doge_plus.jei.inlay_crafting.void_matter_count", "已镶虚空物质块数为 %s");
 
         // ===== Tooltips =====
         add("tooltip.anvilcraft_doge_plus.inlay_property.fire_proof", "耐火：不会被烧毁");
@@ -72,7 +74,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inlay_property.delay_gate", "延时门：收到输入起输出该信号，持续设定 tick 数");
         add("tooltip.anvilcraft_doge_plus.inlay_property.delay_input_gate", "延时输入门：记录输入信号，等待设定 tick 数后作为本面的输入向本方块其它门送出 1 tick");
         add("tooltip.anvilcraft_doge_plus.inlay_property.remote", "远程门：同信道编号的远程面互连为一条总线；红石侧为双向导线，物品侧提供远程取货");
-        add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "发电：放置后产生 512 kW 电力");
+        add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "发电：放置后产生 %s kW 电力");
         add("tooltip.anvilcraft_doge_plus.inlay_property.insert", "存入：将物品存入面朝的容器");
         add("tooltip.anvilcraft_doge_plus.inlay_property.extract", "取出：从面朝的容器取出物品");
         add("tooltip.anvilcraft_doge_plus.inlay_property.resonance", "共鸣：增强其他镶孔的部分材料属性");
@@ -84,6 +86,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.attack", "✦攻击：手持或装备时提升 4 点攻击力");
         add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.enchant", "✦附魔：镶嵌时合并附魔并有 50% 概率提升 1 级，移除时 50% 概率提取附魔");
         add("tooltip.anvilcraft_doge_plus.inlay_details", "按住 [Shift] 查看镶嵌信息");
+        add("tooltip.anvilcraft_doge_plus.inlay_sockets_truncated", "…其余 %1$s 个镶孔未显示（共 %2$s 个）");
         add("tooltip.anvilcraft_doge_plus.material_attributes", "镶嵌属性：");
 
         // ===== 物品描述行（仿前置 tooltip.anvilcraft.item.<id>，代码按物品 id 自动查找） =====

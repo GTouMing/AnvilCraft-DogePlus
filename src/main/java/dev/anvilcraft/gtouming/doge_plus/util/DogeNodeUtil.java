@@ -29,6 +29,9 @@ public class DogeNodeUtil {
         double maxY = blockState.getCollisionShape(level, pos).max(Direction.Axis.Y, 0.5, 0.5);
         // 点击处无碰撞面（空气/无碰撞方块/打开的活板门等空形状 → maxY 为 -Infinity）则不放置
         if (maxY <= 0) return InteractionResult.PASS;
+        // 世界改动只在服务端：客户端到此为止，返回成功做预测（与服务端结果一致，才能正常挥臂）；
+        // 否则客户端会本地生成一个只有自己看得见的节点实体。
+        if (level.isClientSide) return InteractionResult.SUCCESS;
 
         // 移除该位置已有的 Doge 节点
         for (DogeNodeEntity entity : level.getEntitiesOfClass(

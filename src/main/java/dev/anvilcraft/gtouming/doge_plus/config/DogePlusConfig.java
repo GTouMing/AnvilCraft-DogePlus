@@ -64,6 +64,10 @@ public class DogePlusConfig {
     @BoundedDiscrete(max = 200, min = 1)
     public int delayMaxTicks = 20;
 
+    @Comment("发电镶嵌接入电网后产生的电力（kW）。")
+    @BoundedDiscrete(max = 1000000, min = 0)
+    public int generatorPower = 512;
+
     @Comment("物流载体每个存入面单次搬运的物品数上限（各面可在 1 到该值之间设置）。")
     @BoundedDiscrete(max = 1024, min = 1)
     public int logisticsThroughputMax = 64;

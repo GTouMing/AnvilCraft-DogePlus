@@ -71,8 +71,17 @@ public class ClientTooltipEvent {
             List<ItemStack> materialStacks = inlays.stream().map(InlayEntry::toItemStack).toList();
             int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
 
-            // 2.1 镶孔图像组件（已镶嵌画材料图标、空镶孔画中括号）
+            // 2.1 镶孔图像组件（每个镶孔画槽位贴图，已镶嵌叠材料图标）
             elements.add(Either.right(new InlayTooltipComponent(materialStacks, sockets)));
+
+            // 2.1.1 镶孔数由数据包定义，可能远超图像上限：补一行说明，避免信息无提示地丢失
+            //       （未显示的材料其属性行仍会照常列出）。
+            if (sockets > ClientInlayTooltip.MAX_VISIBLE_SOCKETS) {
+                elements.add(Either.left(Component.translatable(
+                                "tooltip.anvilcraft_doge_plus.inlay_sockets_truncated",
+                                sockets - ClientInlayTooltip.MAX_VISIBLE_SOCKETS, sockets)
+                        .withStyle(ChatFormatting.GRAY)));
+            }
 
             // 2.2 属性/提示文本
             boolean resonance = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE);

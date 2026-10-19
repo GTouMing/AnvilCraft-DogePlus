@@ -162,6 +162,28 @@ public record InlayCraftingRecipe(
         return Optional.empty();
     }
 
+    /** 配方限定的潜影嵌套计数范围（某条镶孔要求带 {@code shulker_count} 时）；未限定返回空。 */
+    public Optional<InlayMatcher.EnchantRange> shulkerRange() {
+        for (InlayMatcher matcher : inlays) {
+            if (matcher instanceof InlayMatcher.ByItem byItem
+                    && (byItem.shulkerCount().min().isPresent() || byItem.shulkerCount().max().isPresent())) {
+                return Optional.of(byItem.shulkerCount());
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** 配方限定的已镶虚空物质块数范围（某条镶孔要求带 {@code void_matter_count} 时）；未限定返回空。 */
+    public Optional<InlayMatcher.EnchantRange> voidMatterRange() {
+        for (InlayMatcher matcher : inlays) {
+            if (matcher instanceof InlayMatcher.ByItem byItem
+                    && (byItem.voidMatterCount().min().isPresent() || byItem.voidMatterCount().max().isPresent())) {
+                return Optional.of(byItem.voidMatterCount());
+            }
+        }
+        return Optional.empty();
+    }
+
     // ==================== 产物 ====================
 
     /** 实际产出：逐个产物按概率判定并展开（每份基材调用一次）。 */

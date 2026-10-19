@@ -38,7 +38,13 @@ final class TransferNetwork {
     long readyAt = 0;
 
     /**
-     * 节点位置 → 该节点（的存入面）能到达的全部「取出」货源路线（顶点图里的出边），先近后远。
+     * 节点位置 → 该节点<b>每个面各自</b>的「取出」货源路线（按 {@link Direction#ordinal()} 索引的定长数组，
+     * 未用过的面为 {@code null}），先近后远。
+     *
+     * <p>路线本身是<b>节点级</b>的（从该节点反向 BFS 求得，与该节点是哪个「存入」面服务无关），但这里的
+     * 列表顺序同时充当<b>轮转状态</b>（「下一轮先试哪个源」）。同一个方块上若有两个都朝容器的「存入」面，
+     * 共用一份可变列表会让一个面轮转时顶偏另一个面的游标，使后者读到的过滤与入组时的源不再对应。
+     * 因此按面各存一份，各自轮转。</p>
      *
      * <p>这是一份<b>按需缓存</b>（照前置流体管网的 reachability 缓存）：真正要搬运时才用一次反向
      * BFS 算出并填进来，空结果也缓存（负缓存）；有效取出集合一变就整体清空重算。
@@ -47,7 +53,7 @@ final class TransferNetwork {
      * <p>每条路线还带上沿途「存入」面的过滤（{@link SourceRoute}）。因此<i>设置过滤</i>本身也会让本缓存
      * 过期，需要在过滤变化时一并失效（见 {@code SetLogisticsFilterPacket}）。</p>
      */
-    final Long2ObjectOpenHashMap<ObjectArrayList<SourceRoute>> sources = new Long2ObjectOpenHashMap<>();
+    final Long2ObjectOpenHashMap<ObjectArrayList<SourceRoute>[]> sources = new Long2ObjectOpenHashMap<>();
 
     /**
      * 已记录的有效「取出」集合（顶点图里的取出顶点）。

@@ -47,11 +47,12 @@ import javax.annotation.Nullable;
  * <p>结构沿用逻辑门网络那一套：按维度缓存、{@code byNode} 索引、拓扑种子重建、区块卸载精确失效。
  * 「货源」则照前置流体管网的思路做成一张<b>顶点图 + 按需缓存</b>：网里只维护「哪些取出有效」
  * 这个集合（面朝容器确实存在，按差集增删），某个「存入」能到达的全部有效取出（先近后远）在真正
- * 搬运时用一次反向 BFS 现算并缓存，集合一变缓存整体作废。于是没被搬运过的节点不占缓存，
- * 端点的出现 / 消失也只做一次集合求差，不会随取出数量线性膨胀。</p>
+ * 搬运时用一次反向 BFS 现算并缓存，集合一变缓存整体作废；缓存按面各存一份，轮转状态互不干扰。
+ * 于是没被搬运过的节点不占缓存，端点的出现 / 消失也只做一次集合求差，不会随取出数量线性膨胀。</p>
  *
- * <p>搬运时从缓存的取出列表（先近后远）队首开始轮转：某个源取不到货就顺次后移，取到货则把该源转到
- * 队尾，下次换个队首——于是「多取出对一个存入」时会轮流从各个取出面取货，而不是一直压着最近的那个。</p>
+ * <p>搬运时从缓存的取出列表（先近后远）队首开始轮转：某个源「搬不出货」（过不了过滤、或目标收不下）
+ * 就顺次后移，用过的源一律转到队尾——于是「多取出对一个存入」时会轮流从各个取出面取货、不会一直压着
+ * 最近的那个，搬不动的源也不会把后面的货源饿死。</p>
  *
  * <p>7 游戏刻冷却由<b>整张网共用</b>：一轮里所有「存入」面同时响应，一轮真的搬动了物品才进入冷却，
  * 没搬动则下一 tick 立即重试。同一轮里多个「存入」面从同一个「取出」面取货时，按各面<b>物流量为权重</b>
@@ -390,6 +391,12 @@ final class LevelTransferNetworks {
         return found;
     }
 
+    /** 新建一份「各面各自的货源路线」数组（下标 = {@link Direction#ordinal()}，未用过的面为 {@code null}）。 */
+    @SuppressWarnings("unchecked")
+    private static ObjectArrayList<SourceRoute>[] newSourceRoutes() {
+        return new ObjectArrayList[Direction.values().length];
+    }
+
     /** 该位置某面的过滤物品（未设置时为空栈）。 */
     private ItemStack faceFilter(long packed, Direction dir) {
         BlockPos pos = BlockPos.of(packed);
@@ -447,9 +454,10 @@ final class LevelTransferNetworks {
     }
 
     /**
-     * 一张网的一轮搬运：先为每个「存入」面认领一个取出源（从轮转队列队首开始，取不到就顺次后移），
-     * 再按「物流量权重」把每个取出源能给的量分给竞争该源的全部「存入」面。搬运成功的面把用过的源转到
-     * 队尾，于是「多取出对一个存入」时轮流取货、不会一直压着最近的那个。
+     * 一张网的一轮搬运：先为每个「存入」面认领一个取出源（从轮转队列队首开始，取不到就顺次后移；
+     * 「取不到」既包含货过不了（服务面 + 沿途）过滤，也包含目标容器收不下该货），再按「物流量权重」把每个
+     * 取出源能给的量分给竞争该源的全部「存入」面。每个面搬运后都把用过的源转到队尾：成功时「多取出对一个
+     * 存入」轮流取货、不会一直压着最近的；失败时下一轮改试别的源，不会让一个搬不动的源把后面的货源饿死。
      *
      * <p>分配口径：设某源共有 {@code k} 个竞争面、物流量权重为 {@code w_1..w_k}，则该源取出的总量为
      * {@code pool = min(该源物品总数, Σw)}，第 i 个面分得 {@code pool * w_i / Σw}（除不尽的余数按顺序
@@ -472,6 +480,7 @@ final class LevelTransferNetworks {
             if (target == null) continue;
 
             // 候选货源按需缓存：没算过就现算一次（空结果也缓存成负缓存），端点 / 拓扑变化时整体作废。
+            // 缓存按「面」隔离：列表顺序同时是轮转状态，同方块多面共用会互相顶偏游标。
             // 带远程面的节点例外：它的货源可能落在其它网络的同信道成员上，缓存无法可靠失效，故每 tick 现算。
             TransferNode serviceNode = network.nodes.get(packed);
             boolean remote = serviceNode != null && serviceNode.isRemote();
@@ -479,10 +488,15 @@ final class LevelTransferNetworks {
             if (remote) {
                 sources = this.sourcesOf(network, packed);
             } else {
-                sources = network.sources.get(packed);
+                ObjectArrayList<SourceRoute>[] perFace = network.sources.get(packed);
+                if (perFace == null) {
+                    perFace = newSourceRoutes();
+                    network.sources.put(packed, perFace);
+                }
+                sources = perFace[face.ordinal()];
                 if (sources == null) {
                     sources = this.sourcesOf(network, packed);
-                    network.sources.put(packed, sources);
+                    perFace[face.ordinal()] = sources;
                 }
             }
             if (sources.isEmpty()) continue;
@@ -504,11 +518,12 @@ final class LevelTransferNetworks {
             progress = false;
             Object2ObjectOpenHashMap<TransferSource, List<RoundFace>> groups = new Object2ObjectOpenHashMap<>();
             for (RoundFace rf : faces) {
-                // 跳过没有可搬运物品（并沿链路过滤逐级放行）的取出源。
+                // 跳过搬不出货的取出源：既要求货能通过（服务面 + 沿途）过滤，也要求目标容器确实收得下。
                 while (rf.pointer < rf.sources.size()) {
                     SourceRoute route = rf.sources.get(rf.pointer);
                     IItemHandler handler = this.sourceHandler(handlers, route.source());
-                    if (handler != null && hasMatching(handler, rf.filter, route.chainFilters())) break;
+                    if (handler != null
+                            && canSupply(handler, rf.target, rf.limit, rf.filter, route.chainFilters())) break;
                     rf.pointer++;
                     progress = true;
                 }
@@ -567,11 +582,12 @@ final class LevelTransferNetworks {
                 RoundFace rf = group.get(i);
                 // 服务面自身的过滤 + 沿途每一道「存入」面的过滤，逐级校验。
                 ObjectArrayList<ItemStack> chain = rf.sources.get(rf.pointer).chainFilters();
-                if (!moveOneStack(handler, rf.target, shares[i], rf.filter, chain)) continue;
-                moved = true;
-                // 轮转：把刚用过的取出源转到队尾，下次先试新的队首。多取出对一个存入时才会轮流取货，
-                // 而不是一直压着最近的。缓存的那份列表本身就是轮转状态，端点 / 拓扑变化时随缓存一起作废。
-                if (rf.sources.size() > 1) rf.sources.add(rf.sources.remove(0));
+                boolean ok = moveOneStack(handler, rf.target, shares[i], rf.filter, chain);
+                // 把这次用到的取出源（在 rf.pointer，未必是队首）转到队尾，下一轮先试新的队首：
+                // 成功 → 多取出对一个存入时轮流取货，不会一直压着最近的；失败 → 下一轮别再先选它，
+                // 免得它（模拟与实际不一致等情形下）一直挡住后面的货源。轮转状态就存在这份缓存列表里。
+                if (rf.sources.size() > 1) rf.sources.add(rf.sources.remove(rf.pointer));
+                if (ok) moved = true;
             }
         }
         return moved;
@@ -612,12 +628,22 @@ final class LevelTransferNetworks {
         return total;
     }
 
-    /** 源容器里是否存在能通过「服务面过滤 + 链路过滤」的物品。 */
-    private static boolean hasMatching(IItemHandler handler, ItemStack serviceFilter, List<ItemStack> chain) {
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack stack = handler.getStackInSlot(slot);
-            if (stack.isEmpty()) continue;
-            if (passesAll(stack, serviceFilter, chain)) return true;
+    /**
+     * 源容器里是否存在「能通过（服务面 + 沿途）过滤、且目标容器确实收得下」的物品。
+     *
+     * <p>比只按过滤判定多校验了<b>目标容器的可接收性</b>。仅按过滤选源时，若选中的源只有目标容器
+     * 拒收的物品（如储物抽屉只收固定物品、目标恰好已满），{@code moveOneStack} 会搬运失败；而失败
+     * 既不轮转源列表也不改选下一个源，下一轮又会重新选中同一个源——于是其它有效货源被永久饿死，
+     * 表现为「一个取不到货的近端源把远端源全都挡住」。这里直接跳过这类源，顺延到下一个。</p>
+     */
+    private static boolean canSupply(
+            IItemHandler source, IItemHandler target, int limit, ItemStack serviceFilter, List<ItemStack> chain) {
+        for (int slot = 0; slot < source.getSlots(); slot++) {
+            ItemStack available = source.extractItem(slot, limit, true);
+            if (available.isEmpty()) continue;
+            if (!passesAll(available, serviceFilter, chain)) continue;
+            ItemStack leftover = ItemHandlerUtil.insertItem(target, available, true);
+            if (leftover.getCount() < available.getCount()) return true;
         }
         return false;
     }
@@ -625,8 +651,7 @@ final class LevelTransferNetworks {
     /** 物品是否通过服务面过滤与沿途每一道「存入」面的过滤（逐级 AND）。 */
     private static boolean passesAll(ItemStack item, ItemStack serviceFilter, List<ItemStack> chain) {
         if (!serviceFilter.isEmpty() && !FilterItem.filter(serviceFilter, item)) return false;
-        for (int i = 0; i < chain.size(); i++) {
-            ItemStack filter = chain.get(i);
+        for (ItemStack filter : chain) {
             if (!filter.isEmpty() && !FilterItem.filter(filter, item)) return false;
         }
         return true;

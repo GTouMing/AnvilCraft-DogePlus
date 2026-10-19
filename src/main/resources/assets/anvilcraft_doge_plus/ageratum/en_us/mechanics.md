@@ -80,7 +80,7 @@ When **the base material is present and the material slot is empty**, it tries t
 | **Remote Gate**        | <ref item="minecraft:ender_pearl"/>         | Remote faces with the same channel link up: forwards inputs on the redstone side, remote extract on the item side.                |
 | **Insert**             | <ref item="anvilcraft:chute"/>              | Puts items into the container it faces.                                                                                           |
 | **Extract**            | <ref item="anvilcraft:magnetic_chute"/>     | Takes items from the container it faces.                                                                                          |
-| **Generator**          | <ref item="anvilcraft:supercapacitor"/>     | Produces 512 kW of power once placed.                                                                                             |
+| **Generator**          | <ref item="anvilcraft:supercapacitor"/>     | Produces power once placed (512 kW by default, configurable).                                                                     |
 
 ### Attribute Levels
 
@@ -110,14 +110,14 @@ The **Resonance** property does nothing on its own; it enhances the other inlay 
 
 Inlay crafting recipes fall into three kinds:
 
-| Kind               | `kind`     | Source                          |
-|--------------------|------------|---------------------------------|
-| **Inlay Crafting** | `crafting` | Added by this mod               |
-| **Inlay Smithing** | `smithing` | Vanilla and AnvilCraft smithing |
-| **Inlay Copying**  | `copying`  | AnvilCraft jewel copying        |
+| Kind               | Source                          |
+|--------------------|---------------------------------|
+| **Inlay Crafting** | Added by this mod               |
+| **Inlay Smithing** | Vanilla and AnvilCraft smithing |
+| **Inlay Copying**  | AnvilCraft jewel copying        |
 
 
-**Silent Inlay**: some items can take part in inlaying even without properties; these items are not written into inlay recipes, but defined through **inlay crafting recipes**.
+**Some materials have no properties**, yet can still be inlaid that usually use on an inlay crafting recipe.
 
 
 ### Inlay crafting recipes
@@ -130,6 +130,7 @@ Built-in/derived inlay crafting recipes of the mod:
 - **Vanilla armor trims**: 18 trim templates inlaid with "trimmable armor + trim material".
 - **Hollow Magnet Block**: inlay n Iron Ingots → n Magnet Ingots (n = 1..4).
 - **Confinement Chamber**: inlay 1 Charged Neutronium Ingot → 1 Confined Neutronium Ingot.
+- **Shulker Box**: inlay 3 Shulker Boxes and 1 Void Matter Block → 1 Space Overcompressor.
 
 **Transcendium**: the add-on specifically adds a Transcendium inlay crafting recipe: inlay <ref item="anvilcraft:overheated_ember_metal_block"/> with <ref item="anvilcraft:charged_neutronium_ingot"/> and craft it:
 

@@ -32,7 +32,6 @@ public abstract class MagnetIngotMarkMixin {
     private void doge_plus$markTarget(
             Level level, Player player, InteractionHand usedHand,
             CallbackInfoReturnable<InteractionResultHolder<ItemStack>> cir) {
-        if (level.isClientSide) return;
         ItemStack stack = player.getItemInHand(usedHand);
         if (!stack.is(ModItems.MAGNET_INGOT)) return;
 
@@ -43,10 +42,12 @@ public abstract class MagnetIngotMarkMixin {
         AABB aabb = player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0);
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(level, player, eye, end, aabb,
                 e -> e instanceof LivingEntity && e.isAlive() && e != player);
-        if (hit != null && hit.getEntity() instanceof IAnvilTarget target) {
+        if (!(hit != null && hit.getEntity() instanceof IAnvilTarget target)) return;
+        // 世界改动只在服务端；客户端只回成功做预测（两侧结果一致，才能正常挥臂）。
+        if (!level.isClientSide) {
             target.doge_plus$setMarks(target.doge_plus$getMarks() + 1);
             stack.shrink(1);
-            cir.setReturnValue(InteractionResultHolder.sidedSuccess(stack, false));
         }
+        cir.setReturnValue(InteractionResultHolder.sidedSuccess(stack, level.isClientSide()));
     }
 }

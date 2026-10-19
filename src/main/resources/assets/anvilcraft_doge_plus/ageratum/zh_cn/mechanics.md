@@ -80,7 +80,7 @@ AnvilCraft: Doge+ 的核心是 **镶嵌系统**，一种把材料嵌入物品以
 | **远程门**     | <ref item="minecraft:ender_pearl"/>         | 信道相同的远程面互连：红石侧转发输入，物品侧远程取货。                      |
 | **存入**       | <ref item="anvilcraft:chute"/>              | 将物品存入面朝的容器                                                        |
 | **取出**       | <ref item="anvilcraft:magnetic_chute"/>     | 从面朝的容器取出物品                                                        |
-| **发电**       | <ref item="anvilcraft:supercapacitor"/>     | 放置后产生 512 kW 电力。                                                    |
+| **发电**       | <ref item="anvilcraft:supercapacitor"/>     | 放置后产生电力（默认 512 kW，可在配置中调整）。                             |
 
 ### 属性等级
 
@@ -104,20 +104,20 @@ AnvilCraft: Doge+ 的核心是 **镶嵌系统**，一种把材料嵌入物品以
 
 <recipe id="anvilcraft_doge_plus:inlay_crafting/magnet_ingot_from_hollow_magnet_block_4"/>
 
-**镶合** 是镶嵌系统的拓展：在 [镶合台](block/inlay_crafting_table.md) 上，将带有指定镶嵌的物品/方块合成新的物品/方块。。
+**镶合** 是镶嵌系统的拓展：在 [镶合台](block/inlay_crafting_table.md) 上，把带有指定镶嵌的物品或方块合成成新的物品或方块。
 
 ### 三类镶合
 
 镶合配方分成三类：
 
-| 类别         | `kind`     | 来源                 |
-|--------------|------------|----------------------|
-| **镶嵌合成** | `crafting` | 本 mod 添加          |
-| **镶嵌锻造** | `smithing` | 原版以及本体锻造配方 |
-| **镶嵌复制** | `copying`  | 本体珠宝复制配方     |
+| 类别         | 来源                 |
+|--------------|----------------------|
+| **镶嵌合成** | 本 mod 添加          |
+| **镶嵌锻造** | 原版以及本体锻造配方 |
+| **镶嵌复制** | 本体珠宝复制配方     |
 
 
-**静默镶嵌**：部分物品没有属性也可参与镶嵌，这些物品不会在镶嵌配方中写明，而是通过**镶合配方**定义。
+**部分材料没有属性**，但同样可以镶入物品，一般用于镶合。
 
 
 ### 镶合配方
@@ -130,6 +130,7 @@ AnvilCraft: Doge+ 的核心是 **镶嵌系统**，一种把材料嵌入物品以
 - **原版盔甲纹饰**：18 种纹饰模板镶入「可纹饰装备 + 纹饰材料」。
 - **空心磁铁块**：镶入 n 个铁锭 → n 个磁铁锭（n = 1..4）。
 - **约束仓**：镶入 1 个充能中子锭 → 1 个约束中子锭。
+- **潜影盒**：镶入 3 个潜影盒与 1 个虚空物质块 → 1 个空间超压器。
 
 **超限合金**：附属特别添加了超限合金的镶合配方，由 <ref item="anvilcraft:overheated_ember_metal_block"/> 镶嵌 <ref item="anvilcraft:charged_neutronium_ingot"/> 并镶合而成：
 

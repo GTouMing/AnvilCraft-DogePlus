@@ -1,8 +1,10 @@
 package dev.anvilcraft.gtouming.doge_plus.util;
 
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
+import dev.anvilcraft.gtouming.doge_plus.data.InlayExtra;
 import dev.anvilcraft.gtouming.doge_plus.init.ModDataComponentTypes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
+import dev.dubhe.anvilcraft.init.block.ModBlocks;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -50,6 +52,37 @@ public final class InlayUtil {
             }
         }
         return count;
+    }
+
+    // ==================== 潜影嵌套计数 ====================
+
+    /** 该物品自身记录的潜影嵌套计数（取其全部镶孔条目里的最大值；无则全零）。 */
+    public static InlayExtra.Nesting nestingOf(ItemStack stack) {
+        InlayExtra.Nesting best = InlayExtra.Nesting.EMPTY;
+        for (InlayEntry entry : getInlays(stack)) {
+            if (entry.isEmpty()) continue;
+            InlayExtra.Nesting nesting = entry.nesting();
+            if (nesting.shulkers() + nesting.voidMatter() > best.shulkers() + best.voidMatter()) {
+                best = nesting;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * 镶嵌台在基材上镶入 {@code inlay} 后，新条目应记录的潜影嵌套计数：
+     * 基材已记录的 + 被镶物品自身记录的 + 这次镶入的（潜影盒 +1 / 虚空物质块 +1）。
+     *
+     * <p>不区分先后、也不看最后一次镶的是哪个：逐层把盒镶进盒、或往同一个盒里连镶，计数都照样累加，
+     * 于是「已镶 3 个潜影盒 + 1 个虚空物质块」这一状态与镶入顺序无关。</p>
+     */
+    public static InlayExtra.Nesting nesting(ItemStack inlay, ItemStack base) {
+        InlayExtra.Nesting fromBase = nestingOf(base);
+        InlayExtra.Nesting fromInlay = nestingOf(inlay);
+        int shulkers = fromBase.shulkers() + fromInlay.shulkers() + (inlay.is(Items.SHULKER_BOX) ? 1 : 0);
+        int voidMatter = fromBase.voidMatter() + fromInlay.voidMatter()
+                + (inlay.is(ModBlocks.VOID_MATTER_BLOCK.asItem()) ? 1 : 0);
+        return new InlayExtra.Nesting(shulkers, voidMatter);
     }
 
     // ==================== 镶嵌操作 ====================

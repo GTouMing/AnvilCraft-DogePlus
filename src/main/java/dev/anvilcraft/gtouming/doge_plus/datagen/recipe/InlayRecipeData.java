@@ -72,7 +72,10 @@ public record InlayRecipeData(String inlay, String base) {
             new InlayRecipeData(ENCHANT, CHARGED_NEUTRONIUM_INGOT),
             new InlayRecipeData(RESONANCE, CHARGED_NEUTRONIUM_INGOT),
             // 信标：镶入诅咒金锭（attack 材料）；放置时按诅咒金块金字塔层数概率转化为腐化信标
-            new InlayRecipeData(ATTACK, BEACON)
+            new InlayRecipeData(ATTACK, BEACON),
+            // 潜影盒：镶入潜影盒做嵌套（额外数据记个数）；虚空物质块能否镶由镶合配方把关
+            new InlayRecipeData(SHULKER_BOX_MATERIAL, SHULKER_BOX),
+            new InlayRecipeData(VOID_MATTER_BLOCK, SHULKER_BOX)
     );
 
     /**

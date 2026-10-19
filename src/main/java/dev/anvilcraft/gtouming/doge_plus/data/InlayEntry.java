@@ -64,12 +64,22 @@ public record InlayEntry(ResourceLocation id, List<InlayExtra> extra, List<Resou
      * 不会被其它定义的属性污染。</p>
      */
     public static InlayEntry fromItemStack(ItemStack stack, @Nullable MaterialManager.InlayMaterial material) {
+        return fromItemStack(stack, material, InlayExtra.Nesting.EMPTY);
+    }
+
+    /**
+     * 同 {@link #fromItemStack(ItemStack, MaterialManager.InlayMaterial)}，但额外记录潜影嵌套计数。
+     *
+     * @param nesting 该条目应记录的潜影嵌套计数（见 {@code InlayUtil#nesting}）；全零表示不记
+     */
+    public static InlayEntry fromItemStack(
+            ItemStack stack, @Nullable MaterialManager.InlayMaterial material, InlayExtra.Nesting nesting) {
         if (stack.isEmpty() || material == null) {
             return empty();
         }
 
         List<ResourceLocation> attributes = material.properties().stream().map(InlayProperty::id).toList();
-        return build(stack, attributes);
+        return build(stack, attributes, nesting);
     }
 
     /**
@@ -79,14 +89,19 @@ public record InlayEntry(ResourceLocation id, List<InlayExtra> extra, List<Resou
      * 仍然要记下物品 id 与额外数据（药水、附魔条数）。</p>
      */
     public static InlayEntry ofItem(ItemStack stack) {
+        return ofItem(stack, InlayExtra.Nesting.EMPTY);
+    }
+
+    /** 静默镶嵌（不查材料定义）并额外记录潜影嵌套计数。 */
+    public static InlayEntry ofItem(ItemStack stack, InlayExtra.Nesting nesting) {
         if (stack.isEmpty()) {
             return empty();
         }
-        return build(stack, List.of());
+        return build(stack, List.of(), nesting);
     }
 
     /** 按物品与属性列表构造条目，并抽取额外数据。 */
-    private static InlayEntry build(ItemStack stack, List<ResourceLocation> attributes) {
+    private static InlayEntry build(ItemStack stack, List<ResourceLocation> attributes, InlayExtra.Nesting nesting) {
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         List<InlayExtra> extra = new ArrayList<>();
 
@@ -105,6 +120,11 @@ public record InlayEntry(ResourceLocation id, List<InlayExtra> extra, List<Resou
         int enchantments = countEnchantments(stack);
         if (enchantments > 0) {
             extra.add(new InlayExtra.Enchantments(enchantments));
+        }
+
+        // 潜影嵌套计数：由调用方（镶嵌台，看得到基材）算好传进来
+        if (nesting != null && (nesting.shulkers() > 0 || nesting.voidMatter() > 0)) {
+            extra.add(nesting);
         }
 
         return new InlayEntry(id, extra, attributes);
@@ -129,6 +149,26 @@ public record InlayEntry(ResourceLocation id, List<InlayExtra> extra, List<Resou
             }
         }
         return 0;
+    }
+
+    /** 本条目的潜影嵌套计数（无此项时为全零）。 */
+    public InlayExtra.Nesting nesting() {
+        for (InlayExtra data : extra) {
+            if (data instanceof InlayExtra.Nesting nesting) {
+                return nesting;
+            }
+        }
+        return InlayExtra.Nesting.EMPTY;
+    }
+
+    /** 本条目的已镶潜影盒数（无此项时为 0）。 */
+    public int shulkerCount() {
+        return nesting().shulkers();
+    }
+
+    /** 本条目的已镶虚空物质块数（无此项时为 0）。 */
+    public int voidMatterCount() {
+        return nesting().voidMatter();
     }
 
     /** 本条目的药水效果（无此项时为空）。 */

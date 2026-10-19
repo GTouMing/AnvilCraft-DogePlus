@@ -311,9 +311,11 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHo
         // 一次砸击消耗 min(材料,基材) 份，多出的材料/基材保留在槽位中；产物按份数生成。
         int count = Math.min(inlay.getCount(), base.getCount());
 
+        // 潜影嵌套计数：镶嵌台看得到基材，在这里累加好（其它材料算出来是全零，不记）
+        var nesting = InlayUtil.nesting(inlay, base);
         InlayEntry entry = inlayMaterial == null
-                ? InlayEntry.ofItem(inlay)
-                : InlayEntry.fromItemStack(inlay, inlayMaterial);
+                ? InlayEntry.ofItem(inlay, nesting)
+                : InlayEntry.fromItemStack(inlay, inlayMaterial, nesting);
         int sockets = MaterialManager.getSocketCount(base);
 
         // 镶嵌操作在基材副本上执行：补空占位、抽取附魔等都不应污染未被消耗的剩余基材。

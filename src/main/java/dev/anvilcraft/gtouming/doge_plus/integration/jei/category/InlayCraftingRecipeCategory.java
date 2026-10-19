@@ -133,6 +133,11 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
                         // 超限合金配方：标明本条配方要求的附魔条数（同前置，金色）
                         recipe.enchantRange().ifPresent(range ->
                                 tooltip.add(InlayRecipeTooltips.transcendiumEnchantments(range)));
+                        // 潜影盒配方：标明本条配方要求的潜影嵌套计数（金色）
+                        recipe.shulkerRange().ifPresent(range ->
+                                tooltip.add(InlayRecipeTooltips.shulkerCount(range)));
+                        recipe.voidMatterRange().ifPresent(range ->
+                                tooltip.add(InlayRecipeTooltips.voidMatterCount(range)));
                     });
         }
 

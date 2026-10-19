@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.data;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
@@ -12,6 +13,8 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -19,10 +22,11 @@ import java.util.stream.Stream;
  * 镶嵌条目携带的额外数据。
  *
  * <p>镶嵌会消耗掉材料物品本身，凡是「之后还要用得上」的信息都必须跟着镶孔留下来。
- * 目前有两类：</p>
+ * 目前有三类：</p>
  * <ul>
  *   <li>{@link Potion} 药水效果——镶嵌药水后仍能还原出对应药水；</li>
- *   <li>{@link Enchantments} 附魔条数——中子锭按条数决定镶合产物。</li>
+ *   <li>{@link Enchantments} 附魔条数——中子锭按条数决定镶合产物；</li>
+ *   <li>{@link Nesting} 潜影嵌套计数（已镶潜影盒数 + 虚空物质块数）——按「3 潜影盒 + 1 虚空物质块」镶合出空间超压器。</li>
  * </ul>
  *
  * <p><b>扩展方式</b>：新增一个 record 实现本接口，自带 {@code CODEC} / {@code write} /
@@ -56,8 +60,12 @@ public sealed interface InlayExtra {
             if (typeTag == null) {
                 return DataResult.error(() -> "Missing inlay extra type");
             }
-            return ops.getStringValue(typeTag)
-                    .flatMap(type -> codecFor(type).decode(ops, input));
+            return ops.getStringValue(typeTag).flatMap(type -> {
+                MapCodec<InlayExtra> codec = codecFor(type);
+                return codec == null
+                        ? DataResult.error(() -> "Unknown inlay extra type: " + type)
+                        : codec.decode(ops, input);
+            });
         }
 
         @Override
@@ -70,8 +78,28 @@ public sealed interface InlayExtra {
     /** 单个额外数据的 Codec 形态。 */
     Codec<InlayExtra> CODEC = MAP_CODEC.codec();
 
-    /** 列表 JSON 编解码，供 {@code InlayEntry} 直接使用。 */
-    Codec<List<InlayExtra>> LIST_CODEC = CODEC.listOf();
+    /**
+     * 列表 JSON 编解码，供 {@code InlayEntry} 直接使用。
+     *
+     * <p>逐条解析、<b>丢弃解析失败的条目</b>：额外数据的类型名一旦变动（改名 / 移除），老存档里残留的
+     * 旧条目就不会让整件物品（乃至玩家数据、方块镶嵌数据）反序列化失败——存档照样进得去，只是那条
+     * 额外数据没了。</p>
+     */
+    Codec<List<InlayExtra>> LIST_CODEC = new Codec<>() {
+        @Override
+        public <T> DataResult<Pair<List<InlayExtra>, T>> decode(DynamicOps<T> ops, T input) {
+            return ops.getList(input).map(elements -> {
+                List<InlayExtra> extras = new ArrayList<>();
+                elements.accept(element -> CODEC.parse(ops, element).result().ifPresent(extras::add));
+                return Pair.of(extras, ops.empty());
+            });
+        }
+
+        @Override
+        public <T> DataResult<T> encode(List<InlayExtra> input, DynamicOps<T> ops, T prefix) {
+            return CODEC.listOf().encode(input, ops, prefix);
+        }
+    };
 
     /**
      * 单个额外数据的网络编解码。
@@ -90,11 +118,15 @@ public sealed interface InlayExtra {
     /** 列表网络编解码。 */
     StreamCodec<ByteBuf, List<InlayExtra>> LIST_STREAM_CODEC = STREAM_CODEC.apply(ByteBufCodecs.list());
 
+    @Nullable
     @SuppressWarnings("unchecked")
     private static MapCodec<InlayExtra> codecFor(String type) {
-        if (Potion.TYPE.equals(type)) return (MapCodec<InlayExtra>) (MapCodec<?>) Potion.CODEC;
-        if (Enchantments.TYPE.equals(type)) return (MapCodec<InlayExtra>) (MapCodec<?>) Enchantments.CODEC;
-        throw new IllegalArgumentException("Unknown inlay extra type: " + type);
+        return switch (type) {
+            case Potion.TYPE -> (MapCodec<InlayExtra>) (MapCodec<?>) Potion.CODEC;
+            case Enchantments.TYPE -> (MapCodec<InlayExtra>) (MapCodec<?>) Enchantments.CODEC;
+            case Nesting.TYPE -> (MapCodec<InlayExtra>) (MapCodec<?>) Nesting.CODEC;
+            default -> null;
+        };
     }
 
     private static InlayExtra read(ByteBuf buffer) {
@@ -102,6 +134,7 @@ public sealed interface InlayExtra {
         return switch (type) {
             case Potion.TYPE -> Potion.read(buffer);
             case Enchantments.TYPE -> Enchantments.read(buffer);
+            case Nesting.TYPE -> Nesting.read(buffer);
             default -> throw new IllegalArgumentException("Unknown inlay extra type: " + type);
         };
     }
@@ -151,6 +184,37 @@ public sealed interface InlayExtra {
 
         private static Enchantments read(ByteBuf buffer) {
             return new Enchantments(ByteBufCodecs.VAR_INT.decode(buffer));
+        }
+    }
+
+    /** 潜影嵌套计数：已镶进本物品的潜影盒数与虚空物质块数（不区分先后）。 */
+    record Nesting(int shulkers, int voidMatter) implements InlayExtra {
+
+        public static final String TYPE = "nesting";
+
+        /** 全零（未嵌套）。 */
+        public static final Nesting EMPTY = new Nesting(0, 0);
+
+        public static final MapCodec<Nesting> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+                Codec.INT.fieldOf("shulkers").forGetter(Nesting::shulkers),
+                Codec.INT.fieldOf("void_matter").forGetter(Nesting::voidMatter)
+        ).apply(instance, Nesting::new));
+
+        @Override
+        public String type() {
+            return TYPE;
+        }
+
+        @Override
+        public void write(ByteBuf buffer) {
+            ByteBufCodecs.VAR_INT.encode(buffer, shulkers);
+            ByteBufCodecs.VAR_INT.encode(buffer, voidMatter);
+        }
+
+        private static Nesting read(ByteBuf buffer) {
+            return new Nesting(
+                    ByteBufCodecs.VAR_INT.decode(buffer),
+                    ByteBufCodecs.VAR_INT.decode(buffer));
         }
     }
 }

@@ -45,6 +45,12 @@ public final class InlayRecipeTooltips {
     /** 超限合金配方的概率说明（同前置文案，金色）。 */
     private static final String TRANSCENDIUM_PROBABILITY_KEY =
             "gui.anvilcraft_doge_plus.jei.inlay_crafting.transcendium.probability";
+    /** 潜影嵌套计数要求（金色）：已镶潜影盒数。 */
+    private static final String SHULKER_COUNT_KEY =
+            "gui.anvilcraft_doge_plus.jei.inlay_crafting.shulker_count";
+    /** 潜影嵌套计数要求（金色）：已镶虚空物质块数。 */
+    private static final String VOID_MATTER_COUNT_KEY =
+            "gui.anvilcraft_doge_plus.jei.inlay_crafting.void_matter_count";
 
     /** 数字格式化（与前置一致，最多 3 位小数）。 */
     private static final DecimalFormat FORMATTER = new DecimalFormat();
@@ -128,6 +134,18 @@ public final class InlayRecipeTooltips {
     /** 概率随附魔条数变化时的说明行（金色），如「概率：(10 × (魔咒数量)) / 100」。 */
     public static Component transcendiumChance(double multiplier) {
         return Component.translatable(TRANSCENDIUM_PROBABILITY_KEY, FORMATTER.format(multiplier * 100))
+                .withStyle(ChatFormatting.GOLD);
+    }
+
+    /** 潜影盒数要求行（金色），如「已镶潜影盒数为 3 及以上」。 */
+    public static Component shulkerCount(InlayMatcher.EnchantRange range) {
+        return Component.translatable(SHULKER_COUNT_KEY, enchantRangeLabel(range))
+                .withStyle(ChatFormatting.GOLD);
+    }
+
+    /** 虚空物质块数要求行（金色），如「已镶虚空物质块数为 1 及以上」。 */
+    public static Component voidMatterCount(InlayMatcher.EnchantRange range) {
+        return Component.translatable(VOID_MATTER_COUNT_KEY, enchantRangeLabel(range))
                 .withStyle(ChatFormatting.GOLD);
     }
 

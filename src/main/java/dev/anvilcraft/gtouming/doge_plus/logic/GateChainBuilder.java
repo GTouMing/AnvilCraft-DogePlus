@@ -237,7 +237,11 @@ public final class GateChainBuilder {
      *
      * <p>每个元素「朝上一格 = 取出」（从上一格取货）、「朝下一格 = 存入」（把货交给下一格），于是有向边
      * 从链首一路连到链尾。链首朝起始方块的面本身就是货源（从源容器取货），链尾朝最终点击面的是终点
-     * （送进目标容器），所以两端与链内用的是同一套角色，没有特例。</p>
+     * （送进目标容器），所以两端与链内用的是同一套角色。</p>
+     *
+     * <p>唯一的特例：某个元素「朝上一格」与「朝下一格」落在同一面（链只有一个元素、最终点击面就是
+     * 起始面）时，跟随逻辑载体的写法——该面写「存入」，「入口」（取出）落到反面，否则该节点两面只写得出
+     * 一个角色，收不到货也送不出货。</p>
      *
      * <p>角色写死是有意的：传输网里货源只沿「本方存入面 → 正邻格的取出面」往下游传，节点必须一取一存
      * 才收得到货源。若按邻格已有角色取补，邻格正巧是「取出」时就会把链首两面都写成「存入」——那种节点
@@ -280,11 +284,18 @@ public final class GateChainBuilder {
                     : directionBetween(pos, chain.get(i + 1));
 
             Map<Direction, FaceMode> faces = new HashMap<>();
-            // 朝上一格的面「取出」：链首从面朝容器取物，其余格从上一格取货。
-            faces.put(prevFace, FaceMode.EXTRACT);
-            if (nextFace != null && !nextFace.equals(prevFace)) {
-                // 朝下一格的面「存入」：非尾格把货交给下一格，尾格把货送进面朝容器。
-                faces.put(nextFace, FaceMode.INSERT);
+            if (nextFace != null && nextFace.equals(prevFace)) {
+                // 起始面与截止面一致（最终点击面就是起始面）：跟随逻辑载体——「出口」角色（存入）落在
+                // 同一面、反面作「入口」（取出）。若照旧只写一个「取出」，该节点收不到货也送不出货。
+                faces.put(prevFace, FaceMode.INSERT);
+                faces.put(prevFace.getOpposite(), FaceMode.EXTRACT);
+            } else {
+                // 朝上一格的面「取出」：链首从面朝容器取物，其余格从上一格取货。
+                faces.put(prevFace, FaceMode.EXTRACT);
+                if (nextFace != null) {
+                    // 朝下一格的面「存入」：非尾格把货交给下一格，尾格把货送进面朝容器。
+                    faces.put(nextFace, FaceMode.INSERT);
+                }
             }
             changes.put(pos, faces);
         }

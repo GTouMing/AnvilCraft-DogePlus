@@ -51,6 +51,8 @@ public record BaseMaterialData(String name, int sockets, JsonArray ingredient) {
     public static final String CONFINEMENT_CHAMBER = "confinement_chamber";
     /** 信标：镶入诅咒金锭后，放置时按诅咒金块金字塔层数概率转化为腐化信标。 */
     public static final String BEACON = "beacon";
+    /** 潜影盒：1 镶孔，镶入潜影盒做嵌套；凑成「3 潜影盒 + 1 虚空物质块」后镶合出空间超压器。 */
+    public static final String SHULKER_BOX = "shulker_box";
 
     /** 超温余烬金属块镶孔数：1，镶入中子锭后由镶合按附魔条数出产物。 */
     public static final int OVERHEATED_EMBER_METAL_BLOCK_SOCKETS = 1;
@@ -60,6 +62,9 @@ public record BaseMaterialData(String name, int sockets, JsonArray ingredient) {
 
     /** 信标镶孔数：1，镶入诅咒金锭。 */
     public static final int BEACON_SOCKETS = 1;
+
+    /** 潜影盒镶孔数：1，镶入潜影盒做嵌套 / 镶入虚空物质块。 */
+    public static final int SHULKER_BOX_SOCKETS = 1;
 
     /** 中子锭镶孔数：2（书 / 附魔书 / 紫水晶）。 */
     public static final int NEUTRONIUM_INGOT_SOCKETS = 2;
@@ -134,7 +139,10 @@ public record BaseMaterialData(String name, int sockets, JsonArray ingredient) {
                     .item(ModBlocks.CONFINEMENT_CHAMBER).sockets(CONFINEMENT_CHAMBER_SOCKETS).buildBase(),
             // 信标：1 镶孔，镶入诅咒金锭后放置时按诅咒金块金字塔层数概率转化为腐化信标
             builder().name(BEACON)
-                    .item(Items.BEACON).sockets(BEACON_SOCKETS).buildBase()
+                    .item(Items.BEACON).sockets(BEACON_SOCKETS).buildBase(),
+            // 潜影盒：1 镶孔，镶入潜影盒做嵌套（记个数）/ 镶入虚空物质块
+            builder().name(SHULKER_BOX)
+                    .item(Items.SHULKER_BOX).sockets(SHULKER_BOX_SOCKETS).buildBase()
     };
 
     /**

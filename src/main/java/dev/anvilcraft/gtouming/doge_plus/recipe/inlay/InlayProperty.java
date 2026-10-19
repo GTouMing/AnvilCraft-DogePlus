@@ -151,7 +151,7 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
             "tooltip.anvilcraft_doge_plus.inlay_property.remote",
             0x55FFFF)); // 青色
 
-    /** 发电：放置后产生 512 kW 电力*/
+    /** 发电：放置后作为发电机接入电网输出电力（功率见配置 {@code generatorPower}）。 */
     public static final InlayProperty GENERATOR = register(new InlayProperty(
             AnvilCraftDogePlus.of("generator"),
             "tooltip.anvilcraft_doge_plus.inlay_property.generator",
@@ -174,9 +174,11 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
 
     // ==================== 数据 ====================
 
-    /** tooltip 描述行组件（带颜色）。 */
+    /** tooltip 描述行组件（带颜色）。随配置变化的数值（如发电功率）在此取实时值。 */
     public Component getTooltip() {
-        return Component.translatable(this.descriptionKey)
+        return (this == GENERATOR
+                ? Component.translatable(this.descriptionKey, AnvilCraftDogePlus.CONFIG.generatorPower)
+                : Component.translatable(this.descriptionKey))
                 .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(this.color)));
     }
 

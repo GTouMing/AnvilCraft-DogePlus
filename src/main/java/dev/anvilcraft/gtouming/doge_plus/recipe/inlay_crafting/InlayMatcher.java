@@ -7,6 +7,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
+import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -57,19 +58,25 @@ public sealed interface InlayMatcher permits InlayMatcher.ByProperty, InlayMatch
         return new ByProperty(properties);
     }
 
-    /** 物品要求（不限附魔条数）。 */
+    /** 物品要求（不限附魔条数 / 潜影嵌套计数）。 */
     static InlayMatcher byItem(Item... items) {
-        return new ByItem(List.of(items), Optional.empty(), EnchantRange.ANY);
+        return new ByItem(List.of(items), Optional.empty(), EnchantRange.ANY, EnchantRange.ANY, EnchantRange.ANY);
     }
 
     /** 物品要求 + 附魔条数范围。 */
     static InlayMatcher byItem(EnchantRange enchantsCount, Item... items) {
-        return new ByItem(List.of(items), Optional.empty(), enchantsCount);
+        return new ByItem(List.of(items), Optional.empty(), enchantsCount, EnchantRange.ANY, EnchantRange.ANY);
+    }
+
+    /** 物品要求 + 潜影嵌套计数范围（已镶潜影盒数 / 虚空物质块数）。 */
+    static InlayMatcher byItemWithNesting(
+            EnchantRange shulkers, EnchantRange voidMatter, Item... items) {
+        return new ByItem(List.of(items), Optional.empty(), EnchantRange.ANY, shulkers, voidMatter);
     }
 
     /** 标签要求。 */
     static InlayMatcher byTag(TagKey<Item> tag) {
-        return new ByItem(List.of(), Optional.of(tag), EnchantRange.ANY);
+        return new ByItem(List.of(), Optional.of(tag), EnchantRange.ANY, EnchantRange.ANY, EnchantRange.ANY);
     }
 
     // ==================== 编解码 ====================
@@ -105,13 +112,24 @@ public sealed interface InlayMatcher permits InlayMatcher.ByProperty, InlayMatch
                 } else {
                     buffer.writeBoolean(false);
                 }
-                EnchantRange range = byItem.enchantsCount();
-                buffer.writeBoolean(range.min().isPresent());
-                range.min().ifPresent(buffer::writeVarInt);
-                buffer.writeBoolean(range.max().isPresent());
-                range.max().ifPresent(buffer::writeVarInt);
+                writeRange(buffer, byItem.enchantsCount());
+                writeRange(buffer, byItem.shulkerCount());
+                writeRange(buffer, byItem.voidMatterCount());
             }
         }
+    }
+
+    private static void writeRange(RegistryFriendlyByteBuf buffer, EnchantRange range) {
+        buffer.writeBoolean(range.min().isPresent());
+        range.min().ifPresent(buffer::writeVarInt);
+        buffer.writeBoolean(range.max().isPresent());
+        range.max().ifPresent(buffer::writeVarInt);
+    }
+
+    private static EnchantRange readRange(RegistryFriendlyByteBuf buffer) {
+        Optional<Integer> min = buffer.readBoolean() ? Optional.of(buffer.readVarInt()) : Optional.empty();
+        Optional<Integer> max = buffer.readBoolean() ? Optional.of(buffer.readVarInt()) : Optional.empty();
+        return new EnchantRange(min, max);
     }
 
     private static InlayMatcher read(RegistryFriendlyByteBuf buffer) {
@@ -133,9 +151,7 @@ public sealed interface InlayMatcher permits InlayMatcher.ByProperty, InlayMatch
             Optional<TagKey<Item>> tag = buffer.readBoolean()
                     ? Optional.of(TagKey.create(Registries.ITEM, ResourceLocation.STREAM_CODEC.decode(buffer)))
                     : Optional.empty();
-            Optional<Integer> min = buffer.readBoolean() ? Optional.of(buffer.readVarInt()) : Optional.empty();
-            Optional<Integer> max = buffer.readBoolean() ? Optional.of(buffer.readVarInt()) : Optional.empty();
-            return new ByItem(items, tag, new EnchantRange(min, max));
+            return new ByItem(items, tag, readRange(buffer), readRange(buffer), readRange(buffer));
         }
         throw new IllegalStateException("Unknown inlay matcher kind in network buffer: " + kind);
     }
@@ -182,9 +198,13 @@ public sealed interface InlayMatcher permits InlayMatcher.ByProperty, InlayMatch
 
     // ==================== 按物品 / 标签 ====================
 
-    /** 命中指定物品（或标签）且附魔条数落在范围内。 */
-    record ByItem(List<Item> items, Optional<TagKey<Item>> tag, EnchantRange enchantsCount)
-            implements InlayMatcher {
+    /** 命中指定物品（或标签），且附魔条数、潜影嵌套计数都落在范围内。 */
+    record ByItem(
+            List<Item> items,
+            Optional<TagKey<Item>> tag,
+            EnchantRange enchantsCount,
+            EnchantRange shulkerCount,
+            EnchantRange voidMatterCount) implements InlayMatcher {
 
         private static final Codec<List<Item>> ITEMS_CODEC =
                 Codec.either(BuiltInRegistries.ITEM.byNameCodec(), BuiltInRegistries.ITEM.byNameCodec().listOf()).xmap(
@@ -197,20 +217,30 @@ public sealed interface InlayMatcher permits InlayMatcher.ByProperty, InlayMatch
                 ITEMS_CODEC.optionalFieldOf("item", List.of()).forGetter(ByItem::items),
                 TagKey.codec(Registries.ITEM).optionalFieldOf("tag").forGetter(ByItem::tag),
                 EnchantRange.CODEC.optionalFieldOf("enchants_count", EnchantRange.ANY)
-                        .forGetter(ByItem::enchantsCount)
+                        .forGetter(ByItem::enchantsCount),
+                EnchantRange.CODEC.optionalFieldOf("shulker_count", EnchantRange.ANY)
+                        .forGetter(ByItem::shulkerCount),
+                EnchantRange.CODEC.optionalFieldOf("void_matter_count", EnchantRange.ANY)
+                        .forGetter(ByItem::voidMatterCount)
         ).apply(instance, ByItem::new));
 
         @Override
         public boolean test(InlayEntry entry) {
             Item item = BuiltInRegistries.ITEM.get(entry.id());
-            return matches(item) && enchantsCount.test(entry.enchantmentCount());
+            return matches(item)
+                    && enchantsCount.test(entry.enchantmentCount())
+                    && shulkerCount.test(entry.shulkerCount())
+                    && voidMatterCount.test(entry.voidMatterCount());
         }
 
         @Override
         public boolean test(ItemStack stack) {
+            var nesting = InlayUtil.nestingOf(stack);
             return !stack.isEmpty()
                     && matches(stack.getItem())
-                    && enchantsCount.test(InlayEntry.countEnchantments(stack));
+                    && enchantsCount.test(InlayEntry.countEnchantments(stack))
+                    && shulkerCount.test(nesting.shulkers())
+                    && voidMatterCount.test(nesting.voidMatter());
         }
 
         private boolean matches(Item item) {

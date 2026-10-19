@@ -33,9 +33,14 @@ public class DogeMagnetItem extends Item {
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
-        // 铁砧收纳 / 放置
-        if (MagnetAnvilUtil.tryPickupAnvil(context)) return InteractionResult.CONSUME;
-        if (MagnetAnvilUtil.tryPlaceAnvil(context)) return InteractionResult.CONSUME;
+        // 铁砧收纳 / 放置：优先级高于放节点（点铁砧方块一律先收 / 放铁砧）。
+        // 两侧返回一致（客户端 SUCCESS / 服务端 CONSUME），客户端才能正常挥臂。
+        if (MagnetAnvilUtil.tryPickupAnvil(context)) {
+            return InteractionResult.sidedSuccess(context.getLevel().isClientSide());
+        }
+        if (MagnetAnvilUtil.tryPlaceAnvil(context)) {
+            return InteractionResult.sidedSuccess(context.getLevel().isClientSide());
+        }
         // shift 右键放置 Doge 节点
         return DogeNodeUtil.placeDogeNode(this, context);
     }
@@ -45,7 +50,8 @@ public class DogeMagnetItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand usedHand) {
         ItemStack stack = player.getItemInHand(usedHand);
-        if (level.isClientSide) return InteractionResultHolder.sidedSuccess(stack, true);
+        // 客户端只做预测：世界改动（收纳另一只手的铁砧 / 磁吸）都在服务端跑，这里回成功即可。
+        if (level.isClientSide) return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
         ItemStack other = usedHand == InteractionHand.MAIN_HAND ? player.getOffhandItem() : player.getMainHandItem();
 
         // 1. 收纳另一只手上的铁砧（本磁铁未装铁砧、非潜行）
@@ -64,6 +70,19 @@ public class DogeMagnetItem extends Item {
 
         // 3. 吸引附近物品/经验
         return MagnetUtil.magnetizeItems(this, level, player, usedHand);
+    }
+
+    // ==================== 右键实体 ====================
+
+    @Override
+    public InteractionResult interactLivingEntity(
+            ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
+        // 含铁砧时右键实体 = 蓄力（与右键空气同一套），松开即发射；否则放行给实体自身的交互。
+        if (MagnetHandler.hasAnvil(stack) && !player.isShiftKeyDown()) {
+            player.startUsingItem(hand);
+            return InteractionResult.sidedSuccess(player.level().isClientSide());
+        }
+        return InteractionResult.PASS;
     }
 
     // ==================== 蓄力发射 ====================

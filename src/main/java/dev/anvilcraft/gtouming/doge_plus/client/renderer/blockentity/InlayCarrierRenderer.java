@@ -301,6 +301,9 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
     /** {@code BakedQuad} 顶点在 {@code int[]} 里的步长（{@code DefaultVertexFormat.BLOCK} 每个顶点 8 个 int）。 */
     private static final int VERTEX_STRIDE = 8;
 
+    /** 自定义渲染器（builtin/entity）物品的占位包围盒：按「一格方块」估，几何由它自己的渲染器画。 */
+    private static final float[] UNIT_BOUNDS = {0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
+
     /**
      * 在远程门面的「珍珠负块」凹槽里渲染信道物品。
      *
@@ -309,8 +312,9 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
      * 移），扁平贴图物品则做成 billboard 始终面朝玩家；最后量出物品模型实际的长宽高跨度，统一缩放到
      * 「略小于凹槽」，保证三个轴都被钳在凹槽以内。</p>
      *
-     * <p>自带 {@code BlockEntityWithoutLevelRenderer} 的物品（过滤器）改走它自己的自定义渲染器，才会把
-     * 内容 / 拒绝屏障一并画出来；位姿仍是上面那套（模型已居中），渲染器自会补上内容。</p>
+     * <p>自带 {@code BlockEntityWithoutLevelRenderer} 的物品（过滤器 / 潜影盒等）改走它自己的自定义渲染器，
+     * 才会把内容一并画出来；位姿仍是上面那套。这类物品的模型是 {@code builtin/entity}、没有烘进 quad 的
+     * 几何，包围盒量不出来，按「一格方块」估（见 {@link #UNIT_BOUNDS}）。</p>
      */
     private static void renderChannelItem(
             PoseStack poseStack,
@@ -324,10 +328,15 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
         BakedModel model = itemRenderer.getModel(item, level, null, 0);
         // 量出模型自己的包围盒：用来把它居中，并按跨度算缩放（不假设物品模型就是 0..1 居中的方块）。
+        // 自带 BEWLR 的物品（{@code builtin/entity}，如潜影盒）没有烘进 quad 的几何，包围盒量不出来——
+        // 按「一格方块」估一个，几何交给它自己的渲染器画；普通模型量不出来说明模型是空的，不画。
         float[] bounds = {
                 Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
                 -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
-        if (!accumulateBounds(model, bounds)) return;
+        if (!accumulateBounds(model, bounds)) {
+            if (!model.isCustomRenderer()) return;
+            bounds = UNIT_BOUNDS;
+        }
 
         poseStack.pushPose();
         // 与 blockstate multipart 同一套朝向旋转：把「朝北」的模型坐标摆到该面。
@@ -356,7 +365,7 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             poseStack.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
         }
         // 统一缩放到「略小于凹槽」：凹槽是立方体，按三轴最大跨度缩，每轴都落在里面。
-        float scale = socketFitScale(poseStack, model);
+        float scale = socketFitScale(poseStack, bounds);
         poseStack.scale(scale, scale, scale);
         // 物品模型的几何通常落在 0..1、原点在方块角上，而位姿原点此刻已在凹槽（负块）中心：不挪的话
         // 只有模型的一个角落在中心。与 renderStatic 一样把模型中心挪到位姿原点（用实测包围盒，不假设
@@ -383,15 +392,10 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
     /**
      * 把物品模型塞进凹槽所需的统一缩放。
      *
-     * <p>取模型所有 quad 顶点的包围盒，按当前位姿（含显示变换自带的缩放 / 旋转）变换后量出三轴跨度，
+     * <p>取传入的模型包围盒，按当前位姿（含显示变换自带的缩放 / 旋转）变换后量出三轴跨度，
      * 用其中最大值统一缩放——凹槽是立方体，这样每个轴都钳在里面；再乘 {@link #SOCKET_ITEM_FIT} 留白。</p>
      */
-    private static float socketFitScale(PoseStack poseStack, BakedModel model) {
-        float[] bounds = {
-                Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
-                -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
-        if (!accumulateBounds(model, bounds)) return 1.0F;
-
+    private static float socketFitScale(PoseStack poseStack, float[] bounds) {
         Matrix4f matrix = poseStack.last().pose();
         float minX = Float.MAX_VALUE;
         float minY = Float.MAX_VALUE;
