@@ -37,7 +37,7 @@ public record InlayRecipeData(String inlay, String base) {
     public static final List<String> CARRIER_INLAYS = List.of(
             NOT_GATE, AND_GATE, OUTPUT, INPUT,
             COUNTER_GATE, LATCH_GATE, DELAY_GATE, DELAY_INPUT_GATE, REMOTE,
-            CHUTE, MAGNETIC_CHUTE
+            CHUTE, MAGNETIC_CHUTE, CRAFTING_TABLE
     );
 
     /** 可镶入上述材料的基材：镶嵌载体。 */

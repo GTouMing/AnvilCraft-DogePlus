@@ -285,10 +285,12 @@ public final class GateChainBuilder {
 
             Map<Direction, FaceMode> faces = new HashMap<>();
             if (nextFace != null && nextFace.equals(prevFace)) {
-                // 起始面与截止面一致（最终点击面就是起始面）：跟随逻辑载体——「出口」角色（存入）落在
-                // 同一面、反面作「入口」（取出）。若照旧只写一个「取出」，该节点收不到货也送不出货。
-                faces.put(prevFace, FaceMode.INSERT);
-                faces.put(prevFace.getOpposite(), FaceMode.EXTRACT);
+                // 起始面与截止面一致（链只有一个元素、最终点击面就是起始面）：这一面「朝上一格」，
+                // 按链路方向应是「取出」（从起点/上一格取货），出口「存入」落到反面。这样起点侧由
+                // linkLogisticsFace 写上的「存入」与本节点的「取出」正好互补。
+                // 反过来写（同面存入、反面取出）会让起点也被写成「存入」，两面都是存入，接不上边。
+                faces.put(prevFace, FaceMode.EXTRACT);
+                faces.put(prevFace.getOpposite(), FaceMode.INSERT);
             } else {
                 // 朝上一格的面「取出」：链首从面朝容器取物，其余格从上一格取货。
                 faces.put(prevFace, FaceMode.EXTRACT);

@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.network;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
@@ -50,12 +51,15 @@ public record SetLogisticsFilterPacket(BlockPos pos, Direction face, ItemStack f
         if (player.level().isClientSide) return;
         Level level = player.level();
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof LogisticsCarrierBlock)) return;
+        if (!(state.getBlock() instanceof InlayCarrierBlock)) return;
         if (player.distanceToSqr(Vec3.atCenterOf(pos)) > MAX_DISTANCE_SQR) return;
 
         BlockInlays inlays = BlockInlayManager.get(level, pos);
-        // 只有「存入」面能设过滤（与物流量一致）。
-        if (inlays.getFace(face) != FaceMode.INSERT) return;
+        // 「存入 / 合成存入」面才能设过滤；合成存入在普通载体上也要能设产物。
+        FaceMode mode = inlays.getFace(face);
+        boolean allowed = mode == FaceMode.CRAFT_INSERT
+                || (state.getBlock() instanceof LogisticsCarrierBlock && mode == FaceMode.INSERT);
+        if (!allowed) return;
 
         BlockInlayManager.put(level, pos, inlays.withFilter(face, filter));
         // 过滤可能属于链路中「存入」面：按需货源缓存里已固化沿途过滤，必须失效重算，

@@ -44,6 +44,7 @@
   "tooltip.anvilcraft_doge_plus.inlay_property.attack": "pǝddᴉnbǝ ɹo pꞁǝɥ uǝɥʍ ǝᵷɐɯɐp ʞɔɐʇʇɐ ᘔ+ sʇuɐɹᵷ :ʞɔɐʇʇⱯ",
   "tooltip.anvilcraft_doge_plus.inlay_property.cold_forged": "ʍous ɹǝpʍod ɹo ɹǝʇɐʍ uᴉ ʎʇᴉꞁᴉqɐɹnp sɹᴉɐdǝɹ ʎꞁʍoꞁs :pǝᵷɹoℲ pꞁoƆ",
   "tooltip.anvilcraft_doge_plus.inlay_property.counter_gate": "ʇunoɔ ʇǝs ǝɥʇ ʇɐ ꞁɐuᵷᴉs ǝuoʇspǝɹ ʞɔᴉʇ-⥝ ɐ sʇndʇno puɐ sǝsꞁnd ʇnduᴉ sʇunoɔ :ǝʇɐ⅁ ɹǝʇunoƆ",
+  "tooltip.anvilcraft_doge_plus.inlay_property.craft_insert": "ʇɹǝsuᴉ uᴉɐꞁd ɐ oʇ ʞɔɐq ᵷuᴉꞁꞁɐɟ 'ᵷuᴉʇɹǝsuᴉ ǝɹoɟǝq sꞁɐᴉɹǝʇɐɯ s,ǝɔɹnos ǝɥʇ ɯoɹɟ ɯǝʇᴉ pǝɹǝʇꞁᴉɟ ǝɥʇ sʇɟɐɹɔ :ʇɹǝsuI ʇɟɐɹƆ",
   "tooltip.anvilcraft_doge_plus.inlay_property.defense": "pǝddᴉnbǝ ɹo pꞁǝɥ uǝɥʍ ɹoɯɹɐ ᘔ+ sʇuɐɹᵷ :ǝsuǝɟǝᗡ",
   "tooltip.anvilcraft_doge_plus.inlay_property.delay_gate": "sʞɔᴉʇ ɟo ɹǝqɯnu ʇǝs ǝɥʇ ɹoɟ ꞁɐuᵷᴉs pǝʌᴉǝɔǝɹ ǝɥʇ sʇndʇno :ǝʇɐ⅁ ʎɐꞁǝᗡ",
   "tooltip.anvilcraft_doge_plus.inlay_property.delay_input_gate": "sʞɔᴉʇ ɟo ɹǝqɯnu ʇǝs ǝɥʇ ɹǝʇɟɐ ʇnduᴉ ʞɔᴉʇ-⥝ ɐ sɐ sǝʇɐᵷ ɹǝɥʇo s,ʞɔoꞁq sᴉɥʇ oʇ ʇᴉ spǝǝɟ puɐ ꞁɐuᵷᴉs ʇnduᴉ ǝɥʇ spɹoɔǝɹ :ǝʇɐ⅁ ʇnduI pǝʎɐꞁǝᗡ",
@@ -100,6 +101,7 @@
   "tooltip.anvilcraft_doge_plus.inspection.signal": "%s :ꞁɐuᵷᴉS",
   "tooltip.anvilcraft_doge_plus.inspection.sockets": "%2$s/%1$s :sʇǝʞɔoS",
   "tooltip.anvilcraft_doge_plus.inspection.throughput": "%s :ʇndɥᵷnoɹɥ⟘",
+  "tooltip.anvilcraft_doge_plus.inspection.transfer.craft_insert": "ʇɹǝsuI ʇɟɐɹƆ",
   "tooltip.anvilcraft_doge_plus.inspection.transfer.extract": "ʇɔɐɹʇxƎ",
   "tooltip.anvilcraft_doge_plus.inspection.transfer.insert": "ʇɹǝsuI",
   "tooltip.anvilcraft_doge_plus.inspection.transfer.none": "ɹɐǝꞁƆ",
@@ -130,6 +132,7 @@
   "wheel.anvilcraft_doge_plus.gate.not_gate": "ǝʇɐ⅁ ⟘ON",
   "wheel.anvilcraft_doge_plus.gate.output": "ʇndʇnO",
   "wheel.anvilcraft_doge_plus.gate.remote": "ǝʇoɯǝᴚ",
+  "wheel.anvilcraft_doge_plus.transfer.craft_insert": "ʇɹǝsuI ʇɟɐɹƆ",
   "wheel.anvilcraft_doge_plus.transfer.extract": "ʇɔɐɹʇxƎ",
   "wheel.anvilcraft_doge_plus.transfer.insert": "ʇɹǝsuI",
   "wheel.anvilcraft_doge_plus.transfer.none": "ɹɐǝꞁƆ"

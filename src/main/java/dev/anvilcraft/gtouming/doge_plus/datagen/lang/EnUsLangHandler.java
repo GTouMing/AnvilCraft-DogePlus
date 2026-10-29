@@ -63,6 +63,7 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.remote", "Remote Gate: remote faces with the same channel form a bus; a bidirectional wire for redstone, remote extract lookup for items");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "Generator: produces %s kW of power once placed");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.insert", "Insert: puts items into the container it faces");
+        provider.add("tooltip.anvilcraft_doge_plus.inlay_property.craft_insert", "Craft Insert: crafts the filtered item from the source's materials before inserting, falling back to a plain insert");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.extract", "Extract: takes items from the container it faces");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance", "Resonance: enhances some properties of materials in other sockets");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.cold_forged", "✦ Cold Forged: repairs durability faster in water or powder snow (durable items only)");
@@ -118,6 +119,7 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inspection.gate.remote", "Remote");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.none", "Clear");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.insert", "Insert");
+        provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.craft_insert", "Craft Insert");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.transfer.extract", "Extract");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.down", "Down");
         provider.add("tooltip.anvilcraft_doge_plus.inspection.dir.up", "Up");
@@ -149,6 +151,7 @@ public class EnUsLangHandler {
         // ===== Logistics carrier wheel =====
         provider.add("wheel.anvilcraft_doge_plus.transfer.none", "Clear");
         provider.add("wheel.anvilcraft_doge_plus.transfer.insert", "Insert");
+        provider.add("wheel.anvilcraft_doge_plus.transfer.craft_insert", "Craft Insert");
         provider.add("wheel.anvilcraft_doge_plus.transfer.extract", "Extract");
     }
 }

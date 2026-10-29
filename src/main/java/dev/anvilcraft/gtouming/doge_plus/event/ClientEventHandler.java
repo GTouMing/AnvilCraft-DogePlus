@@ -3,6 +3,8 @@ package dev.anvilcraft.gtouming.doge_plus.event;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.InlayCraftingTableBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.InlayTableBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.MobileSilencerScreen;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.tooltip.CarrierInspectionProvider;
@@ -21,7 +23,10 @@ import dev.anvilcraft.gtouming.doge_plus.network.AdjustLogisticsThroughputPacket
 import dev.anvilcraft.gtouming.doge_plus.network.AdjustRemoteChannelPacket;
 import dev.anvilcraft.gtouming.doge_plus.network.SetCarrierFacePacket;
 import dev.anvilcraft.gtouming.doge_plus.network.SetLogisticsFilterPacket;
+import dev.anvilcraft.gtouming.doge_plus.network.SetRecipeFilterPacket;
 import dev.anvilcraft.gtouming.doge_plus.network.SetRemoteChannelItemPacket;
+import dev.anvilcraft.gtouming.doge_plus.network.QuickEditCarrierPacket;
+import dev.anvilcraft.gtouming.doge_plus.util.CarrierQuickEdit;
 import dev.anvilcraft.lib.v2.wheel.api.WheelMenuModel;
 import dev.anvilcraft.lib.v2.wheel.client.input.WheelScreenController;
 import dev.dubhe.anvilcraft.api.tooltip.HudTooltipManager;
@@ -34,6 +39,8 @@ import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -101,6 +108,16 @@ public class ClientEventHandler {
     /** 该次长按是否可能呼出轮盘（只有逻辑 / 物流载体有轮盘；普通载体只支持点按设信道）。 */
     private static boolean carrierWheelCapable = false;
 
+    /** 镶嵌台 / 镶合台配方过滤的点按目标；{@code null} 表示没有进行中。 */
+    @Nullable
+    private static BlockPos recipeFilterPos = null;
+
+    /** 载体快捷编辑的点按目标；{@code null} 表示没有进行中。 */
+    @Nullable
+    private static BlockPos quickEditPos = null;
+    @Nullable
+    private static Direction quickEditFace = null;
+
     /** lib 的轮盘控制器：负责打开 hold 轮盘、松手时触发选中项。 */
     private static final WheelScreenController WHEEL_CONTROLLER = new WheelScreenController();
 
@@ -113,13 +130,32 @@ public class ClientEventHandler {
 
         if (event.getAction() == GLFW.GLFW_PRESS) {
             if (client.screen != null || carrierWheelOpened) return;
-            // 按住 Ctrl 是「门链手势」（移除链需要铁砧锤）：此时不进入轮盘长按计时，避免两者冲突。
-            if (Screen.hasControlDown()) return;
-            if (!player.getMainHandItem().is(ModItemTags.ANVIL_HAMMER)) return;
             if (!(client.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return;
 
             BlockPos pos = hit.getBlockPos();
             BlockState state = client.level.getBlockState(pos);
+
+            // 载体快捷编辑：手持同类型载体右键，且点击方向上的相邻方块也是同类型载体。
+            // 放在 Ctrl 判断之前，Ctrl 用于取反。
+            if (isCarrierQuickEdit(player, pos, state, hit.getDirection())) {
+                quickEditPos = pos;
+                quickEditFace = hit.getDirection();
+                return;
+            }
+
+            // 按住 Ctrl 是「门链手势」（移除链需要铁砧锤）：此时不进入轮盘长按计时，避免两者冲突。
+            if (Screen.hasControlDown()) return;
+            if (!player.getMainHandItem().is(ModItemTags.ANVIL_HAMMER)) return;
+
+            // 镶嵌台 / 镶合台：点按水平侧面 → 用副手物品设定配方过滤（不呼出轮盘）。
+            recipeFilterPos = null;
+            if ((state.getBlock() instanceof InlayTableBlock
+                    || state.getBlock() instanceof InlayCraftingTableBlock)
+                    && hit.getDirection().getAxis().isHorizontal()) {
+                recipeFilterPos = pos;
+                return;
+            }
+
             if (!(state.getBlock() instanceof InlayCarrierBlock)) return;
 
             // 与交互 / HUD 同一套「按模型部件判定面」，仅命中中心体时退回方块面。
@@ -137,6 +173,24 @@ public class ClientEventHandler {
         }
 
         if (event.getAction() == GLFW.GLFW_RELEASE) {
+            // 载体快捷编辑：松手时按 Ctrl 是否按下来决定默认方向是否取反。
+            if (quickEditPos != null && quickEditFace != null) {
+                PacketDistributor.sendToServer(new QuickEditCarrierPacket(
+                        quickEditPos, quickEditFace, Screen.hasControlDown()));
+                quickEditPos = null;
+                quickEditFace = null;
+                resetCarrierWheel();
+                return;
+            }
+            // 镶嵌台 / 镶合台：点按松手 → 用副手物品设定配方过滤（副手空 = 清除）。
+            if (recipeFilterPos != null) {
+                ItemStack offhand = player.getOffhandItem();
+                PacketDistributor.sendToServer(new SetRecipeFilterPacket(
+                        recipeFilterPos, offhand.isEmpty() ? ItemStack.EMPTY : offhand.copyWithCount(1)));
+                recipeFilterPos = null;
+                resetCarrierWheel();
+                return;
+            }
             // 松开右键 = 确认：交给 lib 的轮盘控制器触发选中项并收起轮盘。
             WHEEL_CONTROLLER.onHoldKeyReleased();
             // 未开轮盘即为「点按」：用副手物品设置该面的标识物（副手空 = 清除）。
@@ -148,8 +202,9 @@ public class ClientEventHandler {
                 if (mode == FaceMode.REMOTE) {
                     PacketDistributor.sendToServer(
                             new SetRemoteChannelItemPacket(carrierWheelPos, carrierWheelFace, held));
-                } else if (mode == FaceMode.INSERT
-                        && client.level.getBlockState(carrierWheelPos).getBlock() instanceof LogisticsCarrierBlock) {
+                } else if (mode == FaceMode.CRAFT_INSERT
+                        || (mode == FaceMode.INSERT
+                            && client.level.getBlockState(carrierWheelPos).getBlock() instanceof LogisticsCarrierBlock)) {
                     PacketDistributor.sendToServer(
                             new SetLogisticsFilterPacket(carrierWheelPos, carrierWheelFace, held));
                 }
@@ -220,6 +275,17 @@ public class ClientEventHandler {
         Objects.requireNonNull(client.gameMode).releaseUsingItem(player);
     }
 
+    /** 是否是「手持同类型载体右键，且点击面朝外是同类型载体 / 容器 / 红石粉」的快捷编辑手势。 */
+    private static boolean isCarrierQuickEdit(LocalPlayer player, BlockPos pos, BlockState state, Direction face) {
+        Block target = state.getBlock();
+        if (!CarrierQuickEdit.isProgrammableCarrier(target)) return false;
+        if (!CarrierQuickEdit.isHeldCarrierOf(player.getMainHandItem(), target)) return false;
+        BlockPos otherPos = pos.relative(face);
+        Block other = player.level().getBlockState(otherPos).getBlock();
+        return CarrierQuickEdit.isSameType(target, other)
+                || CarrierQuickEdit.isEndpoint(player.level(), otherPos, face.getOpposite(), target);
+    }
+
     private static void resetCarrierWheel() {
         carrierWheelPressTick = -1L;
         carrierWheelPos = null;
@@ -250,8 +316,10 @@ public class ClientEventHandler {
 
         BlockInlays inlays = BlockInlayManager.get(player.level(), pos);
 
-        // 物流载体的「存入」面：调节物流量。范围比门设定值大，Shift 步幅取 10。
-        if (state.getBlock() instanceof LogisticsCarrierBlock && inlays.getFace(face) == FaceMode.INSERT) {
+        // 物流载体的「存入 / 合成存入」面：调节物流量。范围比门设定值大，Shift 步幅取 10。
+        FaceMode scrollMode = inlays.getFace(face);
+        if ((state.getBlock() instanceof LogisticsCarrierBlock && scrollMode == FaceMode.INSERT)
+                || scrollMode == FaceMode.CRAFT_INSERT) {
             int step = (int) Math.signum(event.getScrollDeltaY()) * (Screen.hasShiftDown() ? 10 : 1);
             if (step == 0) return;
             PacketDistributor.sendToServer(new AdjustLogisticsThroughputPacket(pos, face, step));

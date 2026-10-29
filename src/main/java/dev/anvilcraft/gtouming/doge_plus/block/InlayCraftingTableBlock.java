@@ -103,6 +103,9 @@ public class InlayCraftingTableBlock extends Block implements EntityBlock {
     /** 放入：槽内有物品则替换，旧物返还玩家。 */
     private static void placeStack(
             InlayCraftingTableBlockEntity table, Level level, BlockPos pos, Player player, ItemStack stack) {
+        // 配方过滤：基材槽不接受这种物品时不放入。
+        if (!table.accepts(InlayCraftingTableBlockEntity.SLOT_BASE, stack)) return;
+
         ItemStack existing = table.getItemHandler().getStackInSlot(InlayCraftingTableBlockEntity.SLOT_BASE);
         ItemStack stored = stack.copy();
         table.setStackInSlot(InlayCraftingTableBlockEntity.SLOT_BASE, stored);

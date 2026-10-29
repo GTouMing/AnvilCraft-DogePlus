@@ -160,6 +160,12 @@ public record InlayProperty(ResourceLocation id, String descriptionKey, int colo
 
     // ==================== 物品搬运属性 ====================
 
+    /** 合成存入：在存入前尝试用取出源中的材料合成过滤物品。 */
+    public static final InlayProperty CRAFT_INSERT = register(new InlayProperty(
+            AnvilCraftDogePlus.of("craft_insert"),
+            "tooltip.anvilcraft_doge_plus.inlay_property.craft_insert",
+            0x55DD99)); // 绿色（与存入同色系）
+
     /** 存入：将物品存入面朝的容器。 */
     public static final InlayProperty INSERT = register(new InlayProperty(
             AnvilCraftDogePlus.of("insert"),

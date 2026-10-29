@@ -117,6 +117,16 @@ public class InlayTableBlock extends Block implements EntityBlock {
                 ? InlayTableBlockEntity.SLOT_BASE
                 : InlayTableBlockEntity.SLOT_MATERIAL;
 
+        // 配方过滤：优先按栈式规则选槽；该槽不接受时，若另一槽为空且接受则改放另一槽，
+        // 避免设定过滤后只能先放基材才能放材料。
+        if (!table.accepts(target, stack)) {
+            int other = target == InlayTableBlockEntity.SLOT_BASE
+                    ? InlayTableBlockEntity.SLOT_MATERIAL
+                    : InlayTableBlockEntity.SLOT_BASE;
+            if (!table.getItemHandler().getStackInSlot(other).isEmpty() || !table.accepts(other, stack)) return;
+            target = other;
+        }
+
         ItemStack existing = table.getItemHandler().getStackInSlot(target);
         ItemStack stored = stack.copy();
         table.setStackInSlot(target, stored);

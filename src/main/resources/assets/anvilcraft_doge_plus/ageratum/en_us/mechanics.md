@@ -100,6 +100,16 @@ The **Resonance** property does nothing on its own; it enhances the other inlay 
 | High Temp         | The longer it stays in lava or fire, the more accumulated damage; attacking slowly consumes it.               |
 | Cold Forged       | Repairs durability faster in water or powder snow (durable items only).                                       |
 
+### Recipe Filtering
+
+Hold an anvil hammer in your main hand and a sample item in your off hand, then right-click a **horizontal side of an Inlay Table / Inlay Crafting Table** to set a recipe filter (right-click with an empty off hand to clear):
+
+- **Inlay Table**: the off-hand item is the base (possibly already inlaid). The base slot only accepts the same base; the material slot accepts the existing inlay materials when the base already has inlays, otherwise every material from that base's recipes.
+- **Inlay Crafting Table**: the off-hand item is the target product. The base slot only accepts fully-inlaid bases matching a recipe that produces it.
+- An <ref item="anvilcraft:filter"/> in the off hand is applied directly as an item filter.
+
+Once set, the filter item is rendered on all four horizontal sides of the block.
+
 ## Inlay Crafting
 
 <recipe id="anvilcraft_doge_plus:inlay_crafting/magnet_ingot_from_hollow_magnet_block_4"/>
@@ -171,3 +181,6 @@ Inlays **are not lost when a block is placed**. A block item that has been inlai
 - **Throughput**: the number of items transported per trip; **filter**: only the specified items are allowed through, and filters are supported.
 - Logistics Carriers chain into a transport network: an **Insert** end records all **Extract** ends and moves items end to end, the whole chain **sharing one 7gt cooldown**. When several **Insert** faces draw from one **Extract** face, the amount is split **weighted by each face's throughput** (zero-share faces fall through). **Every Insert face's filter along the chain applies** (cumulative AND).
 - The **Insert / Extract** target can be a block container or an entity container such as a [Doge Node](../entity/doge_node.md).
+- **Craft Insert**: before inserting, tries to craft the **filtered item** from the materials of the **reachable extract sources**; throughput limits the products per round, and container items (e.g. empty buckets) stay in their respective source. Falls back to a plain insert when it cannot craft. Inlay a **Crafting Table** to gain this property, or select it directly in the wheel.
+
+**Quick edit**: hold a carrier of the same type and right-click one of its faces; if another carrier of the same type is directly on the other side of that face, the two facing faces are completed into a path (when both are empty, the clicked face defaults to Input/Extract and the opposite to Output/Insert; hold **Ctrl** to invert; when only one side has a role, the other side gets the complementary role). If the face points at a **container** (logistics carrier) or **redstone dust** (logic carrier), only the clicked face is edited: an existing Input/Output/Extract/Insert becomes its opposite; an empty face is completed from the carrier's existing roles (prefer Input/Extract when both exist, add Output when only Input exists); hold **Ctrl** to invert.

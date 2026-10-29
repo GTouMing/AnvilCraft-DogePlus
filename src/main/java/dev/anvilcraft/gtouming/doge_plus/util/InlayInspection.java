@@ -81,9 +81,10 @@ public final class InlayInspection {
         }
         lines.add(faceLine(data, inlays, direction));
         lines.add(Component.translatable(KEY + "signal", carrier.signal(direction)).withStyle(ChatFormatting.GRAY));
-        // 物流「存入」面：物流量在上、过滤在下（与世界渲染里「物品层在数字层之下」对应）。
-        // 镶嵌载体的存入 / 取出来自材料，没有这两项参数，因此只对物流载体显示。
-        if (state.getBlock() instanceof LogisticsCarrierBlock && data.getFace(direction) == FaceMode.INSERT) {
+        // 物流「存入 / 合成存入」面：物流量在上、过滤在下（与世界渲染里「物品层在数字层之下」对应）。
+        // 普通载体的存入 / 取出来自材料，但「合成存入」在普通载体上同样需要显示过滤与物流量。
+        if ((state.getBlock() instanceof LogisticsCarrierBlock && data.getFace(direction) == FaceMode.INSERT)
+                || data.getFace(direction) == FaceMode.CRAFT_INSERT) {
             lines.add(Component.translatable(KEY + "throughput", data.getThroughput(direction))
                     .withStyle(ChatFormatting.GRAY));
             ItemStack filter = data.getFilter(direction);

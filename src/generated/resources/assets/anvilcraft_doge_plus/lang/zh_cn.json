@@ -44,6 +44,7 @@
   "tooltip.anvilcraft_doge_plus.inlay_property.attack": "攻击：手持或装备时提升 2 点攻击力",
   "tooltip.anvilcraft_doge_plus.inlay_property.cold_forged": "冷锻：在水中或细雪中缓慢回复耐久",
   "tooltip.anvilcraft_doge_plus.inlay_property.counter_gate": "计数门：累计输入脉冲，达到设定次数时输出 1 tick 的红石信号",
+  "tooltip.anvilcraft_doge_plus.inlay_property.craft_insert": "合成存入：在存入前尝试用取出源中的材料合成过滤物品，无法合成时回退普通存入",
   "tooltip.anvilcraft_doge_plus.inlay_property.defense": "防御：手持或装备时提升 2 点盔甲值",
   "tooltip.anvilcraft_doge_plus.inlay_property.delay_gate": "延时门：收到输入起输出该信号，持续设定 tick 数",
   "tooltip.anvilcraft_doge_plus.inlay_property.delay_input_gate": "延时输入门：记录输入信号，等待设定 tick 数后作为本面的输入向本方块其它门送出 1 tick",
@@ -100,6 +101,7 @@
   "tooltip.anvilcraft_doge_plus.inspection.signal": "信号：%s",
   "tooltip.anvilcraft_doge_plus.inspection.sockets": "镶孔：%1$s/%2$s",
   "tooltip.anvilcraft_doge_plus.inspection.throughput": "物流量：%s",
+  "tooltip.anvilcraft_doge_plus.inspection.transfer.craft_insert": "合成存入",
   "tooltip.anvilcraft_doge_plus.inspection.transfer.extract": "取出",
   "tooltip.anvilcraft_doge_plus.inspection.transfer.insert": "存入",
   "tooltip.anvilcraft_doge_plus.inspection.transfer.none": "清除",
@@ -130,6 +132,7 @@
   "wheel.anvilcraft_doge_plus.gate.not_gate": "非门",
   "wheel.anvilcraft_doge_plus.gate.output": "输出门",
   "wheel.anvilcraft_doge_plus.gate.remote": "远程门",
+  "wheel.anvilcraft_doge_plus.transfer.craft_insert": "合成存入",
   "wheel.anvilcraft_doge_plus.transfer.extract": "取出",
   "wheel.anvilcraft_doge_plus.transfer.insert": "存入",
   "wheel.anvilcraft_doge_plus.transfer.none": "清除"

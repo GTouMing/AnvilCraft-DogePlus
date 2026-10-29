@@ -1,12 +1,18 @@
 repositories {
     mavenLocal()
     mavenCentral()
-    maven { // Anvil Lib
-        name = "Cjsah Maven"
-        url = "https://server.cjsah.net:1002/maven/"
-        content {
-            includeGroup "dev.anvilcraft.lib"
+    // AnvilCraft 生态（AnvilCraft / AnvilLib / Ageratum）固定从 Cjsah 取：否则会先落到
+    // NeoForge 仓库（那里没有这些 group，网络受限时还会直接连接超时，导致依赖解析失败）。
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Cjsah Maven"
+                url = "https://server.cjsah.net:1002/maven/"
+            }
+        }
+        filter {
             includeGroup "dev.dubhe"
+            includeGroup "dev.anvilcraft.lib"
             includeGroup "dev.anvilcraft.resource"
         }
     }

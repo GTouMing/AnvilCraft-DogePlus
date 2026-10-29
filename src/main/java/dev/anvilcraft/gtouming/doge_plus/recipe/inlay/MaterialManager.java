@@ -119,6 +119,17 @@ public class MaterialManager extends SimpleJsonResourceReloadListener {
         return false;
     }
 
+    /** 两个物品是否属于同一个基材定义（配方过滤按基材匹配时用）。 */
+    public static boolean hasSameBase(ItemStack a, ItemStack b) {
+        if (a.isEmpty() || b.isEmpty()) return false;
+        for (BaseMaterial base : BASES.values()) {
+            if (base.ingredient().test(a) && base.ingredient().test(b)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** 查询基材的镶孔数；无定义时返回 {@link #DEFAULT_SOCKETS}。 */
     public static int getSocketCount(ItemStack baseStack) {
         for (BaseMaterial base : BASES.values()) {

@@ -6,6 +6,7 @@ import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import dev.dubhe.anvilcraft.api.itemhandler.ItemHandlerUtil;
+import dev.dubhe.anvilcraft.init.item.ModItems;
 import dev.dubhe.anvilcraft.item.FilterItem;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -21,7 +22,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.phys.AABB;
@@ -30,7 +34,10 @@ import net.neoforged.neoforge.items.IItemHandler;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -504,7 +511,7 @@ final class LevelTransferNetworks {
             // service 面本身就是一个「存入」面：物流量与过滤都按该面现场读。
             BlockInlays data = BlockInlayManager.get(this.level, pos);
             int limit = Math.clamp(data.getThroughput(face), 1, AnvilCraftDogePlus.CONFIG.logisticsThroughputMax);
-            faces.add(new RoundFace(target, limit, data.getFilter(face), sources));
+            faces.add(new RoundFace(target, limit, data.getFilter(face), sources, data.getFace(face)));
         }
         if (faces.isEmpty()) return false;
 
@@ -512,12 +519,43 @@ final class LevelTransferNetworks {
         Object2ObjectOpenHashMap<TransferSource, IItemHandler> handlers = new Object2ObjectOpenHashMap<>();
         Object2ObjectOpenHashMap<TransferSource, Integer> totals = new Object2ObjectOpenHashMap<>();
 
+        // ---- 合成存入：把该面可达的多个取出源当作材料池，先合成；成功则该面本轮不再走普通存入 ----
+        boolean moved = false;
+        Map<Item, List<RecipeHolder<CraftingRecipe>>> craftIndex = null;
+        for (RoundFace rf : faces) {
+            if (rf.mode != FaceMode.CRAFT_INSERT || rf.handled) continue;
+            if (rf.filter.isEmpty() || rf.filter.is(ModItems.FILTER)) continue;
+
+            List<CraftInsertHelper.SourceRef> refs = new ArrayList<>();
+            List<ItemStack> chain = new ArrayList<>();
+            // 同一容器可能经多个取出面 / 路径出现，材料池里只算一次，避免重复计数。
+            Set<BlockPos> seenSources = new HashSet<>();
+            for (SourceRoute route : rf.sources) {
+                BlockPos sourcePos = route.source().containerPos();
+                if (!seenSources.add(sourcePos)) continue;
+                IItemHandler source = this.sourceHandler(handlers, route.source());
+                if (source == null) continue;
+                refs.add(new CraftInsertHelper.SourceRef(source, sourcePos));
+                chain.addAll(route.chainFilters());
+            }
+            if (refs.isEmpty()) continue;
+
+            if (craftIndex == null) craftIndex = CraftInsertHelper.buildIndex(this.level);
+            int crafted = CraftInsertHelper.craft(
+                    this.level, refs, rf.target, rf.filter, rf.limit, chain, craftIndex);
+            if (crafted > 0) {
+                rf.handled = true;
+                moved = true;
+            }
+        }
+
         // ---- 认领（不动点）：份额为 0 的面顺延，直到每个源的每个竞争面都拿得到 ≥ 1 ----
         boolean progress = true;
         while (progress) {
             progress = false;
             Object2ObjectOpenHashMap<TransferSource, List<RoundFace>> groups = new Object2ObjectOpenHashMap<>();
             for (RoundFace rf : faces) {
+                if (rf.handled) continue;
                 // 跳过搬不出货的取出源：既要求货能通过（服务面 + 沿途）过滤，也要求目标容器确实收得下。
                 while (rf.pointer < rf.sources.size()) {
                     SourceRoute route = rf.sources.get(rf.pointer);
@@ -549,12 +587,12 @@ final class LevelTransferNetworks {
         // ---- 分配并搬运：同源按物流量权重分「该源能给的量」 ----
         Object2ObjectOpenHashMap<TransferSource, List<RoundFace>> finalGroups = new Object2ObjectOpenHashMap<>();
         for (RoundFace rf : faces) {
+            if (rf.handled) continue;
             if (rf.pointer < rf.sources.size()) {
                 finalGroups.computeIfAbsent(rf.sources.get(rf.pointer).source(), key -> new ArrayList<>()).add(rf);
             }
         }
 
-        boolean moved = false;
         for (Object2ObjectMap.Entry<TransferSource, List<RoundFace>> entry : finalGroups.object2ObjectEntrySet()) {
             IItemHandler handler = this.sourceHandler(handlers, entry.getKey());
             if (handler == null) continue;
@@ -663,13 +701,17 @@ final class LevelTransferNetworks {
         final int limit;
         final ItemStack filter;
         final ObjectArrayList<SourceRoute> sources;
+        final FaceMode mode;
         int pointer;
+        boolean handled;
 
-        RoundFace(IItemHandler target, int limit, ItemStack filter, ObjectArrayList<SourceRoute> sources) {
+        RoundFace(IItemHandler target, int limit, ItemStack filter,
+                  ObjectArrayList<SourceRoute> sources, FaceMode mode) {
             this.target = target;
             this.limit = limit;
             this.filter = filter;
             this.sources = sources;
+            this.mode = mode;
         }
     }
 
@@ -760,7 +802,8 @@ final class LevelTransferNetworks {
 
     /** 该面是否算「存入」：物流载体编程的搬运角色，或镶嵌材料自带的方向性属性。 */
     private static boolean isInsertFace(BlockInlays data, Direction dir) {
-        return data.getFace(dir) == FaceMode.INSERT;
+        FaceMode mode = data.getFace(dir);
+        return mode == FaceMode.INSERT || mode == FaceMode.CRAFT_INSERT;
     }
 
     /** 该面是否算「取出」。 */

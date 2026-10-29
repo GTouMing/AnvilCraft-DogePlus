@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    "craft_insert"
+  ],
+  "ingredient": [
+    {
+      "item": "minecraft:crafting_table"
+    }
+  ]
+}

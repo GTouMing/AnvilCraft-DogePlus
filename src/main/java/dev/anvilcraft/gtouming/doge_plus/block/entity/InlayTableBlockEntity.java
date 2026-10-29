@@ -5,6 +5,7 @@ import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayRecipe;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
+import dev.anvilcraft.gtouming.doge_plus.util.RecipeFilterUtil;
 import dev.dubhe.anvilcraft.api.itemhandler.IItemHandlerHolder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -52,6 +53,9 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHo
 
     private final ItemStack[] slots = new ItemStack[SLOT_COUNT];
 
+    /** 副手铁砧锤设定的配方过滤物品：镶嵌台按基材解释；空栈表示不过滤。 */
+    private ItemStack recipeFilter = ItemStack.EMPTY;
+
     // ==================== IItemHandler 实现 ====================
 
     /**
@@ -71,6 +75,7 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHo
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             if (!isValidSlot(slot) || stack.isEmpty()) return stack.copy();
             if (slot == SLOT_BASE && !hasSocket(stack)) return stack.copy();
+            if (!accepts(slot, stack)) return stack.copy();
 
             ItemStack existing = slots[slot];
             ItemStack remaining = stack.copy();
@@ -118,7 +123,7 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHo
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            return slot == SLOT_MATERIAL || slot == SLOT_BASE;
+            return (slot == SLOT_MATERIAL || slot == SLOT_BASE) && accepts(slot, stack);
         }
 
         @Override
@@ -182,6 +187,22 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHo
     /** 内部存储，供本方块自身读写。 */
     public IItemHandler getInput() {
         return input;
+    }
+
+    /** 该槽位是否接受该物品（受配方过滤约束）。 */
+    public boolean accepts(int slot, ItemStack stack) {
+        return RecipeFilterUtil.acceptsInlayTable(slot, recipeFilter, stack, level);
+    }
+
+    /** 当前配方过滤物品；空栈表示不过滤。 */
+    public ItemStack getRecipeFilter() {
+        return recipeFilter;
+    }
+
+    /** 设定 / 清除配方过滤物品（服务端调用）。 */
+    public void setRecipeFilter(ItemStack stack) {
+        this.recipeFilter = stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(1);
+        syncToClient();
     }
 
     // ==================== 构造 ====================
@@ -469,6 +490,7 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHo
             list.add(slot.saveOptional(registries));
         }
         tag.put("Slots", list);
+        tag.put("RecipeFilter", recipeFilter.saveOptional(registries));
     }
 
     @Override
@@ -478,5 +500,6 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHo
         for (int i = 0; i < Math.min(list.size(), slots.length); i++) {
             slots[i] = ItemStack.parseOptional(registries, list.getCompound(i));
         }
+        recipeFilter = ItemStack.parseOptional(registries, tag.getCompound("RecipeFilter"));
     }
 }

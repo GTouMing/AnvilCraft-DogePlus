@@ -44,6 +44,7 @@
   "tooltip.anvilcraft_doge_plus.inlay_property.attack": "Attack: grants +2 attack damage when held or equipped",
   "tooltip.anvilcraft_doge_plus.inlay_property.cold_forged": "Cold Forged: slowly repairs durability in water or powder snow",
   "tooltip.anvilcraft_doge_plus.inlay_property.counter_gate": "Counter Gate: counts input pulses and outputs a 1-tick redstone signal at the set count",
+  "tooltip.anvilcraft_doge_plus.inlay_property.craft_insert": "Craft Insert: crafts the filtered item from the source's materials before inserting, falling back to a plain insert",
   "tooltip.anvilcraft_doge_plus.inlay_property.defense": "Defense: grants +2 armor when held or equipped",
   "tooltip.anvilcraft_doge_plus.inlay_property.delay_gate": "Delay Gate: outputs the received signal for the set number of ticks",
   "tooltip.anvilcraft_doge_plus.inlay_property.delay_input_gate": "Delayed Input Gate: records the input signal and feeds it to this block's other gates as a 1-tick input after the set number of ticks",
@@ -100,6 +101,7 @@
   "tooltip.anvilcraft_doge_plus.inspection.signal": "Signal: %s",
   "tooltip.anvilcraft_doge_plus.inspection.sockets": "Sockets: %1$s/%2$s",
   "tooltip.anvilcraft_doge_plus.inspection.throughput": "Throughput: %s",
+  "tooltip.anvilcraft_doge_plus.inspection.transfer.craft_insert": "Craft Insert",
   "tooltip.anvilcraft_doge_plus.inspection.transfer.extract": "Extract",
   "tooltip.anvilcraft_doge_plus.inspection.transfer.insert": "Insert",
   "tooltip.anvilcraft_doge_plus.inspection.transfer.none": "Clear",
@@ -130,6 +132,7 @@
   "wheel.anvilcraft_doge_plus.gate.not_gate": "NOT Gate",
   "wheel.anvilcraft_doge_plus.gate.output": "Output",
   "wheel.anvilcraft_doge_plus.gate.remote": "Remote",
+  "wheel.anvilcraft_doge_plus.transfer.craft_insert": "Craft Insert",
   "wheel.anvilcraft_doge_plus.transfer.extract": "Extract",
   "wheel.anvilcraft_doge_plus.transfer.insert": "Insert",
   "wheel.anvilcraft_doge_plus.transfer.none": "Clear"

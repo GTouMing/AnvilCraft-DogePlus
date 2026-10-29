@@ -161,6 +161,9 @@ public record BlockInlays(
         if (entry.containsAttributes(InlayProperty.INPUT)) {
             return FaceMode.INPUT;
         }
+        if (entry.containsAttributes(InlayProperty.CRAFT_INSERT)) {
+            return FaceMode.CRAFT_INSERT;
+        }
         if (entry.containsAttributes(InlayProperty.INSERT)) {
             return FaceMode.INSERT;
         }

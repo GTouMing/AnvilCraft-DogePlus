@@ -44,6 +44,7 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     public static final String CHUTE = "chute";
     public static final String COLD_FORGED = "cold_forged";
     public static final String COUNTER_GATE = "counter_gate";
+    public static final String CRAFTING_TABLE = "crafting_table";
     public static final String DEFENSE = "defense";
     public static final String DELAY_GATE = "delay_gate";
     public static final String DELAY_INPUT_GATE = "delay_input_gate";
@@ -109,6 +110,9 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
             builder().name(CHUTE)
                     .item(ModBlocks.CHUTE)
                     .attributes(InlayProperty.INSERT).buildInlay(),
+            builder().name(CRAFTING_TABLE)
+                    .item(Items.CRAFTING_TABLE)
+                    .attributes(InlayProperty.CRAFT_INSERT).buildInlay(),
             builder().name(COLD_FORGED)
                     .item(ModItems.FROST_METAL_INGOT)
                     .attributes(InlayProperty.COLD_FORGED).buildInlay(),

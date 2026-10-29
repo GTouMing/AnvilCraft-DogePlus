@@ -60,6 +60,9 @@ public enum FaceMode implements StringRepresentable, WheelOption {
     /** 存入：把物品存入面朝的容器。 */
     INSERT(Kind.TRANSFER, "wheel.anvilcraft_doge_plus.transfer.insert"),
 
+    /** 合成存入：先尝试用取出源中的材料合成过滤物品，再存入；合成不了则回退普通存入。 */
+    CRAFT_INSERT(Kind.TRANSFER, "wheel.anvilcraft_doge_plus.transfer.craft_insert"),
+
     /** 取出：从面朝的容器取出物品。 */
     EXTRACT(Kind.TRANSFER, "wheel.anvilcraft_doge_plus.transfer.extract");
 
@@ -146,6 +149,7 @@ public enum FaceMode implements StringRepresentable, WheelOption {
             case DELAY_INPUT_GATE -> Items.CLOCK;
             case REMOTE -> Items.ENDER_PEARL;
             case INSERT -> ModBlocks.CHUTE.asItem();
+            case CRAFT_INSERT -> Items.CRAFTING_TABLE;
             case EXTRACT -> ModBlocks.MAGNETIC_CHUTE.asItem();
         });
     }
@@ -184,7 +188,7 @@ public enum FaceMode implements StringRepresentable, WheelOption {
     public int calculate(Map<Direction, Integer> inputs, int value) {
         return switch (this) {
             // 搬运角色与无、以及有状态门（输出由 LevelNetworks 每 tick 驱动写入）都不经本方法。
-            case NONE, INSERT, EXTRACT, INPUT, COUNTER_GATE, LATCH_GATE, DELAY_GATE, DELAY_INPUT_GATE, REMOTE -> 0;
+            case NONE, INSERT, CRAFT_INSERT, EXTRACT, INPUT, COUNTER_GATE, LATCH_GATE, DELAY_GATE, DELAY_INPUT_GATE, REMOTE -> 0;
             case NOT_GATE -> {
                 for (Map.Entry<Direction, Integer> face : inputs.entrySet()) {
                     if (face.getValue() > 0) yield 0;

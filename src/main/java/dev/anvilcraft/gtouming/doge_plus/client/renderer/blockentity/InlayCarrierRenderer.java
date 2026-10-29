@@ -150,7 +150,7 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
                 if (mode.isRemote()) continue;
                 if (!showsTransferArrow(level, pos, inlays, face, mode)) continue;
                 draw(poseStack, consumer, level, faceRotX(face), faceRotY(face),
-                        mode == FaceMode.INSERT ? LOGISTICS_INSERT : LOGISTICS_EXTRACT, packedLight, packedOverlay);
+                        isInsertLike(mode) ? LOGISTICS_INSERT : LOGISTICS_EXTRACT, packedLight, packedOverlay);
                 continue;
             }
             // 连接件是通道的延伸：只在已镶嵌、且邻居是红石粉 / 红石导线的面上绘制。
@@ -182,7 +182,7 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             } else if (logistics) {
                 // 物流「存入」面：过滤物品先画（在数字层之下），物流量数字压在其上层。
                 // 两者都要躲开通道棱件与搬运箭头，故用更大的横向偏移（见 LOGISTICS_VALUE_SIDE_OFFSET）。
-                if (focusedMode == FaceMode.INSERT) {
+                if (isInsertLike(focusedMode)) {
                     renderFilterItem(poseStack, buffer, level, focused, inlays.getFilter(focused),
                             packedLight, packedOverlay);
                     renderGateValue(poseStack, buffer, focused, inlays.getThroughput(focused), packedLight,
@@ -527,11 +527,12 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             poseStack.translate(-0.5F, -0.5F, -0.5F);
             // 过滤器物品（AnvilCraft 的 filter）的自定义模型被包了一层、isCustomRenderer 为真：它自带
             // BEWLR（FilterItemRenderer），除了本体还会把过滤器列表里轮播的物品、以及拒绝列表的屏障一起
-            // 画出来。这种物品必须交给它自己的自定义渲染，否则只画出一张空白过滤器贴图；普通物品没有
-            // 自定义渲染器，仍按老路径压扁成一张贴图。
+            // 画出来。这种物品仍交给它自己的自定义渲染，但把压扁后的姿态传进去，于是列表/屏障也压在通道
+            // 侧面上；普通物品没有自定义渲染器，按老路径压扁成一张贴图。
             if (icon.isCustomRenderer()) {
                 IClientItemExtensions.of(filter).getCustomRenderer().renderByItem(
-                        filter, ItemDisplayContext.GUI, poseStack, buffer, packedLight, packedOverlay);
+                        filter, ItemDisplayContext.GUI, flattenedStack(poseStack, center, side),
+                        buffer, packedLight, packedOverlay);
             } else {
                 renderShaded(flattened(poseStack, center, side), consumer, icon, packedLight, packedOverlay, level);
             }
@@ -560,6 +561,15 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         return flat.last();
     }
 
+    /** 与 {@link #flattened} 相同的压扁姿态，包成新的 PoseStack，供自带 BEWLR 的物品也按压扁后的姿态渲染。 */
+    private static PoseStack flattenedStack(PoseStack poseStack, Vector3f center, Direction normal) {
+        PoseStack.Pose flat = flattened(poseStack, center, normal);
+        PoseStack stack = new PoseStack();
+        stack.last().pose().set(flat.pose());
+        stack.last().normal().set(flat.normal());
+        return stack;
+    }
+
     @Override
     public AABB getRenderBoundingBox(InlayCarrierBlockEntity blockEntity) {
         // 连接件伸出方块 3 像素，包围盒需要相应外扩，避免被视锥剔除。
@@ -583,10 +593,19 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
      */
     private static boolean showsTransferArrow(
             Level level, BlockPos pos, BlockInlays inlays, Direction face, FaceMode mode) {
-        FaceMode counterpart = mode == FaceMode.INSERT ? FaceMode.EXTRACT : FaceMode.INSERT;
-        BlockInlays neighbor = BlockInlayManager.get(level, pos.relative(face));
-        if (neighbor.getFace(face.getOpposite()) != counterpart) return true;
+        FaceMode neighborMode = BlockInlayManager.get(level, pos.relative(face)).getFace(face.getOpposite());
+        // 存入（含合成存入）需要一个「取出」对端；取出需要一个「存入 / 合成存入」对端。
+        if (isInsertLike(mode)) {
+            if (neighborMode != FaceMode.EXTRACT) return true;
+        } else {
+            if (!isInsertLike(neighborMode)) return true;
+        }
         return inlays.getFace(face.getOpposite()) == mode;
+    }
+
+    /** 该面是否属于「存入」侧（普通存入与合成存入共用同一套箭头）。 */
+    private static boolean isInsertLike(FaceMode mode) {
+        return mode == FaceMode.INSERT || mode == FaceMode.CRAFT_INSERT;
     }
 
     /** 邻居是否为原版红石粉或铁砧工艺红石导线。 */

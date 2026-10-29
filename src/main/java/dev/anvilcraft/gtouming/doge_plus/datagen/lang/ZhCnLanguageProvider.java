@@ -76,6 +76,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inlay_property.remote", "远程门：同信道编号的远程面互连为一条总线；红石侧为双向导线，物品侧提供远程取货");
         add("tooltip.anvilcraft_doge_plus.inlay_property.generator", "发电：放置后产生 %s kW 电力");
         add("tooltip.anvilcraft_doge_plus.inlay_property.insert", "存入：将物品存入面朝的容器");
+        add("tooltip.anvilcraft_doge_plus.inlay_property.craft_insert", "合成存入：在存入前尝试用取出源中的材料合成过滤物品，无法合成时回退普通存入");
         add("tooltip.anvilcraft_doge_plus.inlay_property.extract", "取出：从面朝的容器取出物品");
         add("tooltip.anvilcraft_doge_plus.inlay_property.resonance", "共鸣：增强其他镶孔的部分材料属性");
         add("tooltip.anvilcraft_doge_plus.inlay_property.resonance.cold_forged", "✦冷锻：在水中或细雪中较快回复耐久（仅耐久物品生效）");
@@ -131,6 +132,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inspection.gate.remote", "远程门");
         add("tooltip.anvilcraft_doge_plus.inspection.transfer.none", "清除");
         add("tooltip.anvilcraft_doge_plus.inspection.transfer.insert", "存入");
+        add("tooltip.anvilcraft_doge_plus.inspection.transfer.craft_insert", "合成存入");
         add("tooltip.anvilcraft_doge_plus.inspection.transfer.extract", "取出");
         add("tooltip.anvilcraft_doge_plus.inspection.dir.down", "下");
         add("tooltip.anvilcraft_doge_plus.inspection.dir.up", "上");
@@ -174,6 +176,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         // ===== 物流载体轮盘 =====
         add("wheel.anvilcraft_doge_plus.transfer.none", "清除");
         add("wheel.anvilcraft_doge_plus.transfer.insert", "存入");
+        add("wheel.anvilcraft_doge_plus.transfer.craft_insert", "合成存入");
         add("wheel.anvilcraft_doge_plus.transfer.extract", "取出");
     }
 }

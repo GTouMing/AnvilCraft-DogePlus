@@ -12,6 +12,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 
 import javax.annotation.Nullable;
 
@@ -74,6 +75,16 @@ public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEn
             renderItem(stack, packedLight, packedOverlay, poseStack, bufferSource, blockEntity.getLevel(), (int) blockEntity.getBlockPos().asLong());
             poseStack.popPose();
         }
+
+        FilterIconRenderer.renderOnHorizontalSides(
+                poseStack, bufferSource, blockEntity.getLevel(), blockEntity.getBlockPos(),
+                blockEntity.getRecipeFilter(), packedLight, packedOverlay);
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(InlayTableBlockEntity blockEntity) {
+        // 过滤图标贴在四个水平侧面外侧，包围盒略外扩避免被视锥剔除。
+        return new AABB(blockEntity.getBlockPos()).inflate(0.5);
     }
 
     private void renderItem(ItemStack stack, int packedLight, int packedOverlay,

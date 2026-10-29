@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.block.entity.chute;
 
+import dev.dubhe.anvilcraft.AnvilCraft;
 import dev.dubhe.anvilcraft.api.itemhandler.ItemHandlerUtil;
 import dev.dubhe.anvilcraft.block.entity.BaseChuteBlockEntity;
 import net.minecraft.core.BlockPos;
@@ -62,7 +63,7 @@ public abstract class AbstractChuteBlockEntity extends BaseChuteBlockEntity {
             }
         }
         level.updateNeighbourForOutputSignal(getBlockPos(), getBlockState().getBlock());
-        if (resetCD) setCooldown(dev.dubhe.anvilcraft.AnvilCraft.CONFIG.chuteMaxCooldown);
+        if (resetCD) setCooldown(AnvilCraft.CONFIG.machines.chuteMaxCooldown);
     }
 
     private boolean inventoryFull() {
