@@ -10,6 +10,7 @@ import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
@@ -91,45 +92,50 @@ public class ClientTooltipEvent {
             }
         }
 
-        // 2. 基材/已镶嵌物品：镶孔图像 + 属性文本（常驻，不再依赖 Shift；
-        //    AE2 虚拟槽 / 样板 tooltip 也能看到）。
+        // 2. 基材/已镶嵌物品：按住 Shift 展开镶孔图像与属性文本；
+        //    AE2 虚拟槽 / 样板 tooltip 同样走这里。
         List<InlayEntry> inlays = InlayUtil.getInlays(stack);
         if (inlays.isEmpty() && !MaterialManager.hasSocket(stack)) return;
 
-        List<ItemStack> materialStacks = inlays.stream().map(InlayEntry::toItemStack).toList();
-        int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
+        if (Screen.hasShiftDown()) {
+            List<ItemStack> materialStacks = inlays.stream().map(InlayEntry::toItemStack).toList();
+            int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
 
-        // 2.1 镶孔图像组件（每个镶孔画槽位贴图，已镶嵌叠材料图标）
-        elements.add(Either.right(new InlayTooltipComponent(materialStacks, sockets)));
+            // 2.1 镶孔图像组件（每个镶孔画槽位贴图，已镶嵌叠材料图标）
+            elements.add(Either.right(new InlayTooltipComponent(materialStacks, sockets)));
 
-        // 2.1.1 镶孔数由数据包定义，可能远超图像上限：补一行说明。
-        if (sockets > ClientInlayTooltip.MAX_VISIBLE_SOCKETS) {
-            elements.add(Either.left(Component.translatable(
-                            "tooltip.anvilcraft_doge_plus.inlay_sockets_truncated",
-                            sockets - ClientInlayTooltip.MAX_VISIBLE_SOCKETS, sockets)
-                    .withStyle(ChatFormatting.GRAY)));
-        }
-
-        // 2.2 属性/提示文本
-        boolean resonance = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE);
-        for (InlayEntry entry : inlays) {
-            for (ResourceLocation id : entry.attributes()) {
-                InlayProperty property = InlayProperty.get(id);
-                if (property == null) continue;
-                Component component = resonance ? enhancedTooltip(property) : property.getTooltip();
-                if (elements.contains(Either.left(component))) continue;
-                elements.add(Either.left(component));
-            }
-        }
-
-        // 高温数值
-        if (InlayUtil.hasProperty(stack, InlayProperty.HIGH_TEMP)) {
-            int heat = stack.getOrDefault(ModDataComponentTypes.HEAT, 0);
-            if (heat > 0) {
+            // 2.1.1 镶孔数由数据包定义，可能远超图像上限：补一行说明。
+            if (sockets > ClientInlayTooltip.MAX_VISIBLE_SOCKETS) {
                 elements.add(Either.left(Component.translatable(
-                                "tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount", heat)
-                        .withStyle(ChatFormatting.RED)));
+                                "tooltip.anvilcraft_doge_plus.inlay_sockets_truncated",
+                                sockets - ClientInlayTooltip.MAX_VISIBLE_SOCKETS, sockets)
+                        .withStyle(ChatFormatting.GRAY)));
             }
+
+            // 2.2 属性/提示文本
+            boolean resonance = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE);
+            for (InlayEntry entry : inlays) {
+                for (ResourceLocation id : entry.attributes()) {
+                    InlayProperty property = InlayProperty.get(id);
+                    if (property == null) continue;
+                    Component component = resonance ? enhancedTooltip(property) : property.getTooltip();
+                    if (elements.contains(Either.left(component))) continue;
+                    elements.add(Either.left(component));
+                }
+            }
+
+            // 高温数值
+            if (InlayUtil.hasProperty(stack, InlayProperty.HIGH_TEMP)) {
+                int heat = stack.getOrDefault(ModDataComponentTypes.HEAT, 0);
+                if (heat > 0) {
+                    elements.add(Either.left(Component.translatable(
+                                    "tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount", heat)
+                            .withStyle(ChatFormatting.RED)));
+                }
+            }
+        } else {
+            elements.add(Either.left(Component.translatable("tooltip.anvilcraft_doge_plus.inlay_details")
+                    .withStyle(ChatFormatting.GRAY)));
         }
     }
 

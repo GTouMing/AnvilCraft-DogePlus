@@ -15,11 +15,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
- * 渲染镶合台各槽位物品：基材居中，材料按当前启用的材料槽数量以骰子点数布局
- * （1 居中、2 分开、3 对角、4 正方、5 分岔、6 两列）。
+ * 渲染镶合台各槽位物品：基材居中，材料按当前实际放入的材料槽数量以骰子点数布局
+ * （1 居中、2 分开、3 对角、4 正方、5 分岔、6 两列）；未放入的材料槽不占位。
+ * 材料缩放与镶嵌台材料槽保持一致。
  */
 public class InlayCraftingTableRenderer implements BlockEntityRenderer<InlayCraftingTableBlockEntity> {
 
@@ -61,17 +64,30 @@ public class InlayCraftingTableRenderer implements BlockEntityRenderer<InlayCraf
             int packedOverlay) {
         int activeMaterials = Math.min(
                 blockEntity.materialSlotCount(), InlayCraftingTableBlockEntity.MATERIAL_SLOTS);
+        List<Integer> filledMaterialSlots = new ArrayList<>();
+        for (int slot = InlayCraftingTableBlockEntity.SLOT_MATERIAL_START;
+             slot < InlayCraftingTableBlockEntity.SLOT_MATERIAL_START + activeMaterials;
+             slot++) {
+            if (!blockEntity.getItemHandler().getStackInSlot(slot).isEmpty()) {
+                filledMaterialSlots.add(slot);
+            }
+        }
+        int filledMaterialCount = filledMaterialSlots.size();
+
         for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
             ItemStack stack = blockEntity.getItemHandler().getStackInSlot(slot);
             if (stack.isEmpty()) continue;
 
+            boolean isBase = slot == InlayCraftingTableBlockEntity.SLOT_BASE;
             float x = 0.5F;
             float z = 0.5F;
-            if (slot != InlayCraftingTableBlockEntity.SLOT_BASE) {
+            if (!isBase) {
                 int index = slot - InlayCraftingTableBlockEntity.SLOT_MATERIAL_START;
                 // 当前过滤下未启用的材料槽不渲染（物品仍在槽里，可空手取回）。
                 if (index >= activeMaterials) continue;
-                float[] pos = materialPos(activeMaterials, index);
+                int materialRank = filledMaterialSlots.indexOf(slot);
+                if (materialRank < 0) continue;
+                float[] pos = materialPos(filledMaterialCount, materialRank);
                 x = pos[0];
                 z = pos[1];
             }
@@ -85,11 +101,12 @@ public class InlayCraftingTableRenderer implements BlockEntityRenderer<InlayCraf
             }
 
             float region = isBlock
-                    ? (slot == InlayCraftingTableBlockEntity.SLOT_BASE ? 0.60F : 0.82F)
-                    : (slot == InlayCraftingTableBlockEntity.SLOT_BASE ? 0.75F : 0.86F);
+                    ? (isBase ? 0.60F : 0.82F)
+                    : (isBase ? 0.75F : 0.86F);
+            // 基材占满平台；材料槽与镶嵌台的材料槽同尺寸（0.25，多方块再缩 1/3）。
             float scale = isBlock
-                    ? (slot == InlayCraftingTableBlockEntity.SLOT_BASE ? 0.375F : 0.1F) * multi
-                    : (slot == InlayCraftingTableBlockEntity.SLOT_BASE ? 0.75F : 0.2F);
+                    ? (isBase ? 0.375F : 0.25F) * multi
+                    : (isBase ? 0.75F : 0.25F);
 
             poseStack.pushPose();
             poseStack.translate(x, region, z);

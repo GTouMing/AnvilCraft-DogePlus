@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus;
 
 import dev.anvilcraft.gtouming.doge_plus.block.placement.GiantDogeAnvilPlacementRule;
+import dev.anvilcraft.gtouming.doge_plus.config.DogePlusClientConfig;
 import dev.anvilcraft.gtouming.doge_plus.config.DogePlusConfig;
 import dev.anvilcraft.gtouming.doge_plus.datagen.ModDataGen;
 import dev.anvilcraft.gtouming.doge_plus.init.*;
@@ -23,6 +24,8 @@ public class AnvilCraftDogePlus {
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     public static final Registrum REGISTRUM = Registrum.create(MOD_ID);
     public static final DogePlusConfig CONFIG = ConfigManager.register(AnvilCraftDogePlus.MOD_ID, DogePlusConfig::new);
+    public static final DogePlusClientConfig CLIENT_CONFIG = ConfigManager.register(
+            AnvilCraftDogePlus.MOD_ID, DogePlusClientConfig::new);
 
     public AnvilCraftDogePlus(IEventBus modEventBus, ModContainer ignoredModContainer) {
         ModCreativeTab.CREATIVE_TABS.register(modEventBus);
