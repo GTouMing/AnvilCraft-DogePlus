@@ -67,7 +67,7 @@ public record InlayRecipeData(String inlay, String base) {
             new InlayRecipeData(RESONANCE, ENCHANTABLES),
             new InlayRecipeData(TOTEMS, CRAB_CLAW),
             // 超温余烬金属块不接受显式镶嵌配方：中子锭没有材料定义，
-            // 由「静默镶嵌」按 neutronium_transmutation 镶合条件放行
+            // 由「镶合台静默镶嵌」按 neutronium_transmutation 镶合条件放行
             // 充能中子锭：2 镶孔，可镶书 / 附魔书（enchant）与紫水晶（resonance）
             new InlayRecipeData(ENCHANT, CHARGED_NEUTRONIUM_INGOT),
             new InlayRecipeData(RESONANCE, CHARGED_NEUTRONIUM_INGOT),
@@ -82,7 +82,7 @@ public record InlayRecipeData(String inlay, String base) {
      * 本 mod 内置 inlay 配方：手工清单 + 两种镶嵌载体（全部逻辑门）。
      *
      * <p>下界升级模板与盔甲纹饰模板<b>不写镶嵌配方</b>：它们要镶入的锻造材料 / 纹饰材料
-     * 没有属性，由「静默镶嵌」按对应镶合（{@code kind = smithing}）的 {@code inlays}
+     * 没有属性，由「镶合台静默镶嵌」按对应镶合（{@code kind = smithing}）的 {@code inlays}
      * 条件放行，因此不必在 {@code recipe/inlay} 里占条目，也不会出现在 JEI 的镶嵌配方中。</p>
      */
     private static final List<InlayRecipeData> VANILLA = new ArrayList<>(BASE_RECIPES);
@@ -98,7 +98,7 @@ public record InlayRecipeData(String inlay, String base) {
      * 全部 inlay 配方：只保留内置清单。
      *
      * <p>前置（AnvilCraft）锻造 / 珠宝复制派生的镶嵌配方<b>不再生成</b>——那些组合改为
-     * 运行时「静默镶嵌」（{@code InlayRecipe.canSilentlyInlay}）：只要符合对应镶合配方的
+     * 运行时「镶合台静默镶嵌」（{@code InlayRecipe.canSilentlyInlay}）：只要符合对应镶合配方的
      * 条件就允许镶上去，但不写进配方表、也不出现在 JEI。材料与基材定义仍由 datagen 派生。</p>
      *
      */

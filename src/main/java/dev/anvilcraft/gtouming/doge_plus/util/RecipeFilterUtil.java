@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.util;
 
+import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCraftingTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.init.ModRecipeTypes;
@@ -58,13 +59,92 @@ public final class RecipeFilterUtil {
         return false;
     }
 
-    /** 镶合台槽位是否接受该物品。{@code filter} 为空表示不过滤。 */
+    /** 镶合台基材槽是否接受该物品。{@code filter} 为空表示不过滤。 */
     public static boolean acceptsCraftingTable(ItemStack filter, ItemStack stack, @Nullable Level level) {
-        if (filter.isEmpty()) return true;
         if (stack.isEmpty()) return false;
-        if (isFilterItem(filter)) return FilterItem.filter(filter, stack);
+        boolean socketed = MaterialManager.hasSocket(stack);
+        if (filter.isEmpty()) return socketed || isCraftingBase(stack, level);
+        if (isFilterItem(filter)) {
+            return FilterItem.filter(filter, stack) && (socketed || isCraftingBase(stack, level));
+        }
         if (level == null || level.isClientSide) return true;
         return matchesRecipeProducing(filter, stack, level);
+    }
+
+    /** 该物品是否任意镶合配方的基材（数据包可定义未列入 material/base 的基材）。 */
+    private static boolean isCraftingBase(ItemStack stack, @Nullable Level level) {
+        if (level == null) return false;
+        for (RecipeHolder<InlayCraftingRecipe> holder : level.getRecipeManager()
+                .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get())) {
+            if (holder.value().getBaseItem() == stack.getItem()) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 镶合台材料槽数量：目标产物过滤时由该产物镶合配方的 {@code inlays} 数量决定；
+     * 无过滤 / {@code anvilcraft:filter} 时保留最大 6 槽。
+     */
+    public static int craftingTableMaterialSlotCount(ItemStack filter, ItemStack base, @Nullable Level level) {
+        if (filter.isEmpty() || isFilterItem(filter)) {
+            return InlayCraftingTableBlockEntity.MATERIAL_SLOTS;
+        }
+        if (level == null) {
+            return InlayCraftingTableBlockEntity.MATERIAL_SLOTS;
+        }
+        int max = 0;
+        for (RecipeHolder<InlayCraftingRecipe> holder : level.getRecipeManager()
+                .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get())) {
+            InlayCraftingRecipe recipe = holder.value();
+            if (!produces(recipe, filter)) continue;
+            if (!base.isEmpty() && recipe.getBaseItem() != base.getItem()) continue;
+            max = Math.max(max, Math.min(recipe.inlays().size(), InlayCraftingTableBlockEntity.MATERIAL_SLOTS));
+        }
+        return max;
+    }
+
+    /**
+     * 镶合台第 {@code materialIndex} 个材料槽是否接受该物品。
+     *
+     * @param base          当前基材槽物品；空栈表示尚未放入
+     * @param materialIndex 材料槽序号（0 起）
+     */
+    public static boolean acceptsCraftingTableMaterial(
+            ItemStack filter, ItemStack base, int materialIndex, ItemStack stack, @Nullable Level level) {
+        if (stack.isEmpty() || materialIndex < 0
+                || materialIndex >= InlayCraftingTableBlockEntity.MATERIAL_SLOTS) {
+            return false;
+        }
+        if (isFilterItem(filter)) return FilterItem.filter(filter, stack);
+        // 客户端拿不到完整配方表，放行以避免误拒；服务端权威。
+        if (level == null || level.isClientSide) return true;
+
+        if (filter.isEmpty()) {
+            if (base.isEmpty()) return true;
+            return matchesAnyCraftingRecipeMaterial(base, stack, level);
+        }
+
+        for (RecipeHolder<InlayCraftingRecipe> holder : level.getRecipeManager()
+                .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get())) {
+            InlayCraftingRecipe recipe = holder.value();
+            if (!produces(recipe, filter)) continue;
+            if (!base.isEmpty() && recipe.getBaseItem() != base.getItem()) continue;
+            if (materialIndex >= recipe.inlays().size()) continue;
+            if (recipe.inlays().get(materialIndex).testMaterial(stack)) return true;
+        }
+        return false;
+    }
+
+    private static boolean matchesAnyCraftingRecipeMaterial(ItemStack base, ItemStack stack, Level level) {
+        for (RecipeHolder<InlayCraftingRecipe> holder : level.getRecipeManager()
+                .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get())) {
+            InlayCraftingRecipe recipe = holder.value();
+            if (recipe.getBaseItem() != base.getItem()) continue;
+            for (InlayMatcher matcher : recipe.inlays()) {
+                if (matcher.testMaterial(stack)) return true;
+            }
+        }
+        return false;
     }
 
     private static boolean acceptsInlayMaterial(ItemStack filterBase, ItemStack stack, @Nullable Level level) {
@@ -90,16 +170,7 @@ public final class RecipeFilterUtil {
             MaterialManager.InlayMaterial inlayMaterial = recipe.getInlayMaterial();
             if (inlayMaterial != null && inlayMaterial.ingredient().test(stack)) return true;
         }
-        // 静默镶嵌：镶合配方里声明的材料同样可以镶进该基材。
-        for (RecipeHolder<InlayCraftingRecipe> holder : level.getRecipeManager()
-                .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get())) {
-            InlayCraftingRecipe recipe = holder.value();
-            if (!filterBase.is(recipe.getBaseItem())) continue;
-            resolved = true;
-            for (InlayMatcher matcher : recipe.inlays()) {
-                if (matcher.test(stack)) return true;
-            }
-        }
+        // 静默镶嵌已迁到镶合台：这里只按显式镶嵌配方放行。
         // 一条配方都解析不到时不锁死：放行（设定时已做合法性校验）。
         return !resolved;
     }
@@ -108,12 +179,13 @@ public final class RecipeFilterUtil {
         for (RecipeHolder<InlayCraftingRecipe> holder : level.getRecipeManager()
                 .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get())) {
             InlayCraftingRecipe recipe = holder.value();
-            if (produces(recipe, output) && recipe.matches(stack)) return true;
+            // 重构后基材入槽时可能尚未镶满，只校验「配方基材物品」。
+            if (produces(recipe, output) && recipe.getBaseItem() == stack.getItem()) return true;
         }
         return false;
     }
 
-    private static boolean produces(InlayCraftingRecipe recipe, ItemStack output) {
+    public static boolean produces(InlayCraftingRecipe recipe, ItemStack output) {
         for (InlayOutput result : recipe.results()) {
             if (result instanceof InlayOutput.Fixed fixed && fixed.item() == output.getItem()) {
                 return true;

@@ -2,6 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.block.entity;
 
 import dev.anvilcraft.gtouming.doge_plus.init.ModRecipeTypes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay_crafting.InlayCraftingRecipe;
+import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.anvilcraft.gtouming.doge_plus.util.RecipeFilterUtil;
 import dev.dubhe.anvilcraft.api.itemhandler.IItemHandlerHolder;
 import net.minecraft.core.BlockPos;
@@ -33,16 +34,19 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * 镶合台方块实体：单个物品槽（镶满的基材）。
+ * 镶合台方块实体：一个基材槽 + 由目标产物过滤/配方决定数量的材料槽（最多 6 个，每槽对应一条镶孔要求）。
  *
- * <p>铁砧砸击时按 {@link InlayCraftingRecipe} 匹配整件基材（物品 + 全部镶孔按序一致），
- * 命中则一次耗尽整叠：按份生成配方声明的全部产物（含返还的模具），均落在台体下方，
- * 供漏斗/溜槽等自动化收集；产物区域位于收集区之外，不会被自身 tick 吸回。</p>
+ * <p>铁砧砸击时先把材料槽里的静默镶嵌追加到基材，再按 {@link InlayCraftingRecipe} 匹配整件基材
+ * （物品 + 全部镶孔）；命中则一次耗尽整叠：按份生成配方声明的全部产物（含返还的模具），
+ * 均落在台体下方，供漏斗/溜槽等自动化收集；产物区域位于收集区之外，不会被自身 tick 吸回。</p>
  */
 public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemHandlerHolder {
 
     public static final int SLOT_BASE = 0;
-    public static final int SLOT_COUNT = 1;
+    public static final int SLOT_MATERIAL_START = 1;
+    /** 可放入的静默镶嵌材料数（内置镶合配方最大 6：逻辑载体六个镶孔）。 */
+    public static final int MATERIAL_SLOTS = 6;
+    public static final int SLOT_COUNT = SLOT_MATERIAL_START + MATERIAL_SLOTS;
 
     private final ItemStack[] slots = new ItemStack[SLOT_COUNT];
 
@@ -179,9 +183,21 @@ public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemH
         return input;
     }
 
-    /** 该槽位是否接受该物品（受配方过滤约束）。 */
+    /** 该槽位是否接受该物品（基材槽按产物过滤；材料槽按过滤决定的数量与对应 matcher）。 */
     public boolean accepts(int slot, ItemStack stack) {
-        return RecipeFilterUtil.acceptsCraftingTable(recipeFilter, stack, level);
+        if (slot == SLOT_BASE) {
+            return RecipeFilterUtil.acceptsCraftingTable(recipeFilter, stack, level);
+        }
+        if (slot >= SLOT_MATERIAL_START && slot < SLOT_COUNT) {
+            return RecipeFilterUtil.acceptsCraftingTableMaterial(
+                    recipeFilter, slots[SLOT_BASE], slot - SLOT_MATERIAL_START, stack, level);
+        }
+        return false;
+    }
+
+    /** 当前过滤/基材下启用的材料槽数量（目标产物过滤时 = 配方镶孔数；否则 6）。 */
+    public int materialSlotCount() {
+        return RecipeFilterUtil.craftingTableMaterialSlotCount(recipeFilter, slots[SLOT_BASE], level);
     }
 
     /** 当前配方过滤物品；空栈表示不过滤。 */
@@ -247,13 +263,17 @@ public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemH
             if (entity.isRemoved() || entity.getItem().isEmpty()) continue;
 
             ItemStack item = entity.getItem();
-            ItemStack result = input.insertItem(SLOT_BASE, item, false);
-            if (result.getCount() == item.getCount()) continue;
+            ItemStack remaining = item;
+            for (int slot = 0; slot < SLOT_COUNT && !remaining.isEmpty(); slot++) {
+                if (!accepts(slot, remaining)) continue;
+                remaining = input.insertItem(slot, remaining, false);
+            }
+            if (remaining.getCount() == item.getCount()) continue;
 
-            if (result.isEmpty()) {
+            if (remaining.isEmpty()) {
                 entity.discard();
             } else {
-                entity.setItem(result);
+                entity.setItem(remaining);
             }
             syncToClient();
         }
@@ -262,8 +282,8 @@ public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemH
     // ==================== 核心：镶合处理 ====================
 
     /**
-     * 铁砧砸击处理：单槽基材匹配 {@link InlayCraftingRecipe} 后一次耗尽整叠，
-     * 按份数在台体下方生成全部产物（同镶嵌台整叠加工语义）。
+     * 铁砧砸击处理：先把材料槽里的静默镶嵌全部追加到基材，再按 {@link InlayCraftingRecipe}
+     * 匹配整件基材；命中后一次耗尽整叠，按份数在台体下方生成全部产物。
      *
      * <p>每份基材独立判定一次概率产物并展开多产物，再把整叠结果按物品合并、按堆叠上限
      * 掉落——这样概率产物按份独立出现，多产物 / 多数量都准确生成。</p>
@@ -276,19 +296,58 @@ public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemH
         ItemStack base = slots[SLOT_BASE];
         if (base.isEmpty()) return false;
 
-        InlayCraftingRecipe recipe = findRecipe(base);
+        // 有材料时一次砸击产出一份；材料槽的整叠数量就是该材料的镶孔数。
+        // 无材料时（基材已镶满）沿用整叠镶合。
+        int activeMaterialSlots = materialSlotCount();
+        int materialEnd = SLOT_MATERIAL_START + activeMaterialSlots;
+        boolean hasMaterials = false;
+        for (int slot = SLOT_MATERIAL_START; slot < materialEnd; slot++) {
+            if (!slots[slot].isEmpty()) {
+                hasMaterials = true;
+                break;
+            }
+        }
+
+        ItemStack work = base.copyWithCount(1);
+        int crafts;
+        int[] used = new int[SLOT_COUNT];
+        if (hasMaterials) {
+            crafts = 1;
+            int applied = 0;
+            for (int slot = SLOT_MATERIAL_START; slot < materialEnd; slot++) {
+                ItemStack material = slots[slot];
+                if (material.isEmpty()) continue;
+                for (int n = 0; n < material.getCount(); n++) {
+                    ItemStack next = InlayUtil.applySilentInlay(work, material);
+                    if (next.isEmpty()) break; // 没有空镶孔
+                    work = next;
+                    used[slot]++;
+                    applied++;
+                }
+            }
+            if (applied == 0) return false;
+        } else {
+            crafts = base.getCount();
+        }
+
+        InlayCraftingRecipe recipe = findRecipe(work);
         if (recipe == null) return false;
 
-        int crafts = base.getCount();
         List<ItemStack> totals = new ArrayList<>();
         for (int i = 0; i < crafts; i++) {
-            for (ItemStack result : recipe.resultsFor(base, level.random, level.registryAccess())) {
+            for (ItemStack result : recipe.resultsFor(work, level.random, level.registryAccess())) {
                 accumulate(totals, result);
             }
         }
         if (totals.isEmpty()) return false;
 
-        slots[SLOT_BASE] = ItemStack.EMPTY;
+        // 全部校验通过后才消耗，避免失败时吞材料。
+        slots[SLOT_BASE] = base.copyWithCount(base.getCount() - crafts);
+        for (int slot = SLOT_MATERIAL_START; slot < materialEnd; slot++) {
+            if (used[slot] <= 0) continue;
+            slots[slot] = slots[slot].copyWithCount(slots[slot].getCount() - used[slot]);
+        }
+
         for (ItemStack total : totals) {
             dropItem(total, total.getCount());
         }
@@ -315,6 +374,19 @@ public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemH
         if (level == null) return null;
         List<RecipeHolder<InlayCraftingRecipe>> recipes = level.getRecipeManager()
                 .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get());
+
+        // 目标产物过滤：必须在产出该产物的配方里选，否则「同一基材+同一材料、不同产物」
+        // （如九种下界合金升级）会总是命中第一条。
+        if (!recipeFilter.isEmpty() && !RecipeFilterUtil.isFilterItem(recipeFilter)) {
+            for (RecipeHolder<InlayCraftingRecipe> holder : recipes) {
+                InlayCraftingRecipe recipe = holder.value();
+                if (!RecipeFilterUtil.produces(recipe, recipeFilter)) continue;
+                if (recipe.getBaseItem() != base.getItem()) continue;
+                if (recipe.matches(base)) return recipe;
+            }
+            return null;
+        }
+
         for (RecipeHolder<InlayCraftingRecipe> holder : recipes) {
             InlayCraftingRecipe recipe = holder.value();
             if (recipe.matches(base)) return recipe;

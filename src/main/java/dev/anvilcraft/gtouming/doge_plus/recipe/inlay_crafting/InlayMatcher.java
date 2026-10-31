@@ -46,6 +46,14 @@ public sealed interface InlayMatcher permits InlayMatcher.ByProperty, InlayMatch
     /** 是否命中一个实时物品（静默镶嵌用；附魔条数取物品自身）。 */
     boolean test(ItemStack stack);
 
+    /**
+     * 作为镶合台材料槽中的「待镶嵌材料」判定：只看物品/标签/附魔条数，
+     * 不检查「已累积的潜影盒/虚空物质块计数」——那些计数在镶嵌后才写进条目。
+     */
+    default boolean testMaterial(ItemStack stack) {
+        return test(stack);
+    }
+
     /** 展示用候选物品（JEI / 文档构造「已镶满的基材」）。 */
     List<ItemStack> candidates();
 
@@ -241,6 +249,13 @@ public sealed interface InlayMatcher permits InlayMatcher.ByProperty, InlayMatch
                     && enchantsCount.test(InlayEntry.countEnchantments(stack))
                     && shulkerCount.test(nesting.shulkers())
                     && voidMatterCount.test(nesting.voidMatter());
+        }
+
+        @Override
+        public boolean testMaterial(ItemStack stack) {
+            return !stack.isEmpty()
+                    && matches(stack.getItem())
+                    && enchantsCount.test(InlayEntry.countEnchantments(stack));
         }
 
         private boolean matches(Item item) {

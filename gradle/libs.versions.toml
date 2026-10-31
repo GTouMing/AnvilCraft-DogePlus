@@ -7,6 +7,8 @@ ageratum = "0.0.1+build.111"
 jei = "19.21.0.247"
 curios = "9.5.1+1.21.1"
 jade = "iku9fmp8"
+# AE2（应用能源2）：官方 Maven Central 坐标，POM 会带上运行时依赖 GuideME
+ae2 = "19.2.18"
 # Storage Drawers：必须用 NeoForge 版本 ID（px0CCB06），
 # 因为 "1.21.1-13.11.4" 被 fabric/forge/neoforge 共用，按版本号会拉到 fabric 版
 storagedrawers = "px0CCB06"
@@ -20,6 +22,7 @@ ageratum = { group = "dev.anvilcraft.resource", name = "ageratum-neoforge-1.21.1
 jei = { group = "mezz.jei", name = "jei-1.21.1-neoforge", version.ref = "jei" }
 curios = { group = "top.theillusivec4.curios", name = "curios-neoforge", version.ref = "curios" }
 jade = { group = "maven.modrinth", name = "nvQzSEkH", version.ref = "jade" }
+ae2 = { group = "org.appliedenergistics", name = "appliedenergistics2", version.ref = "ae2" }
 storagedrawers = { group = "maven.modrinth", name = "storagedrawers", version.ref = "storagedrawers" }
 
 [plugins]

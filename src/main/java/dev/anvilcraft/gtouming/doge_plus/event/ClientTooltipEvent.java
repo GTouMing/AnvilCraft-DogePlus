@@ -10,7 +10,6 @@ import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
@@ -22,13 +21,16 @@ import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientTooltipComponentFactoriesEvent;
 import net.neoforged.neoforge.client.event.RenderTooltipEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * 镶嵌 tooltip 追加渲染。
@@ -44,6 +46,29 @@ import java.util.List;
 @EventBusSubscriber(modid = AnvilCraftDogePlus.MOD_ID, value = Dist.CLIENT)
 public class ClientTooltipEvent {
 
+    /**
+     * AE2 可选兼容：用反射持有解包函数，AE2 缺席时返回 identity。
+     * 这样本类不会在类加载/校验阶段直接引用 AE2 相关类。
+     */
+    private static final Function<ItemStack, ItemStack> AE2_UNWRAP = createAe2Unwrap();
+
+    private static Function<ItemStack, ItemStack> createAe2Unwrap() {
+        try {
+            if (!ModList.get().isLoaded("ae2")) return Function.identity();
+            Class<?> compat = Class.forName("dev.anvilcraft.gtouming.doge_plus.client.Ae2TooltipCompat");
+            Method unwrap = compat.getMethod("unwrap", ItemStack.class);
+            return stack -> {
+                try {
+                    return (ItemStack) unwrap.invoke(null, stack);
+                } catch (ReflectiveOperationException e) {
+                    return stack;
+                }
+            };
+        } catch (Throwable ignored) {
+            return Function.identity();
+        }
+    }
+
     @SubscribeEvent
     public static void registerTooltipComponents(RegisterClientTooltipComponentFactoriesEvent event) {
         event.register(InlayTooltipComponent.class, ClientInlayTooltip::new);
@@ -52,6 +77,8 @@ public class ClientTooltipEvent {
     @SubscribeEvent
     public static void onGatherTooltip(RenderTooltipEvent.GatherComponents event) {
         ItemStack stack = event.getItemStack();
+        // AE2 的虚拟槽 / 样板会把 GenericStack 包装成物品；先解包再读取 INLAY。
+        stack = AE2_UNWRAP.apply(stack);
         List<Either<FormattedText, TooltipComponent>> elements = event.getTooltipElements();
 
         // 1. 材料物品：性质描述行（追加为普通文本行）
@@ -64,49 +91,45 @@ public class ClientTooltipEvent {
             }
         }
 
-        // 2. 基材/已镶嵌物品：镶孔图像 + 属性文本
+        // 2. 基材/已镶嵌物品：镶孔图像 + 属性文本（常驻，不再依赖 Shift；
+        //    AE2 虚拟槽 / 样板 tooltip 也能看到）。
         List<InlayEntry> inlays = InlayUtil.getInlays(stack);
         if (inlays.isEmpty() && !MaterialManager.hasSocket(stack)) return;
-        if (Screen.hasShiftDown()) {
-            List<ItemStack> materialStacks = inlays.stream().map(InlayEntry::toItemStack).toList();
-            int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
 
-            // 2.1 镶孔图像组件（每个镶孔画槽位贴图，已镶嵌叠材料图标）
-            elements.add(Either.right(new InlayTooltipComponent(materialStacks, sockets)));
+        List<ItemStack> materialStacks = inlays.stream().map(InlayEntry::toItemStack).toList();
+        int sockets = Math.max(materialStacks.size(), MaterialManager.getSocketCount(stack));
 
-            // 2.1.1 镶孔数由数据包定义，可能远超图像上限：补一行说明，避免信息无提示地丢失
-            //       （未显示的材料其属性行仍会照常列出）。
-            if (sockets > ClientInlayTooltip.MAX_VISIBLE_SOCKETS) {
-                elements.add(Either.left(Component.translatable(
-                                "tooltip.anvilcraft_doge_plus.inlay_sockets_truncated",
-                                sockets - ClientInlayTooltip.MAX_VISIBLE_SOCKETS, sockets)
-                        .withStyle(ChatFormatting.GRAY)));
-            }
+        // 2.1 镶孔图像组件（每个镶孔画槽位贴图，已镶嵌叠材料图标）
+        elements.add(Either.right(new InlayTooltipComponent(materialStacks, sockets)));
 
-            // 2.2 属性/提示文本
-            boolean resonance = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE);
-            for (InlayEntry entry : inlays) {
-                for (ResourceLocation id : entry.attributes()) {
-                    InlayProperty property = InlayProperty.get(id);
-                    if (property == null) continue;
-                    Component component = resonance ? enhancedTooltip(property) : property.getTooltip();
-                    if (elements.contains(Either.left(component))) continue;
-                    elements.add(Either.left(component));
-                }
-            }
-
-            // 高温数值
-            if (InlayUtil.hasProperty(stack, InlayProperty.HIGH_TEMP)) {
-                int heat = stack.getOrDefault(ModDataComponentTypes.HEAT, 0);
-                if (heat > 0) {
-                    elements.add(Either.left(Component.translatable(
-                                    "tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount", heat)
-                            .withStyle(ChatFormatting.RED)));
-                }
-            }
-        } else {
-            elements.add(Either.left(Component.translatable("tooltip.anvilcraft_doge_plus.inlay_details")
+        // 2.1.1 镶孔数由数据包定义，可能远超图像上限：补一行说明。
+        if (sockets > ClientInlayTooltip.MAX_VISIBLE_SOCKETS) {
+            elements.add(Either.left(Component.translatable(
+                            "tooltip.anvilcraft_doge_plus.inlay_sockets_truncated",
+                            sockets - ClientInlayTooltip.MAX_VISIBLE_SOCKETS, sockets)
                     .withStyle(ChatFormatting.GRAY)));
+        }
+
+        // 2.2 属性/提示文本
+        boolean resonance = InlayUtil.hasProperty(stack, InlayProperty.RESONANCE);
+        for (InlayEntry entry : inlays) {
+            for (ResourceLocation id : entry.attributes()) {
+                InlayProperty property = InlayProperty.get(id);
+                if (property == null) continue;
+                Component component = resonance ? enhancedTooltip(property) : property.getTooltip();
+                if (elements.contains(Either.left(component))) continue;
+                elements.add(Either.left(component));
+            }
+        }
+
+        // 高温数值
+        if (InlayUtil.hasProperty(stack, InlayProperty.HIGH_TEMP)) {
+            int heat = stack.getOrDefault(ModDataComponentTypes.HEAT, 0);
+            if (heat > 0) {
+                elements.add(Either.left(Component.translatable(
+                                "tooltip.anvilcraft_doge_plus.inlay_property.high_temp_amount", heat)
+                        .withStyle(ChatFormatting.RED)));
+            }
         }
     }
 

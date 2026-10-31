@@ -104,8 +104,8 @@ The **Resonance** property does nothing on its own; it enhances the other inlay 
 
 Hold an anvil hammer in your main hand and a sample item in your off hand, then right-click a **horizontal side of an Inlay Table / Inlay Crafting Table** to set a recipe filter (right-click with an empty off hand to clear):
 
-- **Inlay Table**: the off-hand item is the base (possibly already inlaid). The base slot only accepts the same base; the material slot accepts the existing inlay materials when the base already has inlays, otherwise every material from that base's recipes.
-- **Inlay Crafting Table**: the off-hand item is the target product. The base slot only accepts fully-inlaid bases matching a recipe that produces it.
+- **Inlay Table**: the off-hand item is the base (possibly already inlaid). The base slot only accepts the same base; the material slot accepts only materials from that base's **explicit inlay recipes**. Put silent-inlay materials in the Inlay Crafting Table.
+- **Inlay Crafting Table**: the off-hand item is the target product. The base slot accepts the recipe's base; the number of material slots equals the recipe's socket requirements, and each slot only accepts materials matching its requirement (up to 6).
 - An <ref item="anvilcraft:filter"/> in the off hand is applied directly as an item filter.
 
 Once set, the filter item is rendered on all four horizontal sides of the block.
@@ -114,7 +114,7 @@ Once set, the filter item is rendered on all four horizontal sides of the block.
 
 <recipe id="anvilcraft_doge_plus:inlay_crafting/magnet_ingot_from_hollow_magnet_block_4"/>
 
-**Inlay Crafting** extends the inlay system: at the [Inlay Crafting Table](block/inlay_crafting_table.md), items/blocks carrying the specified inlays are combined into new items/blocks.
+**Inlay Crafting** extends the inlay system: put the base plus up to 6 materials into the [Inlay Crafting Table](block/inlay_crafting_table.md); one anvil strike performs all **silent inlays** and then matches the inlay crafting recipe to produce new items/blocks.
 
 ### The three kinds of inlay crafting
 
@@ -127,7 +127,7 @@ Inlay crafting recipes fall into three kinds:
 | **Inlay Copying**  | AnvilCraft jewel copying        |
 
 
-**Some materials have no properties**, yet can still be inlaid that usually use on an inlay crafting recipe.
+**Some materials have no properties**; the Inlay Crafting Table applies them as **silent-inlay** materials during the strike. The Inlay Table only handles materials with explicit recipes.
 
 
 ### Inlay crafting recipes

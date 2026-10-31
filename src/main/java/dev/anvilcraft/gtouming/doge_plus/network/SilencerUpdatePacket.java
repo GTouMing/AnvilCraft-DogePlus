@@ -1,7 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.network;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
-import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import dev.anvilcraft.gtouming.doge_plus.item.MobileSilencer;
 import dev.anvilcraft.lib.v2.network.packet.IInsensitiveBiPacket;
 import dev.anvilcraft.lib.v2.network.packet.IPacket;

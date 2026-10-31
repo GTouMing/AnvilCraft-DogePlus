@@ -117,28 +117,33 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
             IFocusGroup focuses) {
         InlayCraftingRecipe recipe = recipeHolder.value();
 
+        // 产物预览仍用「由配方镶孔要求构造的已镶满基材」作为 sample。
         List<ItemStack> inlaidBases = buildInlaidBases(recipe);
         ItemStack sampleBase = inlaidBases.isEmpty()
                 ? new ItemStack(recipe.getBaseItem())
                 : inlaidBases.getFirst();
         List<InlayOutput.Preview> previews = previews(recipe, sampleBase);
 
-        // 输入：已镶满的基材（base + 全部 inlays），单槽
-        List<ItemStack> displayedInputs = filterFocused(inlaidBases, focuses);
-        if (!displayedInputs.isEmpty()) {
-            builder.addInputSlot(JeiSlotUtil.INPUT_X, JeiSlotUtil.DEFAULT_Y)
-                    .addItemStacks(displayedInputs)
-                    .addRichTooltipCallback((view, tooltip) -> {
-                        InlayRecipeTooltips.propertyRequirements(recipe.inlays()).forEach(tooltip::add);
-                        // 超限合金配方：标明本条配方要求的附魔条数（同前置，金色）
-                        recipe.enchantRange().ifPresent(range ->
-                                tooltip.add(InlayRecipeTooltips.transcendiumEnchantments(range)));
-                        // 潜影盒配方：标明本条配方要求的潜影嵌套计数（金色）
-                        recipe.shulkerRange().ifPresent(range ->
-                                tooltip.add(InlayRecipeTooltips.shulkerCount(range)));
-                        recipe.voidMatterRange().ifPresent(range ->
-                                tooltip.add(InlayRecipeTooltips.voidMatterCount(range)));
-                    });
+        // 基材槽：镶合台会在此基础上把材料槽里的静默镶嵌追加进去。
+        builder.addInputSlot(JeiSlotUtil.INPUT_X, JeiSlotUtil.DEFAULT_Y + JeiSlotUtil.OFFSET)
+                .addItemStack(new ItemStack(recipe.getBaseItem()))
+                .addRichTooltipCallback((view, tooltip) -> {
+                    InlayRecipeTooltips.propertyRequirements(recipe.inlays()).forEach(tooltip::add);
+                    recipe.enchantRange().ifPresent(range ->
+                            tooltip.add(InlayRecipeTooltips.transcendiumEnchantments(range)));
+                    recipe.shulkerRange().ifPresent(range ->
+                            tooltip.add(InlayRecipeTooltips.shulkerCount(range)));
+                    recipe.voidMatterRange().ifPresent(range ->
+                            tooltip.add(InlayRecipeTooltips.voidMatterCount(range)));
+                });
+
+        // 材料槽：每条镶孔要求一个槽（最多 6 个，与镶合台一致）。
+        List<InlayMatcher> matchers = recipe.inlays();
+        for (int i = 0; i < matchers.size() && i < 6; i++) {
+            int[] pos = materialPos(i);
+            var slot = builder.addInputSlot(pos[0], pos[1]);
+            List<ItemStack> candidates = matchers.get(i).candidates();
+            if (!candidates.isEmpty()) slot.addItemStacks(candidates);
         }
 
         // 输出：配方声明的全部产物（多产物 / 概率产物 / 推导产物），逐格标注数量与概率
@@ -150,6 +155,16 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
                     .addItemStack(preview.stack())
                     .addRichTooltipCallback((view, tooltip) -> outputTooltip(preview, tooltip));
         }
+    }
+
+    /** 材料槽坐标：3×2 排在基材槽上方。 */
+    private static int[] materialPos(int index) {
+        int col = index % 3;
+        int row = index / 3;
+        return new int[] {
+                JeiSlotUtil.INPUT_X - JeiSlotUtil.OFFSET + col * JeiSlotUtil.OFFSET,
+                JeiSlotUtil.DEFAULT_Y - JeiSlotUtil.OFFSET + row * JeiSlotUtil.OFFSET
+        };
     }
 
     /**
@@ -241,18 +256,6 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
         return new int[] {startX + (index % cols) * JeiSlotUtil.OFFSET, startY + (index / cols) * JeiSlotUtil.OFFSET};
     }
 
-    /** JEI 聚焦过滤：与当前聚焦物品匹配时只保留命中项，否则显示全部。 */
-    private static List<ItemStack> filterFocused(List<ItemStack> stacks, IFocusGroup focuses) {
-        List<ItemStack> focused = focuses.getItemStackFocuses()
-                .map(f -> f.getTypedValue().getIngredient())
-                .toList();
-        if (focused.isEmpty()) return stacks;
-        List<ItemStack> filtered = stacks.stream()
-                .filter(i -> focused.stream().anyMatch(p -> ItemStack.isSameItemSameComponents(p, i)))
-                .toList();
-        return filtered.isEmpty() ? stacks : filtered;
-    }
-
     /**
      * 含推导产物（盔甲纹饰 / 中子锭行为表）的配方按当前展示的基材逐帧重算输出槽，
      * 使输出与输入帧对应；纯固定产物的配方无需重算。
@@ -266,13 +269,24 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
         if (!recipe.hasDynamicResults()) return;
         // 聚焦输出时保留 JEI 默认行为
         if (focuses.getFocuses(RecipeIngredientRole.OUTPUT).findAny().isPresent()) return;
-        if (recipeSlots.size() < 2) return;
 
-        ItemStack inlaid = recipeSlots.getFirst().getDisplayedItemStack().orElse(ItemStack.EMPTY);
-        if (inlaid.isEmpty()) return;
-        List<InlayOutput.Preview> previews = previews(recipe, inlaid);
-        for (int i = 0; i < previews.size() && i + 1 < recipeSlots.size(); i++) {
-            recipeSlots.get(i + 1).createDisplayOverrides().addItemStack(previews.get(i).stack());
+        int materialCount = Math.min(recipe.inlays().size(), 6);
+        int outputStart = 1 + materialCount;
+        if (recipeSlots.size() <= outputStart) return;
+
+        ItemStack base = recipeSlots.getFirst().getDisplayedItemStack().orElse(ItemStack.EMPTY);
+        if (base.isEmpty()) base = new ItemStack(recipe.getBaseItem());
+        ItemStack work = base.copyWithCount(1);
+        for (int i = 0; i < materialCount; i++) {
+            ItemStack material = recipeSlots.get(1 + i).getDisplayedItemStack().orElse(ItemStack.EMPTY);
+            if (material.isEmpty()) continue;
+            work = InlayUtil.applySilentInlay(work, material);
+            if (work.isEmpty()) return;
+        }
+
+        List<InlayOutput.Preview> previews = previews(recipe, work);
+        for (int i = 0; i < previews.size() && outputStart + i < recipeSlots.size(); i++) {
+            recipeSlots.get(outputStart + i).createDisplayOverrides().addItemStack(previews.get(i).stack());
         }
     }
 
@@ -303,7 +317,14 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
 
         this.arrowIn.draw(guiGraphics, 54, 30);
         this.arrowOutputFromBelow.draw(guiGraphics, 92, 29);
-        JeiSlotUtil.drawDefaultInputSlots(guiGraphics, this.slotDefault, 1);
+        // 基材槽 + 材料槽背景
+        this.slotDefault.draw(guiGraphics, JeiSlotUtil.INPUT_X - 1,
+                JeiSlotUtil.DEFAULT_Y + JeiSlotUtil.OFFSET - 1);
+        int materialCount = Math.min(recipeHolder.value().inlays().size(), 6);
+        for (int i = 0; i < materialCount; i++) {
+            int[] pos = materialPos(i);
+            this.slotDefault.draw(guiGraphics, pos[0] - 1, pos[1] - 1);
+        }
         // 输出槽框数量与 setRecipe 的 gridPos 网格一致（按产物数量决定网格大小），
         // 物品坐标 +1 偏移与输入槽约定一致。
         int outputs = slotsView.getSlotViews(RecipeIngredientRole.OUTPUT).size();

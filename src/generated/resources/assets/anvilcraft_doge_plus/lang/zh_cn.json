@@ -122,6 +122,7 @@
   "tooltip.anvilcraft_doge_plus.item.magnetic_chute_dropper": "溜槽/磁性溜槽与发射器/投掷器的结合体，最多九倍发射/投掷量",
   "tooltip.anvilcraft_doge_plus.item.mobile_silencer": "头戴式主动消音器",
   "tooltip.anvilcraft_doge_plus.material_attributes": "镶嵌属性：",
+  "tooltip.anvilcraft_doge_plus.pattern_inlay": "镶嵌：%s",
   "wheel.anvilcraft_doge_plus.gate.and_gate": "与门",
   "wheel.anvilcraft_doge_plus.gate.counter_gate": "计数门",
   "wheel.anvilcraft_doge_plus.gate.delay_gate": "延时门",

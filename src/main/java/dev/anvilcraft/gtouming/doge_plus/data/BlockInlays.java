@@ -86,8 +86,12 @@ public record BlockInlays(
                 CHANNEL_MAP_CODEC.decode(buffer));
     }
 
+    /** 空记录单例：查询不到镶嵌数据时返回它，避免热路径反复分配。记录与集合均不可变。 */
+    private static final BlockInlays NULLS =
+            new BlockInlays(Blocks.AIR, List.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
+
     public static BlockInlays nulls() {
-        return new BlockInlays(Blocks.AIR, List.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
+        return NULLS;
     }
 
     /**

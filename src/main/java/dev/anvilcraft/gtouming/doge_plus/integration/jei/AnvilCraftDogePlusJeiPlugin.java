@@ -17,10 +17,12 @@ import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
+import net.neoforged.fml.ModList;
 
 import java.util.List;
 
@@ -76,6 +78,13 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
     private static List<RecipeHolder<InlayCraftingRecipe>> byKind(
             List<RecipeHolder<InlayCraftingRecipe>> recipes, InlayCraftingRecipe.Kind kind) {
         return recipes.stream().filter(holder -> holder.value().kind() == kind).toList();
+    }
+
+    @Override
+    public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
+        // AE2 的样板编码终端：JEI「+」直接写入处理样板（AE2 自身在 19.2.18 没有 JEI 集成）。
+        if (!ModList.get().isLoaded("ae2")) return;
+        Ae2PatternTransfer.register(registration);
     }
 
     @Override

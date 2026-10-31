@@ -23,6 +23,19 @@ repositories {
             includeGroup "com.tterrag.registrate"
         }
     }
+    // AE2（应用能源2）官方坐标在 Maven Central。moddev 插件会先挂 NeoForge 仓库，
+    // 不可达时会直接超时，因此固定该 group 只从 Maven Central 解析（GuideME 同 group）。
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Maven Central (AE2)"
+                url = "https://repo1.maven.org/maven2/"
+            }
+        }
+        filter {
+            includeGroup "org.appliedenergistics"
+        }
+    }
     maven { // JEI
         name = "BlameJared Maven"
         url = "https://maven.blamejared.com"

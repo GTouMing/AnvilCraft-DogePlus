@@ -1,7 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.logic;
 
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
@@ -21,6 +21,9 @@ final class Network {
     /** 网络内是否存在有状态门（计数 / 锁存 / 延时），用于每 tick 只推进这些网络。 */
     final boolean hasStatefulGates;
 
+    /** 网络内是否存在非门；没有非门时无需做振荡判定。 */
+    final boolean hasNotGates;
+
     /** 网络跨越的区块 */
     final LongOpenHashSet chunks = new LongOpenHashSet();
 
@@ -33,17 +36,17 @@ final class Network {
      */
     boolean needsReset = true;
 
-    /** 本轮结算开始前的输出快照（下标同 {@link Direction#ordinal()}），用于判断收敛后是否真的变化。 */
-    Long2ObjectOpenHashMap<int[]> baseline;
+    /** 本轮结算开始前的输出快照（位置 -> 6 面 4-bit 压缩），用于判断收敛后是否真的变化。 */
+    Long2IntOpenHashMap baseline;
 
     /**
-     * 上一次已通知邻居的输出快照（下标同 {@link Direction#ordinal()}）。
+     * 上一次已通知邻居的输出快照（位置 -> 6 面 4-bit 压缩）。
      *
      * <p>通知判定必须与它比较，而不是与 {@link #baseline}：{@code baseline} 每轮结算开始时都会重建，
      * 会把「上一轮结算末尾写入的有状态门输出」吸收进去，导致计数 / 锁存 / 延时门的输出变化
      * 永远不通知邻居（红石读不到）。本快照只在真正通知后更新，因此任何写入路径的变化都会被补上通知。</p>
      */
-    Long2ObjectOpenHashMap<int[]> lastNotified;
+    Long2IntOpenHashMap lastNotified;
 
     /**
      * 本轮结算（可能跨多轮 / 跨游戏刻）内输出发生过变化的非门位置。
@@ -62,10 +65,11 @@ final class Network {
      */
     final LongOpenHashSet dirtyNodes = new LongOpenHashSet();
 
-    Network(Long2ObjectLinkedOpenHashMap<GateNode> nodes, boolean overflow, boolean hasStatefulGates) {
+    Network(Long2ObjectLinkedOpenHashMap<GateNode> nodes, boolean overflow, boolean hasStatefulGates, boolean hasNotGates) {
         this.nodes = nodes;
         this.overflow = overflow;
         this.hasStatefulGates = hasStatefulGates;
+        this.hasNotGates = hasNotGates;
 
         // 计算区块归属
         for (LongIterator it = nodes.keySet().iterator(); it.hasNext();) {
@@ -102,5 +106,15 @@ record GateNode(LogicGateOutputData data, BlockPos pos, int statefulMask) {
     void setOutput(Direction direction, int signal) {
         if (data == null) return;
         data.setSignal(pos, direction, signal);
+    }
+
+    /** 6 面输出压缩成一个 int（每面 4 bits），供快照 / 清零整块读写。 */
+    int getPacked() {
+        return data == null ? 0 : data.getPacked(pos);
+    }
+
+    void setPacked(int packed) {
+        if (data == null) return;
+        data.setPacked(pos, packed);
     }
 }

@@ -1,12 +1,13 @@
 package dev.anvilcraft.gtouming.doge_plus.transfer;
 
+import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.chunk.ChunkAccess;
 
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -55,9 +56,10 @@ public final class ItemTransferNetworkManager {
         }
     }
 
-    /** 区块加载时扫描其中的传输节点并作为建网种子。 */
-    public static void chunkLoaded(ServerLevel level, ChunkAccess chunk) {
-        state(level).chunkLoaded(chunk);
+    /** 区块加载时登记其中的传输节点种子（只遍历该区块的镶嵌记录，不再逐方块扫描）。 */
+    public static void chunkLoaded(
+            ServerLevel level, ChunkPos chunkPos, List<Map.Entry<BlockPos, BlockInlays>> entries) {
+        state(level).chunkLoaded(chunkPos, entries);
     }
 
     /** 区块卸载时移除其中节点，并重建仍处于加载状态的部分。 */

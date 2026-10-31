@@ -9,10 +9,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.ChunkAccess;
 
 import javax.annotation.Nullable;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -184,10 +184,8 @@ public final class LogicGateNetworkManager {
         if (network != null && network.valid) {
             return network.getOutputSignal(neighborPos.asLong(), direction.getOpposite());
         }
-        // 邻居是尚未建网的门：直接读其持久化输出，避免触发建网副作用。
-        if (isLogicGate(level, neighborPos)) {
-            return peekOutput(level, neighborPos, direction.getOpposite());
-        }
+        // 不是已建网的门：按外部方块读世界红石。邻居区块未加载时不读，避免为显示信号强制加载区块。
+        if (!serverLevel.hasChunkAt(neighborPos)) return 0;
         int weak = level.getSignal(neighborPos, direction);
         int strong = level.getDirectSignal(neighborPos, direction);
         return Math.max(weak, strong);
@@ -222,17 +220,29 @@ public final class LogicGateNetworkManager {
     }
 
     /**
-     * 区块加载时扫描逻辑门
+     * 区块加载时登记其中的逻辑门种子。
+     *
+     * <p>只遍历该区块的镶嵌记录（由 {@code BlockInlayManager.purgeAndCollect} 提供），
+     * 不再逐方块扫描整块区块。</p>
      */
-    public static void chunkLoaded(ServerLevel level, ChunkAccess chunk) {
+    public static void chunkLoaded(
+            ServerLevel level, ChunkPos chunkPos, List<Map.Entry<BlockPos, BlockInlays>> entries) {
         LevelNetworks state = state(level);
-        chunk.findBlocks(
-                (blockState) -> true,
-                (pos, blockState) -> {
-                    if (logicGateData(level, pos, blockState) != null)
-                        state.topologySeeds.add(pos.asLong());
-                }
-        );
+        for (Map.Entry<BlockPos, BlockInlays> entry : entries) {
+            if (hasGateFace(entry.getValue())) {
+                state.topologySeeds.add(entry.getKey().asLong());
+            }
+        }
+        // 未加载期间按 0 处理的外部输入，区块加载后要让相邻已建网络重新采样（只标脏，下一 tick 结算）。
+        state.markNetworksAroundChunkDirty(chunkPos.toLong());
+    }
+
+    /** 该记录是否至少有一个非 NONE 的面（逻辑门 / 远程面）。 */
+    private static boolean hasGateFace(BlockInlays data) {
+        for (Direction dir : Direction.values()) {
+            if (data.getFace(dir) != FaceMode.NONE) return true;
+        }
+        return false;
     }
 
     /**
@@ -252,6 +262,8 @@ public final class LogicGateNetworkManager {
     }
 
     public static boolean isLogicGate(Level level, BlockPos pos) {
+        // 未加载的区块不读：getBlockState 会强制加载区块（关闭流程里会变成主线程自等待）。
+        if (!level.hasChunkAt(pos)) return false;
         return logicGateData(level, pos, level.getBlockState(pos)) != null;
     }
 

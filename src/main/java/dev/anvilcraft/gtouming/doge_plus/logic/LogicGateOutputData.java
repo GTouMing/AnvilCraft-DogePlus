@@ -12,6 +12,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import javax.annotation.Nullable;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 /**
  * 逻辑门持久化数据
@@ -21,18 +23,28 @@ public class LogicGateOutputData extends SavedData {
 
     private static final String DATA_NAME = "doge_plus_logic_gate_signals";
 
+    private static final Factory<LogicGateOutputData> FACTORY =
+            new Factory<>(LogicGateOutputData::new, LogicGateOutputData::load);
+
+    /** 按 ServerLevel 对象身份缓存，避免热路径每次 new Factory + computeIfAbsent。 */
+    private static final Map<ServerLevel, LogicGateOutputData> CACHE = new IdentityHashMap<>();
+
     /** 位置 -> 各方向信号 (压缩存储) */
     private final Long2ObjectOpenHashMap<DirectionalSignals> signals = new Long2ObjectOpenHashMap<>();
 
     @Nullable
     public static LogicGateOutputData get(Level level) {
-        if (level instanceof ServerLevel server) {
-            return server.getDataStorage().computeIfAbsent(
-                    new Factory<>(LogicGateOutputData::new, LogicGateOutputData::load),
-                    DATA_NAME
-            );
-        }
-        return null;
+        if (!(level instanceof ServerLevel server)) return null;
+        LogicGateOutputData cached = CACHE.get(server);
+        if (cached != null) return cached;
+        LogicGateOutputData data = server.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+        CACHE.put(server, data);
+        return data;
+    }
+
+    /** 世界卸载时释放该维度的缓存。 */
+    public static void clear(ServerLevel level) {
+        CACHE.remove(level);
     }
 
     // ==================== 数据操作 ====================
@@ -40,6 +52,28 @@ public class LogicGateOutputData extends SavedData {
     public int getSignal(BlockPos pos, Direction direction) {
         DirectionalSignals data = signals.get(pos.asLong());
         return data == null ? 0 : data.getSignal(direction);
+    }
+
+    /** 整块 6 面信号（每面 4 bits）；无记录为 0。 */
+    public int getPacked(BlockPos pos) {
+        DirectionalSignals data = signals.get(pos.asLong());
+        return data == null ? 0 : data.getPacked();
+    }
+
+    /** 一次性写入 6 面信号；全 0 时移除记录。 */
+    public void setPacked(BlockPos pos, int packed) {
+        long key = pos.asLong();
+        DirectionalSignals data = signals.get(key);
+        if (packed == 0) {
+            if (data != null) signals.remove(key);
+        } else {
+            if (data == null) {
+                data = new DirectionalSignals();
+                signals.put(key, data);
+            }
+            data.setPacked(packed);
+        }
+        setDirty();
     }
 
     public void setSignal(BlockPos pos, Direction direction, int signal) {

@@ -37,7 +37,8 @@ import java.util.List;
 import static dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager.hasSocket;
 
 /**
- * 镶嵌台方块实体：2 个槽位（镶嵌物/被镶嵌物）。
+ * 镶嵌台方块实体：2 个槽位（镶嵌物/被镶嵌物），只处理**显式镶嵌配方**；
+ * 静默镶嵌由镶合台负责。
  *
  * <p>铁砧砸击时执行镶嵌：查找匹配的 {@link InlayRecipe}，消耗 1 个材料 + 1 个基材，
  * 产出镶嵌后的物品。基材镶孔数（数据驱动）决定可镶嵌次数：
@@ -314,29 +315,18 @@ public class InlayTableBlockEntity extends BlockEntity implements IItemHandlerHo
     }
 
     private int processAddInlay(ItemStack inlay, ItemStack base, float fallDistance) {
-        // 属性以配方引用的材料定义为准（同一物品可匹配多个定义，避免无属性材料被其它定义污染）；
-        // 没有显式配方时按「静默镶嵌」放行——此时材料可以没有定义（如两种中子锭），属性记为空
+        // 镶嵌台只处理显式镶嵌配方；静默镶嵌由镶合台负责。
         InlayRecipe recipe = findRecipe(inlay, base);
-        MaterialManager.InlayMaterial inlayMaterial;
-        boolean silent = false;
-        if (recipe != null) {
-            inlayMaterial = recipe.getInlayMaterial();
-        } else if (level != null && InlayRecipe.canSilentlyInlay(level, inlay, base)) {
-            inlayMaterial = MaterialManager.getInlayMaterial(inlay);
-            silent = true;
-        } else {
-            return 0;
-        }
-        if (!silent && inlayMaterial == null) return 0;
+        if (recipe == null) return 0;
+        MaterialManager.InlayMaterial inlayMaterial = recipe.getInlayMaterial();
+        if (inlayMaterial == null) return 0;
 
         // 一次砸击消耗 min(材料,基材) 份，多出的材料/基材保留在槽位中；产物按份数生成。
         int count = Math.min(inlay.getCount(), base.getCount());
 
         // 潜影嵌套计数：镶嵌台看得到基材，在这里累加好（其它材料算出来是全零，不记）
         var nesting = InlayUtil.nesting(inlay, base);
-        InlayEntry entry = inlayMaterial == null
-                ? InlayEntry.ofItem(inlay, nesting)
-                : InlayEntry.fromItemStack(inlay, inlayMaterial, nesting);
+        InlayEntry entry = InlayEntry.fromItemStack(inlay, inlayMaterial, nesting);
         int sockets = MaterialManager.getSocketCount(base);
 
         // 镶嵌操作在基材副本上执行：补空占位、抽取附魔等都不应污染未被消耗的剩余基材。

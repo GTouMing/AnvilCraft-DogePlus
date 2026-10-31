@@ -29,10 +29,10 @@ import org.jetbrains.annotations.Nullable;
 /**
  * 镶合台：镶合配方的工作方块。
  *
- * <p>单个物品槽（镶满的基材）。顶面为输入区：手持物品在顶面放入（槽满则替换并返还旧物），
- * 空手右键取出；顶部被铁砧砸击时执行镶合（见
- * {@link InlayCraftingTableBlockEntity#processCrafting}），产物与空镶嵌基材以掉落物
- * 形式生成在台体下方，供漏斗/溜槽等自动化收集。</p>
+ * <p>一个基材槽 + 由目标产物过滤/配方决定数量的材料槽（最多 6 个，每槽对应一条镶孔要求）。顶面为输入区：手持物品在顶面放入（优先并入空槽/同类槽，
+ * 全满时替换并返还旧物），空手右键取出全部；顶部被铁砧砸击时先执行静默镶嵌、再匹配镶合配方
+ * （见 {@link InlayCraftingTableBlockEntity#processCrafting}），产物以掉落物形式生成在台体下方，
+ * 供漏斗/溜槽等自动化收集。</p>
  */
 public class InlayCraftingTableBlock extends Block implements EntityBlock {
 
@@ -91,39 +91,60 @@ public class InlayCraftingTableBlock extends Block implements EntityBlock {
         return ItemInteractionResult.sidedSuccess(false);
     }
 
-    /** 空手取出槽位物品。 */
+    /** 空手取出全部槽位物品。 */
     private static void retrieve(InlayCraftingTableBlockEntity table, Level level, BlockPos pos, Player player) {
-        ItemStack slotStack = table.getItemHandler().getStackInSlot(InlayCraftingTableBlockEntity.SLOT_BASE);
-        if (slotStack.isEmpty()) return;
-        player.getInventory().placeItemBackInInventory(slotStack.copy());
-        table.setStackInSlot(InlayCraftingTableBlockEntity.SLOT_BASE, ItemStack.EMPTY);
-        level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.6f, 1.0f);
+        boolean any = false;
+        for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
+            ItemStack slotStack = table.getItemHandler().getStackInSlot(slot);
+            if (slotStack.isEmpty()) continue;
+            player.getInventory().placeItemBackInInventory(slotStack.copy());
+            table.setStackInSlot(slot, ItemStack.EMPTY);
+            any = true;
+        }
+        if (any) {
+            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.6f, 1.0f);
+        }
     }
 
-    /** 放入：槽内有物品则替换，旧物返还玩家。 */
+    /** 放入：优先并入可合并的空槽/同类槽；全满时替换第一个接受的槽，旧物返还玩家。 */
     private static void placeStack(
             InlayCraftingTableBlockEntity table, Level level, BlockPos pos, Player player, ItemStack stack) {
-        // 配方过滤：基材槽不接受这种物品时不放入。
-        if (!table.accepts(InlayCraftingTableBlockEntity.SLOT_BASE, stack)) return;
+        for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
+            if (!table.accepts(slot, stack)) continue;
+            ItemStack existing = table.getItemHandler().getStackInSlot(slot);
+            if (!existing.isEmpty() && !ItemStack.isSameItemSameComponents(existing, stack)) continue;
 
-        ItemStack existing = table.getItemHandler().getStackInSlot(InlayCraftingTableBlockEntity.SLOT_BASE);
-        ItemStack stored = stack.copy();
-        table.setStackInSlot(InlayCraftingTableBlockEntity.SLOT_BASE, stored);
-        if (!player.getAbilities().instabuild) stack.shrink(stored.getCount());
-        if (!existing.isEmpty()) {
-            player.getInventory().placeItemBackInInventory(existing.copy());
+            ItemStack remaining = table.getItemHandler().insertItem(slot, stack, false);
+            int moved = stack.getCount() - remaining.getCount();
+            if (moved <= 0) continue;
+            if (!player.getAbilities().instabuild) stack.shrink(moved);
+            level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 0.8f, 1.0f);
+            return;
         }
-        level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 0.8f, 1.0f);
+
+        for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
+            if (!table.accepts(slot, stack)) continue;
+            ItemStack existing = table.getItemHandler().getStackInSlot(slot);
+            ItemStack stored = stack.copy();
+            table.setStackInSlot(slot, stored);
+            if (!player.getAbilities().instabuild) stack.shrink(stored.getCount());
+            if (!existing.isEmpty()) {
+                player.getInventory().placeItemBackInInventory(existing.copy());
+            }
+            level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 0.8f, 1.0f);
+            return;
+        }
     }
 
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        // 方块被移除（换成了其它方块/空气）时，返还槽位物品
+        // 方块被移除（换成了其它方块/空气）时，返还全部槽位物品
         if (!state.is(newState.getBlock())) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof InlayCraftingTableBlockEntity table) {
-                ItemStack stack = table.getItemHandler().getStackInSlot(InlayCraftingTableBlockEntity.SLOT_BASE);
-                if (!stack.isEmpty()) {
+                for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
+                    ItemStack stack = table.getItemHandler().getStackInSlot(slot);
+                    if (stack.isEmpty()) continue;
                     ItemEntity item = new ItemEntity(
                             level,
                             pos.getX() + 0.5,

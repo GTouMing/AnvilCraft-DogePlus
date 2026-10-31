@@ -12,6 +12,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import javax.annotation.Nullable;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 /**
  * 逻辑门运行时状态（仅计数门 / 锁存门 / 延时门需要）。
@@ -25,6 +27,12 @@ public class LogicGateStateData extends SavedData {
     private static final String DATA_NAME = "doge_plus_logic_gate_state";
     private static final int DIRECTIONS = Direction.values().length;
 
+    private static final Factory<LogicGateStateData> FACTORY =
+            new Factory<>(LogicGateStateData::new, LogicGateStateData::load);
+
+    /** 按 ServerLevel 对象身份缓存，避免热路径每次 new Factory + computeIfAbsent。 */
+    private static final Map<ServerLevel, LogicGateStateData> CACHE = new IdentityHashMap<>();
+
     private static final int COUNT_MASK = 0xFF;
     private static final int LATCHED_BIT = 1 << 8;
     private static final int REMAINING_SHIFT = 9;
@@ -35,13 +43,17 @@ public class LogicGateStateData extends SavedData {
 
     @Nullable
     public static LogicGateStateData get(Level level) {
-        if (level instanceof ServerLevel server) {
-            return server.getDataStorage().computeIfAbsent(
-                    new Factory<>(LogicGateStateData::new, LogicGateStateData::load),
-                    DATA_NAME
-            );
-        }
-        return null;
+        if (!(level instanceof ServerLevel server)) return null;
+        LogicGateStateData cached = CACHE.get(server);
+        if (cached != null) return cached;
+        LogicGateStateData data = server.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+        CACHE.put(server, data);
+        return data;
+    }
+
+    /** 世界卸载时释放该维度的缓存。 */
+    public static void clear(ServerLevel level) {
+        CACHE.remove(level);
     }
 
     // ==================== 计数门 ====================

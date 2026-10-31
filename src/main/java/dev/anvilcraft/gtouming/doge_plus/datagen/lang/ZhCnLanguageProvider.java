@@ -89,6 +89,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("tooltip.anvilcraft_doge_plus.inlay_details", "按住 [Shift] 查看镶嵌信息");
         add("tooltip.anvilcraft_doge_plus.inlay_sockets_truncated", "…其余 %1$s 个镶孔未显示（共 %2$s 个）");
         add("tooltip.anvilcraft_doge_plus.material_attributes", "镶嵌属性：");
+        add("tooltip.anvilcraft_doge_plus.pattern_inlay", "镶嵌：%s");
 
         // ===== 物品描述行（仿前置 tooltip.anvilcraft.item.<id>，代码按物品 id 自动查找） =====
         add("tooltip.anvilcraft_doge_plus.item.doge_steel_ingot", "一块可塑性良好的铁");

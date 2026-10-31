@@ -12,10 +12,10 @@ items:
 
 <block id="anvilcraft_doge_plus:inlay_table"/>
 
-The workstation of the inlay system:
+The workstation of the inlay system (only **explicit inlay recipes**):
 
 - First right-click to insert the item to be inlaid. The base material provides the **sockets**.
-- Then right-click to insert the material to embed. The inlay material provides **properties**.
+- Then right-click to insert the material to embed; the material must have a matching `recipe/inlay` recipe. Use the [Inlay Crafting Table](inlay_crafting_table.md) for silent-inlay materials.
 - An anvil landing on the table performs the inlay; products drop below, and can be collected automatically with hoppers/chutes.
 
 <recipe id="anvilcraft_doge_plus:crafting_shaped/inlay_table"/>

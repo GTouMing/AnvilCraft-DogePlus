@@ -27,7 +27,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -867,15 +866,22 @@ final class LevelTransferNetworks {
 
     // ==================== 区块管理 ====================
 
-    void chunkLoaded(ChunkAccess chunk) {
-        // 只扫描区块自己的方块：避免为了找网络而同步加载相邻区块。
-        chunk.findBlocks(
-                state -> !state.isAir(),
-                (pos, state) -> {
-                    if (this.hasTransferFace(pos)) this.topologySeeds.add(pos.asLong());
-                });
+    void chunkLoaded(ChunkPos chunkPos, List<Map.Entry<BlockPos, BlockInlays>> entries) {
+        for (Map.Entry<BlockPos, BlockInlays> entry : entries) {
+            if (this.hasTransferFace(entry.getKey(), entry.getValue())) {
+                topologySeeds.add(entry.getKey().asLong());
+            }
+        }
         // 端点的容器可能就在这个区块里，紧邻的网络需要重算记录。
-        this.markNetworksAroundChunkDirty(chunk.getPos().toLong());
+        this.markNetworksAroundChunkDirty(chunkPos.toLong());
+    }
+
+    /** 该位置的镶嵌记录是否含传输面（不需要再查一次 SavedData）。 */
+    private boolean hasTransferFace(BlockPos pos, BlockInlays data) {
+        for (Direction dir : Direction.values()) {
+            if (isInsertFace(data, dir) || isExtractFace(data, dir)) return true;
+        }
+        return this.remoteChannels(pos, data).length > 0;
     }
 
     void chunkUnloaded(long chunkPos) {

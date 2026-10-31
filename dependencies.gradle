@@ -23,4 +23,8 @@ dependencies {
     // Storage Drawers（储物抽屉）— 开发环境软兼容与测试
     compileOnly(libs.storagedrawers)
     runtimeOnly(libs.storagedrawers)
+
+    // AE2（应用能源2）— 开发环境软兼容与测试
+    compileOnly(libs.ae2)
+    runtimeOnly(libs.ae2)
 }

@@ -11,7 +11,7 @@ Welcome to **AnvilCraft: Doge+**, an add-on for [AnvilCraft](https://github.com/
 
 This mod brings three major pieces of content:
 
-- **Inlay System** A brand-new mechanic: inlay materials into a base material at the Inlay Table to grant items special properties.
+- **Inlay System** A brand-new mechanic: apply explicit inlay recipes at the Inlay Table, or process silent-inlay materials together with the base at the Inlay Crafting Table, to grant items special properties.
 - **Inlay Crafting Recipes** Recipes built on the inlay system that combine items/blocks carrying the specified inlays into new items/blocks.
 - **Quality of Life** Chute dispenser/dropper variants, a stronger-attracting Doge Node, a Doge Magnet that stores/launches anvils, and a wearable Mobile Silencer.
 

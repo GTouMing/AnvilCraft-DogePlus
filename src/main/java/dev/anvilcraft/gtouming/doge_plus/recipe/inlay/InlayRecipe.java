@@ -109,7 +109,7 @@ public class InlayRecipe extends AbstractProcessRecipe<InlayRecipe> {
     }
 
     /**
-     * 静默镶嵌：显式镶嵌配方被移除后，仍然允许「符合镶合条件」的组合镶上去。
+     * 静默镶嵌（镶合台 / 载体直接操作）：显式镶嵌配方被移除后，仍然允许「符合镶合条件」的组合镶上去。
      *
      * <p>判定依据是镶合配方本身：只要存在一条以该基材为模具、且 {@code inlays} 中有任一
      * ingredient 接受该材料的镶合配方，这次镶嵌就放行——但它不写进 {@code recipe/inlay}，

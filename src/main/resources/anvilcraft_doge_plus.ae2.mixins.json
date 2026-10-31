@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.anvilcraft.gtouming.doge_plus.mixin.ae2",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AEItemKeyMixin",
+    "PatternDetailsTooltipMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -73,7 +73,7 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
 
     // ===== 原版锻造兼容（无属性材料）=====
     // 说明：下界合金锭、钻石装备与纹饰材料已不再定义材料——它们没有属性、也没有手写镶嵌配方，
-    // 完全由「静默镶嵌」按镶合条件放行（原先的 NETHERITE_UPGRADE_INLAYS / TRIM_INLAYS 常量随之移除）。
+    // 完全由「镶合台静默镶嵌」按镶合条件放行（原先的 NETHERITE_UPGRADE_INLAYS / TRIM_INLAYS 常量随之移除）。
 
     // ===== 空心磁铁块镶合（无属性材料，手写镶嵌配方引用其材料键）=====
     public static final String IRON_INGOT = "iron_ingot";
@@ -95,7 +95,7 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     );
 
     /** 下界合金升级 / 盔甲纹饰的材料不再定义：它们没有属性、也没有手写镶嵌配方，
-     * 由「静默镶嵌」按镶合条件放行，故原 NETHERITE_UPGRADE_INLAYS / TRIM_* 常量一并移除。 */
+     * 由「镶合台静默镶嵌」按镶合条件放行，故原 NETHERITE_UPGRADE_INLAYS / TRIM_* 常量一并移除。 */
 
     /** 本 mod 内置镶嵌材料（含属性）。 */
     private static final List<InlayMaterialData> MANUAL = new ArrayList<>();
@@ -193,7 +193,7 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
      * 全部镶嵌材料定义：仅内置清单。
      *
      * <p>前置（AnvilCraft）锻造 / 珠宝复制派生的材料<b>不再生成</b>——它们没有属性，只作为
-     * 镶合条件里的材料，由「静默镶嵌」按 {@code inlay_crafting} 的 {@code inlays} 放行。</p>
+     * 镶合条件里的材料，由「镶合台静默镶嵌」按 {@code inlay_crafting} 的 {@code inlays} 放行。</p>
      */
     public static List<InlayMaterialData> all() {
         return new ArrayList<>(MANUAL);

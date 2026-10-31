@@ -4,6 +4,7 @@ import dev.anvilcraft.gtouming.doge_plus.data.InlayEntry;
 import dev.anvilcraft.gtouming.doge_plus.data.InlayExtra;
 import dev.anvilcraft.gtouming.doge_plus.init.ModDataComponentTypes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
+import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.MaterialManager;
 import dev.dubhe.anvilcraft.init.block.ModBlocks;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
@@ -86,6 +87,36 @@ public final class InlayUtil {
     }
 
     // ==================== 镶嵌操作 ====================
+
+    /**
+     * 静默镶嵌：把材料追加到基材的空镶孔，保留基材已有镶嵌。
+     *
+     * <p>只追加、不替换：基材没有空镶孔或材料为空时返回 {@link ItemStack#EMPTY}。
+     * 材料有定义时沿用其属性，没有定义时（如两种中子锭）按物品记一个无属性条目。</p>
+     */
+    public static ItemStack applySilentInlay(ItemStack base, ItemStack material) {
+        if (base.isEmpty() || material.isEmpty()) return ItemStack.EMPTY;
+
+        int sockets = MaterialManager.getSocketCount(base);
+        int filled = 0;
+        for (InlayEntry entry : getInlays(base)) {
+            if (!entry.isEmpty()) filled++;
+        }
+        if (filled >= sockets) return ItemStack.EMPTY;
+
+        MaterialManager.InlayMaterial definition = MaterialManager.getInlayMaterial(material);
+        InlayExtra.Nesting nesting = nesting(material, base);
+        InlayEntry entry = definition == null
+                ? InlayEntry.ofItem(material, nesting)
+                : InlayEntry.fromItemStack(material, definition, nesting);
+        if (entry.isEmpty()) return ItemStack.EMPTY;
+
+        ItemStack result = withAddedInlay(base.copyWithCount(1), entry);
+        if (entry.containsAttributes(InlayProperty.ENCHANT)) {
+            transferEnchantments(result, material);
+        }
+        return result;
+    }
 
     public static ItemStack withAddedInlay(ItemStack base, InlayEntry inlay) {
         List<InlayEntry> inlays = new ArrayList<>(getInlays(base));

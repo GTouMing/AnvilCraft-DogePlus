@@ -41,17 +41,28 @@ public class BlockInlayManager extends SavedData {
 
     private static final String DATA_NAME = "doge_plus_inlaid_blocks";
 
+    private static final SavedData.Factory<BlockInlayManager> FACTORY =
+            new SavedData.Factory<>(BlockInlayManager::new, BlockInlayManager::load);
+
+    /** 按 ServerLevel 对象身份缓存，避免热路径每次 new Factory + computeIfAbsent。 */
+    private static final Map<ServerLevel, BlockInlayManager> CACHE = new IdentityHashMap<>();
+
     private final Map<BlockPos, BlockInlays> INLAID_BLOCKS = new HashMap<>();
 
     /** 获取指定维度的管理数据；客户端或不可持久化维度返回 null。 */
     @Nullable
     public static BlockInlayManager get(BlockGetter level) {
-        if (level instanceof ServerLevel server) {
-            return server.getDataStorage().computeIfAbsent(
-                    new SavedData.Factory<>(BlockInlayManager::new, BlockInlayManager::load),
-                    DATA_NAME);
-        }
-        return null;
+        if (!(level instanceof ServerLevel server)) return null;
+        BlockInlayManager cached = CACHE.get(server);
+        if (cached != null) return cached;
+        BlockInlayManager manager = server.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+        CACHE.put(server, manager);
+        return manager;
+    }
+
+    /** 世界卸载时释放该维度的缓存。 */
+    public static void clear(ServerLevel level) {
+        CACHE.remove(level);
     }
 
     /** 该坐标是否携带指定镶嵌性质（任一镶嵌材料带该性质即视为携带）。 */
@@ -104,22 +115,27 @@ public class BlockInlayManager extends SavedData {
      * <p>在区块加载时调用：残留记录若不清掉，除了让网络把空气当成节点，还会被之后放回该坐标的
      * 新方块误继承（记录里的方块字段可能又是同类载体，看起来「对得上」）。</p>
      */
-    public static void purgeInconsistent(ServerLevel level, ChunkPos chunkPos) {
+    public static List<Map.Entry<BlockPos, BlockInlays>> purgeAndCollect(ServerLevel level, ChunkPos chunkPos) {
         BlockInlayManager manager = get(level);
-        if (manager == null) return;
+        if (manager == null) return List.of();
         long packedChunk = chunkPos.toLong();
+        List<Map.Entry<BlockPos, BlockInlays>> valid = new ArrayList<>();
         boolean changed = false;
         Iterator<Map.Entry<BlockPos, BlockInlays>> it = manager.INLAID_BLOCKS.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<BlockPos, BlockInlays> entry = it.next();
             BlockPos pos = entry.getKey();
             if (ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4) != packedChunk) continue;
-            if (entry.getValue().block() == level.getBlockState(pos).getBlock()) continue;
-            it.remove();
-            changed = true;
-            syncToClients(level, pos, BlockInlays.nulls());
+            if (entry.getValue().block() != level.getBlockState(pos).getBlock()) {
+                it.remove();
+                changed = true;
+                syncToClients(level, pos, BlockInlays.nulls());
+                continue;
+            }
+            valid.add(Map.entry(pos, entry.getValue()));
         }
         if (changed) manager.setDirty();
+        return valid;
     }
 
     /** 清除坐标的镶嵌记录（幂等：无记录时无操作），并广播到客户端。 */

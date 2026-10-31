@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
+import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
@@ -27,6 +28,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -492,7 +494,11 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
         BakedModel model = itemRenderer.getModel(filter, level, null, 0);
         Vector3f guiScale = model.getTransforms().getTransform(ItemDisplayContext.GUI).scale;
-        float scale = FILTER_ITEM_SCALE * FILTER_ITEM_SHRINK / Math.max(guiScale.x(), 0.01F);
+        // 多方块巨构（如加速环）的物品模型是整座结构，额外缩 1/3 才能放进过滤图标。
+        float multiPartShrink = filter.getItem() instanceof BlockItem blockItem
+                && blockItem.getBlock() instanceof IMultiPartBlock ? 1.0F / 3.0F : 1.0F;
+        float scale = FILTER_ITEM_SCALE * FILTER_ITEM_SHRINK * multiPartShrink
+                / Math.max(guiScale.x(), 0.01F);
 
         // 通道部件与物品都在方块图集上：直接按顶点色烘明暗即可。
         VertexConsumer consumer = buffer.getBuffer(PART_RENDER_TYPE);

@@ -76,6 +76,7 @@ public class EnUsLangHandler {
         provider.add("tooltip.anvilcraft_doge_plus.inlay_details", "Hold [Shift] for inlay info");
         provider.add("tooltip.anvilcraft_doge_plus.inlay_sockets_truncated", "…%1$s more sockets not shown (%2$s total)");
         provider.add("tooltip.anvilcraft_doge_plus.material_attributes", "Inlay attributes:");
+        provider.add("tooltip.anvilcraft_doge_plus.pattern_inlay", "Inlays: %s");
 
         // ===== Item descriptions (mirrors base tooltip.anvilcraft.item.<id>, looked up by item id) =====
         provider.add("tooltip.anvilcraft_doge_plus.item.doge_steel_ingot", "A piece of iron with good malleability");
