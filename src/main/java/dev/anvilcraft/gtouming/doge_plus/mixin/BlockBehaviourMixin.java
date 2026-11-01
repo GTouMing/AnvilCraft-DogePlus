@@ -90,11 +90,9 @@ public abstract class BlockBehaviourMixin {
         /* ===== 磁性镶嵌方块放置：把下方铁砧吸到正下方 ===== */
         AnvilMagnetUtil.attractAnvilToMagnet(level, mainPos);
 
-        PowerGridManager manager = PowerGridManager.get(level);
-        if (manager == null) return;
-
-        if (BlockInlayManager.hasProperty(level, mainPos, InlayProperty.GENERATOR))
-            manager.add(mainPos, new InlayPowerProducer(level, mainPos));
+        // 此处镶嵌数据可能尚未写入（BlockItemMixin 在 placeBlock 返回后补写），
+        // 写入路径会再调用一次；这里负责覆盖数据已存在的放置路径并清掉陈旧节点。
+        PowerGridManager.addIfGenerator(level, mainPos);
     }
     /**
      * 方块移除时触发更新。

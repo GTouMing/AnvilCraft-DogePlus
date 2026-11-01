@@ -117,16 +117,22 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
             IFocusGroup focuses) {
         InlayCraftingRecipe recipe = recipeHolder.value();
 
-        // 产物预览仍用「由配方镶孔要求构造的已镶满基材」作为 sample。
+        // 聚焦已镶嵌物品且它恰好满足本配方时，直接把它作为基材槽：
+        // U 查询会按该物品的具体 INLAY 组件匹配，页面也基于该物品而非普通基材。
+        ItemStack focusedBase = focusedInlaidBase(focuses, recipe);
+        ItemStack baseStack = focusedBase != null ? focusedBase : new ItemStack(recipe.getBaseItem());
+
+        // 产物预览仍用「由配方镶孔要求构造的已镶满基材」作为 sample；
+        // 有聚焦物品时改用聚焦物品，保证预览基于当前镶嵌状态。
         List<ItemStack> inlaidBases = buildInlaidBases(recipe);
-        ItemStack sampleBase = inlaidBases.isEmpty()
-                ? new ItemStack(recipe.getBaseItem())
-                : inlaidBases.getFirst();
+        ItemStack sampleBase = focusedBase != null
+                ? focusedBase
+                : (inlaidBases.isEmpty() ? new ItemStack(recipe.getBaseItem()) : inlaidBases.getFirst());
         List<InlayOutput.Preview> previews = previews(recipe, sampleBase);
 
         // 基材槽：镶合台会在此基础上把材料槽里的静默镶嵌追加进去。
         builder.addInputSlot(JeiSlotUtil.INPUT_X, JeiSlotUtil.DEFAULT_Y + JeiSlotUtil.OFFSET)
-                .addItemStack(new ItemStack(recipe.getBaseItem()))
+                .addItemStack(baseStack)
                 .addRichTooltipCallback((view, tooltip) -> {
                     InlayRecipeTooltips.propertyRequirements(recipe.inlays()).forEach(tooltip::add);
                     recipe.enchantRange().ifPresent(range ->
@@ -155,6 +161,17 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
                     .addItemStack(preview.stack())
                     .addRichTooltipCallback((view, tooltip) -> outputTooltip(preview, tooltip));
         }
+    }
+
+    /** 聚焦物品中满足该配方完整镶孔集合的已镶嵌基材。 */
+    @Nullable
+    private static ItemStack focusedInlaidBase(IFocusGroup focuses, InlayCraftingRecipe recipe) {
+        for (var focus : focuses.getItemStackFocuses().toList()) {
+            ItemStack stack = focus.getTypedValue().getIngredient();
+            if (stack.isEmpty() || InlayUtil.getInlays(stack).isEmpty()) continue;
+            if (recipe.matches(stack)) return stack.copyWithCount(1);
+        }
+        return null;
     }
 
     /** 材料槽坐标：3×2 排在基材槽上方。 */

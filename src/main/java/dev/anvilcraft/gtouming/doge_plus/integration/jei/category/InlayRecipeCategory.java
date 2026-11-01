@@ -147,9 +147,17 @@ public class InlayRecipeCategory extends AbstractProgressCategory<InlayRecipe> {
         if (baseMaterial == null) return List.of();
 
         List<ItemStack> bases = Arrays.asList(baseMaterial.ingredient().getItems());
-        List<ItemStack> focused = focuses.getItemStackFocuses().map(f -> f.getTypedValue().getIngredient()).toList();
-        List<ItemStack> filterBases = bases.stream().filter(i -> focused.stream().anyMatch(p -> ItemStack.isSameItemSameComponents(p,i))).toList();
-        return filterBases.isEmpty()? bases : filterBases;
+        List<ItemStack> focused = focuses.getItemStackFocuses()
+                .map(f -> f.getTypedValue().getIngredient())
+                .filter(stack -> !stack.isEmpty())
+                .toList();
+        // 聚焦已镶嵌物品时保留其 INLAY 组件作为基材槽：U 查询因此按具体镶嵌状态展开，
+        // 输出也会在该物品的旧镶嵌之上追加，而不是退回普通基材的物品。
+        List<ItemStack> focusedBases = focused.stream()
+                .filter(stack -> bases.stream().anyMatch(base -> base.is(stack.getItem())))
+                .map(stack -> stack.copyWithCount(1))
+                .toList();
+        return focusedBases.isEmpty() ? bases : focusedBases;
     }
 
     @Override

@@ -96,6 +96,7 @@ public class BlockInlayManager extends SavedData {
         manager.INLAID_BLOCKS.put(pos.immutable(), inlays);
         manager.setDirty();
         syncToClients((Level) level, pos, manager.INLAID_BLOCKS.get(pos));
+        if (level instanceof Level lv) PowerGridManager.addIfGenerator(lv, pos);
     }
 
     /**
@@ -130,6 +131,7 @@ public class BlockInlayManager extends SavedData {
                 it.remove();
                 changed = true;
                 syncToClients(level, pos, BlockInlays.nulls());
+                PowerGridManager.addIfGenerator(level, pos);
                 continue;
             }
             valid.add(Map.entry(pos, entry.getValue()));
@@ -146,6 +148,7 @@ public class BlockInlayManager extends SavedData {
             manager.setDirty();
             syncToClients((Level) level, pos, BlockInlays.nulls());
         }
+        if (level instanceof Level lv) PowerGridManager.addIfGenerator(lv, pos);
     }
 
     /** 向跟踪该方块所在区块的玩家广播同步包（空列表表示移除）。 */
@@ -185,6 +188,7 @@ public class BlockInlayManager extends SavedData {
             PENDING_MOVES.add(inlays);
 
             syncToClients(level, pos, inlays);
+            PowerGridManager.addIfGenerator(level, pos);
 
         } catch (Exception ignored) {}
     }
@@ -205,6 +209,7 @@ public class BlockInlayManager extends SavedData {
                 manager.setDirty();
 
                 syncToClients(level, pos, pending);
+                PowerGridManager.addIfGenerator(level, pos);
                 return;
             }
         }

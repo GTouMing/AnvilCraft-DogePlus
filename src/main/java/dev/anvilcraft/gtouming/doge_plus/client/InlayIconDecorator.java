@@ -20,6 +20,7 @@ import net.neoforged.neoforge.client.IItemDecorator;
 import net.neoforged.neoforge.client.event.RegisterItemDecorationsEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,18 +38,24 @@ import java.util.Map;
 @EventBusSubscriber(modid = AnvilCraftDogePlus.MOD_ID, value = Dist.CLIENT)
 public final class InlayIconDecorator implements IItemDecorator {
 
-    /** 距图标左上角的偏移（留 1px 边距）。 */
-    private static final int ORIGIN = 1;
-    /** 不同材料行/列之间的间距：1px 点 + 1px 间隔。 */
-    private static final int MATERIAL_PITCH = 2;
-    /** 同一材料属性之间的间距：紧邻。 */
-    private static final int PROPERTY_PITCH = 1;
-    /** 16×16 图标内最多容纳的材料行/列数。 */
-    private static final int MAX_MATERIALS = 8;
-    /** 16×16 图标内最多容纳的属性数。 */
-    private static final int MAX_PROPERTIES = 8;
+    /** 从图标左上角开始绘制。 */
+    private static final int ORIGIN = 0;
+    /** 每个像素点的边长。 */
+    private static final int DOT_SIZE = 2;
+    /** 不同材料行/列之间的间隔。 */
+    private static final int GAP = 1;
+    /** 不同材料行/列之间的步距：2px 点 + 1px 间隔。 */
+    private static final int MATERIAL_PITCH = DOT_SIZE + GAP;
+    /** 同一材料的属性紧邻：步距等于点边长，不留间隔。 */
+    private static final int PROPERTY_PITCH = DOT_SIZE;
+    /** 18×18 槽位内最多容纳的材料行/列数（6 × 3 = 18）。 */
+    private static final int MAX_MATERIALS = 6;
+    /** 18×18 槽位内最多容纳的属性数。 */
+    private static final int MAX_PROPERTIES = 6;
     private static final int ALPHA = 0xFF000000;
     private static final int FALLBACK_COLOR = 0xFFFFFFFF;
+    /** 物品模型/数量/耐久在更高的 z 上；装饰点需再抬一层，否则会被物品遮挡。 */
+    private static final float OVERLAY_Z = 300.0F;
 
     /** 按材料物品缓存的材质代表色（ARGB）。 */
     private static final Map<ResourceLocation, Integer> MATERIAL_COLORS = new HashMap<>();
@@ -79,45 +86,75 @@ public final class InlayIconDecorator implements IItemDecorator {
         int materialLimit = Math.min(materials.size(), MAX_MATERIALS);
         boolean drew = false;
 
-        for (int materialIndex = 0; materialIndex < materialLimit; materialIndex++) {
-            InlayEntry entry = materials.get(materialIndex);
-            List<ResourceLocation> attributes = entry.attributes();
-            int dotIndex = 0;
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, 0.0F, OVERLAY_Z);
+        try {
+            for (int materialIndex = 0; materialIndex < materialLimit; materialIndex++) {
+                InlayEntry entry = materials.get(materialIndex);
+                List<ResourceLocation> attributes = entry.attributes();
+                int dotIndex = 0;
 
-            if (attributes.isEmpty()) {
-                // 无属性镶嵌：用材料本身的物品/方块材质代表色。
-                int color = materialColor(entry);
-                int pixelX = vertical
-                        ? x + ORIGIN + dotIndex * PROPERTY_PITCH
-                        : x + ORIGIN + materialIndex * MATERIAL_PITCH;
-                int pixelY = vertical
-                        ? y + ORIGIN + materialIndex * MATERIAL_PITCH
-                        : y + ORIGIN + dotIndex * PROPERTY_PITCH;
-                graphics.fill(pixelX, pixelY, pixelX + 1, pixelY + 1, color);
-                drew = true;
-                continue;
+                if (attributes.isEmpty()) {
+                    // 无属性镶嵌：用材料本身的物品/方块材质代表色。
+                    int color = materialColor(entry);
+                    int pixelX = vertical
+                            ? x + ORIGIN + dotIndex * PROPERTY_PITCH
+                            : x + ORIGIN + materialIndex * MATERIAL_PITCH;
+                    int pixelY = vertical
+                            ? y + ORIGIN + materialIndex * MATERIAL_PITCH
+                            : y + ORIGIN + dotIndex * PROPERTY_PITCH;
+                    fillDot(graphics, pixelX, pixelY, color);
+                    drew = true;
+                    continue;
+                }
+
+                for (int attributeIndex = 0;
+                     attributeIndex < attributes.size() && dotIndex < MAX_PROPERTIES;
+                     attributeIndex++) {
+                    InlayProperty property = InlayProperty.get(attributes.get(attributeIndex));
+                    if (property == null) continue;
+
+                    int pixelX = vertical
+                            ? x + ORIGIN + dotIndex * PROPERTY_PITCH
+                            : x + ORIGIN + materialIndex * MATERIAL_PITCH;
+                    int pixelY = vertical
+                            ? y + ORIGIN + materialIndex * MATERIAL_PITCH
+                            : y + ORIGIN + dotIndex * PROPERTY_PITCH;
+
+                    fillDot(graphics, pixelX, pixelY, ALPHA | property.getColor());
+                    drew = true;
+                    dotIndex++;
+                }
             }
-
-            for (int attributeIndex = 0;
-                 attributeIndex < attributes.size() && dotIndex < MAX_PROPERTIES;
-                 attributeIndex++) {
-                InlayProperty property = InlayProperty.get(attributes.get(attributeIndex));
-                if (property == null) continue;
-
-                int pixelX = vertical
-                        ? x + ORIGIN + dotIndex * PROPERTY_PITCH
-                        : x + ORIGIN + materialIndex * MATERIAL_PITCH;
-                int pixelY = vertical
-                        ? y + ORIGIN + materialIndex * MATERIAL_PITCH
-                        : y + ORIGIN + dotIndex * PROPERTY_PITCH;
-
-                graphics.fill(pixelX, pixelY, pixelX + 1, pixelY + 1, ALPHA | property.getColor());
-                drew = true;
-                dotIndex++;
-            }
+        } finally {
+            graphics.pose().popPose();
         }
 
         return drew;
+    }
+
+    /**
+     * 2×2 点拆成四个 1px 象限：左上高光、右下阴影，形成轻微立体质感。
+     * 只调明度与饱和度，保留属性色/材质色的色相。
+     */
+    private static void fillDot(GuiGraphics graphics, int x, int y, int baseColor) {
+        graphics.fill(x, y, x + 1, y + 1, shade(baseColor, 1.24F, 0.82F));
+        graphics.fill(x + 1, y, x + 2, y + 1, shade(baseColor, 1.08F, 0.96F));
+        graphics.fill(x, y + 1, x + 1, y + 2, shade(baseColor, 0.88F, 1.06F));
+        graphics.fill(x + 1, y + 1, x + 2, y + 2, shade(baseColor, 0.70F, 1.16F));
+    }
+
+    /** 以 HSB 调整明度/饱和度，保留 alpha 与色相。 */
+    private static int shade(int argb, float brightness, float saturation) {
+        int a = (argb >>> 24) & 0xFF;
+        int r = (argb >>> 16) & 0xFF;
+        int g = (argb >>> 8) & 0xFF;
+        int b = argb & 0xFF;
+        float[] hsb = Color.RGBtoHSB(r, g, b, null);
+        hsb[1] = Math.clamp(hsb[1] * saturation, 0.0F, 1.0F);
+        hsb[2] = Math.clamp(hsb[2] * brightness, 0.0F, 1.0F);
+        int rgb = Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]) & 0xFFFFFF;
+        return (a << 24) | rgb;
     }
 
     /**

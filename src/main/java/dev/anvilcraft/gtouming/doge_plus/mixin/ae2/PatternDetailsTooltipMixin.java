@@ -19,20 +19,13 @@ import java.util.stream.Collectors;
 
 /**
  * AE2 编码样板的 tooltip 只展示嵌套 {@link GenericStack} 的物品图标，不会触发我们
- * 对顶层 ItemStack 的镶嵌 tooltip 追加。这里在输入 / 输出加入时补一行镶嵌信息。
+ * 对顶层 ItemStack 的镶嵌 tooltip 追加。这里在产物加入时补一行镶嵌信息。
+ *
+ * <p>不对输入追加：输入端已镶嵌材料的旧镶嵌是产物镶嵌（旧 + 新）的子集，
+ * 两边都补会出现两行重复的「镶嵌」条目。</p>
  */
 @Mixin(targets = "appeng.api.crafting.PatternDetailsTooltip", remap = false)
 public abstract class PatternDetailsTooltipMixin {
-
-    @Inject(method = "addInput(Lappeng/api/stacks/AEKey;J)V", at = @At("TAIL"))
-    private void doge$addInputKey(AEKey what, long amount, CallbackInfo ci) {
-        doge$appendInlay(what);
-    }
-
-    @Inject(method = "addInput(Lappeng/api/stacks/GenericStack;)V", at = @At("TAIL"))
-    private void doge$addInputStack(GenericStack stack, CallbackInfo ci) {
-        if (stack != null) doge$appendInlay(stack.what());
-    }
 
     @Inject(method = "addOutput(Lappeng/api/stacks/AEKey;J)V", at = @At("TAIL"))
     private void doge$addOutputKey(AEKey what, long amount, CallbackInfo ci) {

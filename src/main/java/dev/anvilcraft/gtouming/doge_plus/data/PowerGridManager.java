@@ -1,5 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.data;
 
+import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
 import dev.dubhe.anvilcraft.api.power.PowerGrid;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -57,6 +58,27 @@ public class PowerGridManager extends SavedData {
             PowerGrid.addComponent(producer);
         }
         setDirty();
+    }
+
+    /**
+     * 按方块当前镶嵌数据同步发电节点。
+     *
+     * <p>{@code BlockBehaviour.onPlace} 早于 {@code BlockItemMixin} 写入镶嵌数据，
+     * 因此放置路径必须在写入后再调用一次本方法；同时它也负责清掉同一坐标上
+     * 已经不携带发电属性的旧节点。</p>
+     */
+    public static void addIfGenerator(Level level, BlockPos pos) {
+        PowerGridManager manager = get(level);
+        if (manager == null) return;
+
+        if (!BlockInlayManager.hasProperty(level, pos, InlayProperty.GENERATOR)) {
+            manager.remove(pos);
+            return;
+        }
+        // 同一坐标的镶嵌数据未变时复用；数据变了则替换，让旧的异步入队项因快照失效被跳过。
+        InlayPowerProducer existing = manager.get(pos);
+        if (existing != null && existing.isCurrent()) return;
+        manager.add(pos, new InlayPowerProducer(level, pos));
     }
 
     /**
