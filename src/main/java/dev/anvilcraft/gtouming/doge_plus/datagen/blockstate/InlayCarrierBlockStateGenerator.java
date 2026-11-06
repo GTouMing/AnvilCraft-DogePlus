@@ -42,7 +42,7 @@ public final class InlayCarrierBlockStateGenerator {
         generate(context, provider,
                 "carrier/logic/core", "carrier/logic/core_powered",
                 "carrier/logic/core_cross", "carrier/logic/core_cross_powered",
-                "carrier/logic/wire", "carrier/logic/wire_powered",
+                "carrier/logic/wire", "carrier/logic/wire_powered", null,
                 "carrier/logic/wire_remote", "carrier/logic/wire_remote_powered",
                 "carrier/logic/edge", "carrier/logic/edge_powered",
                 "carrier/logic/edge_vertical", "carrier/logic/edge_vertical_powered",
@@ -59,6 +59,8 @@ public final class InlayCarrierBlockStateGenerator {
      * @param coreCrossPoweredModel  贯通中心体的通电变体；传 {@code null} 时贯通中心体不分通电与否
      * @param corePoweredModel       任意面通电时用的中心体；传 {@code null} 时中心体不分通电与否
      * @param wirePoweredModel       通电通道模型；传 {@code null} 时通道不分通电与否，都用 {@code wireModel}
+     * @param wireGlassModel         通道的半透明面板模型（与 {@code wireModel} 同条件、同朝向一起画）；
+     *                               只有面板贴图真的带半透明像素时才拆出来，实心通道传 {@code null}
      * @param wireRemoteModel        远程门面的通道模型（{@code wire_remote}，自带珍珠辉光）
      * @param wireRemotePoweredModel 远程门面的通电变体；与中心体同一条件（任意面通电即换用它）；
      *                               传 {@code null} 时远程面不分通电与否
@@ -75,6 +77,7 @@ public final class InlayCarrierBlockStateGenerator {
             @Nullable String coreCrossPoweredModel,
             String wireModel,
             @Nullable String wirePoweredModel,
+            @Nullable String wireGlassModel,
             String wireRemoteModel,
             @Nullable String wireRemotePoweredModel,
             String edgeModel,
@@ -196,29 +199,14 @@ public final class InlayCarrierBlockStateGenerator {
                             .end();
                 }
             }
+            // 通道本身（实心边框）与半透明面板是两个模型、两个渲染层：边框先写深度，面板再混合，
+            // 这样接头处不会因为半透明层不写深度而在 mip 距离上断续。
             if (wirePoweredModel == null) {
-                multipart.part()
-                        .modelFile(existing(provider, wireModel))
-                        .rotationX(rotX(face))
-                        .rotationY(rotY(face))
-                        .addModel()
-                        .condition(InlayCarrierBlock.property(face), CarrierWire.UNPOWERED, CarrierWire.POWERED)
-                        .end();
+                addWireParts(multipart, provider, face, wireModel, wireGlassModel,
+                        CarrierWire.UNPOWERED, CarrierWire.POWERED);
             } else {
-                multipart.part()
-                        .modelFile(existing(provider, wireModel))
-                        .rotationX(rotX(face))
-                        .rotationY(rotY(face))
-                        .addModel()
-                        .condition(InlayCarrierBlock.property(face), CarrierWire.UNPOWERED)
-                        .end();
-                multipart.part()
-                        .modelFile(existing(provider, wirePoweredModel))
-                        .rotationX(rotX(face))
-                        .rotationY(rotY(face))
-                        .addModel()
-                        .condition(InlayCarrierBlock.property(face), CarrierWire.POWERED)
-                        .end();
+                addWireParts(multipart, provider, face, wireModel, wireGlassModel, CarrierWire.UNPOWERED);
+                addWireParts(multipart, provider, face, wirePoweredModel, null, CarrierWire.POWERED);
             }
         }
 
@@ -248,6 +236,41 @@ public final class InlayCarrierBlockStateGenerator {
                     .addModel()
                     .end();
         }
+    }
+
+    /**
+     * 加通道：统一条件下画实心边框与半透明面板两个模型。
+     *
+     * <p>两者贴图不同、渲染层也不同（{@code cutout} / {@code translucent}），但几何位置完全重合，
+     * 因此朝向与条件必须完全一致；面板传 {@code null} 表示该通道没有半透明部分。</p>
+     */
+    private static void addWireParts(
+            MultiPartBlockStateBuilder multipart,
+            RegistrumBlockstateProvider provider,
+            Direction face,
+            String frameModel,
+            @Nullable String glassModel,
+            CarrierWire... states) {
+        addWirePart(multipart, provider, face, frameModel, states);
+        if (glassModel != null) {
+            addWirePart(multipart, provider, face, glassModel, states);
+        }
+    }
+
+    /** 加一个通道部件模型：按面朝向旋转，条件为「该面落在 {@code states}」。 */
+    private static void addWirePart(
+            MultiPartBlockStateBuilder multipart,
+            RegistrumBlockstateProvider provider,
+            Direction face,
+            String model,
+            CarrierWire... states) {
+        multipart.part()
+                .modelFile(existing(provider, model))
+                .rotationX(rotX(face))
+                .rotationY(rotY(face))
+                .addModel()
+                .condition(InlayCarrierBlock.property(face), states)
+                .end();
     }
 
     /** 加一条棱件：条件为「a 面落在 {@code aStates} 且 b 面落在 {@code bStates}」。 */

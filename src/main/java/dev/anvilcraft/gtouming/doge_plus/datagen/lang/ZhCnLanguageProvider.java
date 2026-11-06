@@ -40,7 +40,6 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("gui.anvilcraft_doge_plus.jei.inlay", "镶嵌");
         add("gui.anvilcraft_doge_plus.jei.inlay_crafting", "镶嵌合成");
         add("gui.anvilcraft_doge_plus.jei.inlay_smithing", "镶嵌锻造");
-        add("gui.anvilcraft_doge_plus.jei.inlay_copying", "镶嵌复制");
         add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_requirement", "此配方按属性指定镶孔：");
         add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_any_of", "（以下任一属性 ×%s）");
         add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_times", " ×%s");

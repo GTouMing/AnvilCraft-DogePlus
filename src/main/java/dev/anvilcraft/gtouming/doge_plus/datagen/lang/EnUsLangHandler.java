@@ -27,7 +27,6 @@ public class EnUsLangHandler {
         provider.add("gui.anvilcraft_doge_plus.jei.inlay", "Inlay");
         provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting", "Inlay Crafting");
         provider.add("gui.anvilcraft_doge_plus.jei.inlay_smithing", "Inlay Smithing");
-        provider.add("gui.anvilcraft_doge_plus.jei.inlay_copying", "Inlay Copying");
         provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_requirement", "This recipe requires sockets by property:");
         provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_any_of", "(any of the following x%s)");
         provider.add("gui.anvilcraft_doge_plus.jei.inlay_crafting.property_times", " x%s");

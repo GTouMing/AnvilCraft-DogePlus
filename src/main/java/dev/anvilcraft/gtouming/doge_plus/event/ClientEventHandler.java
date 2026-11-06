@@ -16,6 +16,7 @@ import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
+import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
 import dev.anvilcraft.gtouming.doge_plus.init.ModItems;
 import dev.anvilcraft.gtouming.doge_plus.item.MobileSilencer;
 import dev.anvilcraft.gtouming.doge_plus.network.AdjustGateValuePacket;
@@ -34,6 +35,8 @@ import dev.dubhe.anvilcraft.init.item.ModItemTags;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
@@ -348,6 +351,16 @@ public class ClientEventHandler {
     public static void onClientSetup(FMLClientSetupEvent event) {
         // 头戴铁砧锤时的载体 HUD：注册以视线命中面为焦点的方块实体 tooltip provider。
         HudTooltipManager.INSTANCE.registerBlockEntityTooltip(new CarrierInspectionProvider());
+
+        event.enqueueWork(() -> {
+            // 载体的玻璃区依赖模型自己的 render_type（cutout / translucent 分层）。部分渲染器
+            // （如 Sodium）拿不到逐部件 render_type 时会退回方块级渲染层，默认 solid 会把玻璃画成
+            // 不透明。这里把三个载体整体登记到 translucent 作为兜底：原版渲染器仍优先用各部件模型
+            // 的 render_type（边框依旧是 cutout），只有读不到逐部件信息时才整体走半透明。
+            ItemBlockRenderTypes.setRenderLayer(ModBlocks.INLAY_CARRIER.get(), RenderType.translucent());
+            ItemBlockRenderTypes.setRenderLayer(ModBlocks.LOGIC_CARRIER.get(), RenderType.translucent());
+            ItemBlockRenderTypes.setRenderLayer(ModBlocks.LOGISTICS_CARRIER.get(), RenderType.translucent());
+        });
     }
 
     @SubscribeEvent

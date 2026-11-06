@@ -13,12 +13,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -60,10 +59,21 @@ final class LevelNetworks {
     /** 本轮结算中「输入面显示值发生变化」的节点，用于只刷新这些载体的外观 / HUD。 */
     private final LongOpenHashSet visualDirty = new LongOpenHashSet();
 
-    /** 复用求值输入映射与传播队列，避免每节点 / 每次结算分配。 */
-    private final EnumMap<Direction, Integer> scratchInputs = new EnumMap<>(Direction.class);
+    /** 复用求值输入（按下标存值）与传播队列，避免每节点 / 每次结算分配。 */
+    private final int[] scratchInputs = new int[DIRECTIONS.length];
     private final LongOpenHashSet propagateQueued = new LongOpenHashSet();
     private final LongArrayList propagateQueue = new LongArrayList();
+
+    /** 有状态门的输入快照（位置 -> 6 面信号值），跨结算复用数组，避免逐门分配 Map。 */
+    private final Long2ObjectOpenHashMap<int[]> arrivalInputs = new Long2ObjectOpenHashMap<>();
+
+    /**
+     * 本轮实际求值过的节点。
+     *
+     * <p>有状态门的输入只在它被求值时才会读到最新值；没被求值说明它的输入没有变化，
+     * 到达检测就可以跳过它。这样一次局部更新不会把整张网里的计数 / 锁存 / 延时门全部重采样。</p>
+     */
+    private final LongOpenHashSet evaluatedNodes = new LongOpenHashSet();
 
     /** 复用 runUpdates 每轮的种子 / 脏网络集合。 */
     private final LongOpenHashSet passSeeds = new LongOpenHashSet();
@@ -155,9 +165,37 @@ final class LevelNetworks {
      * 会去读方块、强制加载区块甚至等待主线程自己。标脏后交给下一 tick 统一收敛。</p>
      */
     private void markSignalDirty(Network network) {
-        // 主输入（外部红石 / 邻居门）变化：必须从全 0 重算，避免旧的反馈电平被当作状态残留。
-        network.needsReset = true;
+        if (network.hasFeedback) {
+            // 有环：必须从全 0 重算，避免旧的反馈电平被当作状态残留。
+            network.needsReset = true;
+        } else {
+            // 无环：门输出是输入的纯函数，从当前值继续求值即可到达同一不动点，不必清零。
+            network.dirtyAll = true;
+        }
         dirtySignals.add(network);
+    }
+
+    /**
+     * 只把网络内的一个节点标脏（无环网络）。
+     *
+     * <p>外部方块变化影响的是「紧邻它的门」：它的输入面读到的值变了，而其余节点并不知道这一变化，
+     * 从它继续传播就能算到唯一的不动点。有环网络仍退回整网重算。</p>
+     */
+    private void markNodeDirty(Network network, long packedPos) {
+        if (!network.valid || network.overflow) return;
+        if (network.hasFeedback || !network.nodes.containsKey(packedPos)) {
+            markSignalDirty(network);
+            return;
+        }
+        network.dirtyNodes.add(packedPos);
+        dirtySignals.add(network);
+    }
+
+    /** 节点级更新：标脏该节点、让同信道对端重采样总线，并立即结算。 */
+    void requestNodeUpdate(Network network, long packedPos) {
+        markNodeDirty(network, packedPos);
+        dirtyChannelPeers(network);
+        runUpdates();
     }
 
     /**
@@ -180,18 +218,39 @@ final class LevelNetworks {
      */
     void signalUpdateAdjacent(BlockPos pos, @Nullable Network except) {
         ObjectOpenHashSet<Network> affected = null;
-        for (Direction dir : Direction.values()) {
-            Network network = byGate.get(pos.relative(dir).asLong());
+        LongOpenHashSet adjacentNodes = null;
+        long packedPos = pos.asLong();
+        for (Direction dir : DIRECTIONS) {
+            long neighbor = offsetPacked(packedPos, dir);
+            Network network = byGate.get(neighbor);
             if (network == null || !network.valid || network.overflow || network == except) continue;
             if (affected == null) affected = new ObjectOpenHashSet<>();
             affected.add(network);
+            // 紧邻这次变化的门才可能读到不同的值；无环网络只求值这些节点。
+            if (!network.hasFeedback) {
+                if (adjacentNodes == null) adjacentNodes = new LongOpenHashSet();
+                adjacentNodes.add(neighbor);
+            }
         }
         if (affected == null) return;
+        // 先把所有受影响网络和同信道对端一起标脏，最后只结算一次；
+        // 避免一个外部方块变化按邻居数量触发多次全量 runUpdates。
         for (Network network : affected) {
-            requestSignalUpdate(network);
+            if (network.hasFeedback) markSignalDirty(network);
             // 同信道对端不相邻，收不到这次邻居变化：显式让它们重采样总线。
             dirtyChannelPeers(network);
         }
+        if (adjacentNodes != null) {
+            for (LongIterator it = adjacentNodes.iterator(); it.hasNext();) {
+                long node = it.nextLong();
+                Network network = byGate.get(node);
+                if (network != null && !network.hasFeedback) {
+                    network.dirtyNodes.add(node);
+                    dirtySignals.add(network);
+                }
+            }
+        }
+        runUpdates();
     }
 
     void tick() {
@@ -214,10 +273,6 @@ final class LevelNetworks {
         advanceTimers();
 
         runUpdates();
-    }
-
-    /** 一个输入面的到达事件：该上升沿的信号值。 */
-    private record Rise(int value) {
     }
 
     /**
@@ -269,7 +324,8 @@ final class LevelNetworks {
      * 因此同 tick 内的脉冲不会被漏掉，也不必每 tick 扫描整个网络。</p>
      */
     private void advanceTimers() {
-        ObjectOpenHashSet<Network> dirty = new ObjectOpenHashSet<>();
+        // 时序推进只改写这些节点自己的输出 / 状态：按节点标脏，无环网络不必因此整网重算。
+        LongOpenHashSet dirtyNodes = new LongOpenHashSet();
 
         // 计数门脉冲只持续 1 tick。
         if (!pulseMasks.isEmpty()) {
@@ -278,10 +334,10 @@ final class LevelNetworks {
                 Network network = byGate.get(packedPos);
                 if (network == null) continue;
                 int mask = entry.getIntValue();
-                for (Direction dir : Direction.values()) {
+                for (Direction dir : DIRECTIONS) {
                     if ((mask & (1 << dir.ordinal())) == 0) continue;
                     network.setOutputSignal(packedPos, dir, 0);
-                    dirty.add(network);
+                    dirtyNodes.add(packedPos);
                 }
             }
             pulseMasks.clear();
@@ -296,10 +352,10 @@ final class LevelNetworks {
                 if (network == null) continue;
                 BlockPos pos = BlockPos.of(packedPos);
                 int mask = entry.getIntValue();
-                for (Direction dir : Direction.values()) {
+                for (Direction dir : DIRECTIONS) {
                     if ((mask & (1 << dir.ordinal())) == 0) continue;
                     if (stateData != null) stateData.setCount(pos, dir, 0);
-                    dirty.add(network);
+                    dirtyNodes.add(packedPos);
                 }
             }
             delayInputPulses.clear();
@@ -322,7 +378,7 @@ final class LevelNetworks {
                 }
                 BlockInlays inlays = BlockInlayManager.get(level, pos);
                 int remainingMask = 0;
-                for (Direction dir : Direction.values()) {
+                for (Direction dir : DIRECTIONS) {
                     if ((mask & (1 << dir.ordinal())) == 0) continue;
                     int remaining = 0;
                     if (stateData != null) {
@@ -340,7 +396,7 @@ final class LevelNetworks {
                         } else {
                             network.setOutputSignal(packedPos, dir, 0);
                         }
-                        dirty.add(network);
+                        dirtyNodes.add(packedPos);
                     }
                 }
                 if (remainingMask != 0) {
@@ -357,9 +413,12 @@ final class LevelNetworks {
             pendingDelays.putAll(stillPending);
         }
 
-        for (Network network : dirty) {
-            if (network.valid && !network.overflow) {
-                requestSignalUpdate(network);
+        // 只标脏受影响节点；{@link #tick()} 末尾统一结算一次，避免每个计时器各触发一轮 runUpdates。
+        for (LongIterator it = dirtyNodes.iterator(); it.hasNext();) {
+            long nodePos = it.nextLong();
+            Network network = byGate.get(nodePos);
+            if (network != null && network.valid && !network.overflow) {
+                markNodeDirty(network, nodePos);
             }
         }
     }
@@ -368,49 +427,60 @@ final class LevelNetworks {
      * 网络更新时处理有状态门的「到达事件」：与本网络上次记录的各输入面信号比较，
      * 逐面检测上升沿（当前信号大于上次），有变化才推进计数 / 锁存 / 延时。
      *
+     * <p>只复查本轮真正求值过的节点：门的输入只在它被求值时才会读到新值，没被求值说明
+     * 输入没变，不必重新采样（也不会漏掉任何上升沿——输入变化必然会把该节点标脏）。</p>
+     *
      * @return 本轮是否存在到达事件（需要重算网络 / 刷新运行时长显示）
      */
     private boolean applyGateArrivals(Network network) {
-        if (stateData == null || !network.hasStatefulGates) return false;
+        if (stateData == null || !network.hasStatefulGates || evaluatedNodes.isEmpty()) return false;
 
-        // 先把所有有状态门的输入取成快照：同一轮内各门的到达判定必须基于同一份输入，
+        // 先把本轮求值过的有状态门的输入取成快照：同一轮内各门的到达判定必须基于同一份输入，
         // 否则先处理的门写回的输出会被后处理的门读到，结果会取决于遍历顺序。
-        Long2ObjectOpenHashMap<Map<Direction, Integer>> inputs = new Long2ObjectOpenHashMap<>();
-        for (Long2ObjectMap.Entry<GateNode> entry : network.nodes.long2ObjectEntrySet()) {
-            if (entry.getValue().statefulMask() == 0) continue;
-            long packedPos = entry.getLongKey();
-            BlockPos pos = BlockPos.of(packedPos);
-            if (!level.hasChunkAt(pos)) continue;
-            inputs.put(packedPos, collectNodeInputs(network, pos, BlockInlayManager.get(level, pos)));
+        // 快照数组按位置复用，不再逐门分配 Map。
+        for (LongIterator it = evaluatedNodes.iterator(); it.hasNext();) {
+            long packedPos = it.nextLong();
+            if (!network.statefulNodes.contains(packedPos)) continue;
+            GateNode node = network.nodes.get(packedPos);
+            if (node == null) continue;
+            int[] values = arrivalInputs.get(packedPos);
+            if (values == null) {
+                values = new int[DIRECTIONS.length];
+                arrivalInputs.put(packedPos, values);
+            }
+            fillNodeInputs(
+                    network, node.pos(), BlockInlayManager.get(level, node.pos()), node.logistics(), values);
         }
 
         boolean changed = false;
-        for (Long2ObjectMap.Entry<GateNode> entry : network.nodes.long2ObjectEntrySet()) {
-            long packedPos = entry.getLongKey();
-            GateNode node = entry.getValue();
-            if (node.statefulMask() == 0) continue;
-            BlockPos pos = BlockPos.of(packedPos);
-            if (!level.hasChunkAt(pos)) continue;
+        int[] rises = new int[DIRECTIONS.length];
+        for (LongIterator it = evaluatedNodes.iterator(); it.hasNext();) {
+            long packedPos = it.nextLong();
+            if (!network.statefulNodes.contains(packedPos)) continue;
+            GateNode node = network.nodes.get(packedPos);
+            if (node == null) continue;
+            BlockPos pos = node.pos();
+            int[] inputs = arrivalInputs.get(packedPos);
+            if (inputs == null) continue;
             BlockInlays inlays = BlockInlayManager.get(level, pos);
-            Map<Direction, Integer> inputMap = inputs.getOrDefault(packedPos, Map.of());
-            int[] previous = lastInputs.computeIfAbsent(packedPos, key -> new int[Direction.values().length]);
+            int[] previous = lastInputs.computeIfAbsent(packedPos, key -> new int[DIRECTIONS.length]);
             int[] previousNeighbor = null;
 
-            // 汇总各输入面（含远程面，以及延时输入门自己产生的那 1 tick 脉冲，见 collectNodeInputs）
+            // 汇总各输入面（含远程面，以及延时输入门自己产生的那 1 tick 脉冲，见 fillNodeInputs）
             // 与上次记录比对得到的到达事件，供计数 / 锁存 / 延时门共用。
             // 延时输入门的那一路也走这里统一比对：脉冲存在的那一 tick 恰好是一次上升沿，
             // 且 previous 随即被更新为脉冲值，同一 tick 内重复结算也不会重复计数。
-            List<Rise> rises = new ArrayList<>(2);
-            for (Direction dir : Direction.values()) {
-                int current = inputMap.getOrDefault(dir, 0);
+            int riseCount = 0;
+            for (Direction dir : DIRECTIONS) {
+                int current = inputs[dir.ordinal()];
                 if (current > previous[dir.ordinal()]) {
-                    rises.add(new Rise(current));
+                    rises[riseCount++] = current;
                 }
                 previous[dir.ordinal()] = current;
             }
 
             boolean arrived = false;
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 if ((node.statefulMask() & (1 << dir.ordinal())) == 0) continue;
                 FaceMode type = inlays.getFace(dir);
                 int held = node.getOutput(dir);
@@ -421,7 +491,7 @@ final class LevelNetworks {
                     // 上一 tick 的邻居读数另存于 lastDelayInputs：previous 上的那一格是它自己的脉冲。
                     if (previousNeighbor == null) {
                         previousNeighbor = lastDelayInputs.computeIfAbsent(
-                                packedPos, key -> new int[Direction.values().length]);
+                                packedPos, key -> new int[DIRECTIONS.length]);
                     }
                     int current = neighborSignal(network, pos, dir);
                     if (current > previousNeighbor[dir.ordinal()]) {
@@ -429,12 +499,12 @@ final class LevelNetworks {
                         arrived = true;
                     }
                     previousNeighbor[dir.ordinal()] = current;
-                } else if (!rises.isEmpty()) {
+                } else if (riseCount > 0) {
                     arrived = true;
                     next = switch (type) {
-                        case COUNTER_GATE -> arriveCounter(pos, dir, packedPos, rises.size(), held);
-                        case LATCH_GATE -> arriveLatch(pos, dir, rises, held);
-                        case DELAY_GATE -> arriveDelay(pos, dir, packedPos, rises, held);
+                        case COUNTER_GATE -> arriveCounter(pos, dir, packedPos, riseCount, held);
+                        case LATCH_GATE -> arriveLatch(pos, dir, rises, riseCount, held, node.carrier());
+                        case DELAY_GATE -> arriveDelay(pos, dir, packedPos, rises, riseCount, held);
                         default -> held;
                     };
                 } else {
@@ -442,6 +512,7 @@ final class LevelNetworks {
                 }
                 if (next != held) {
                     node.setOutput(dir, next);
+                    network.touchedNodes.add(packedPos);
                 }
             }
             // 有到达事件：即使输出不变（如计数门只累计），运行时显示值也可能变化，需要刷新。
@@ -468,33 +539,35 @@ final class LevelNetworks {
     }
 
     /** 锁存门：每个到达事件在「记录并输出该信号」与「清除并停止输出」之间切换。 */
-    private int arriveLatch(BlockPos pos, Direction dir, List<Rise> rises, int held) {
+    private int arriveLatch(
+            BlockPos pos, Direction dir, int[] rises, int riseCount, int held, boolean carrier) {
         boolean latched = false;
         if (stateData != null) {
             latched = stateData.isLatched(pos, dir);
         }
         int next = held;
-        for (Rise rise : rises) {
+        for (int i = 0; i < riseCount; i++) {
             if (latched) {
                 latched = false;
                 next = 0;
             } else {
                 latched = true;
-                next = rise.value();
+                next = rises[i];
             }
         }
         stateData.setLatched(pos, dir, latched);
         // 锁存门的设定值与当前记录同步：记录值写回镶嵌数据（随后同步给客户端）。
         // 但「可调节的设定值」是载体独有的特性——只有载体会渲染 / 显示这个值；
         // 非载体（如镶嵌了锁存门的石头）写回只会留下无意义的存档写入与客户端同步。
-        if (level.getBlockState(pos).getBlock() instanceof InlayCarrierBlock) {
+        // 是否为载体在建网时已缓存进节点，这里不再查方块状态。
+        if (carrier) {
             BlockInlayManager.put(level, pos, BlockInlayManager.get(level, pos).withValue(dir, next));
         }
         return next;
     }
 
     /** 延时门：每个到达事件更新输出值；未在计时则按设定 tick 起计时（倒计时由 advanceTimers 推进）。 */
-    private int arriveDelay(BlockPos pos, Direction dir, long packedPos, List<Rise> rises, int held) {
+    private int arriveDelay(BlockPos pos, Direction dir, long packedPos, int[] rises, int riseCount, int held) {
         int remaining = 0;
         if (stateData != null) {
             remaining = stateData.getRemaining(pos, dir);
@@ -510,7 +583,7 @@ final class LevelNetworks {
             }
         }
         if (remaining > 0) {
-            next = rises.getLast().value();
+            next = rises[riseCount - 1];
         }
         stateData.setRemaining(pos, dir, remaining);
         return next;
@@ -551,6 +624,8 @@ final class LevelNetworks {
         // 服务端关闭时 stopServer 会在主线程反复 tick / 卸载区块。此刻结算网络会去读方块，
         // 强制加载正在卸载的区块并等待主线程自己，把「Saving worlds」永久卡住。
         if (level.getServer().isStopped()) return;
+        // 每 tick 的兜底调用在没有积压时直接返回，避免空跑 settle 循环与 finally 扫描。
+        if (topologySeeds.isEmpty() && dirtySignals.isEmpty()) return;
         processingUpdates = true;
 
         try {
@@ -610,7 +685,7 @@ final class LevelNetworks {
 
             // 检查邻居是否属于其他网络（可能被桥接）
             BlockPos blockPos = BlockPos.of(pos);
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 long neighbor = blockPos.relative(dir).asLong();
                 Network neighborNetwork = byGate.get(neighbor);
                 if (neighborNetwork != null && neighborNetwork != oldNetwork) {
@@ -652,6 +727,9 @@ final class LevelNetworks {
         boolean overflow = false;
         boolean hasStateful = false;
         boolean hasNot = false;
+        LongOpenHashSet notGateNodes = new LongOpenHashSet();
+        LongOpenHashSet statefulNodes = new LongOpenHashSet();
+        LongOpenHashSet remoteNodes = new LongOpenHashSet();
 
         while (!queue.isEmpty()) {
             long packedPos = queue.dequeueLong();
@@ -668,15 +746,34 @@ final class LevelNetworks {
             BlockInlays inlays = logicGateData(level, pos, state);
             if (inlays == null) continue;
             int statefulMask = 0;
-            for (Direction dir : Direction.values()) {
+            int outputMask = 0;
+            int consumerMask = 0;
+            boolean remote = false;
+            boolean logistics = state.getBlock() instanceof LogisticsCarrierBlock;
+            boolean carrier = state.getBlock() instanceof InlayCarrierBlock;
+            for (Direction dir : DIRECTIONS) {
                 FaceMode mode = inlays.getFace(dir);
-                if (mode.isStateful()) statefulMask |= 1 << dir.ordinal();
-                if (mode == FaceMode.NOT_GATE) hasNot = true;
+                int bit = 1 << dir.ordinal();
+                if (mode.isStateful()) statefulMask |= bit;
+                if (outputsSignal(mode)) outputMask |= bit;
+                if (mode == FaceMode.INPUT || mode == FaceMode.DELAY_INPUT_GATE) consumerMask |= bit;
+                if (mode == FaceMode.NOT_GATE) {
+                    hasNot = true;
+                    notGateNodes.add(packedPos);
+                }
+                // 与 {@link #redstoneChannels} 同一判据：物流载体的远程面不参与红石总线。
+                if (mode == FaceMode.REMOTE && !logistics) remote = true;
             }
-            if (statefulMask != 0) hasStateful = true;
+            if (statefulMask != 0) {
+                hasStateful = true;
+                statefulNodes.add(packedPos);
+            }
+            if (remote) remoteNodes.add(packedPos);
 
             // 获取该位置的门配置
-            nodes.put(packedPos, new GateNode(data, pos, statefulMask));
+            nodes.put(packedPos,
+                    new GateNode(data, pos, statefulMask, outputMask, consumerMask,
+                            state.getBlock(), logistics, carrier));
 
             // 检查规模限制
             if (nodes.size() >= MAX_NETWORK_SIZE) {
@@ -685,16 +782,20 @@ final class LevelNetworks {
             }
 
             // 添加邻居：所有方向的邻居逻辑门
-            for (Direction dir : Direction.values()) {
-                long neighbor = pos.relative(dir).asLong();
-                if (queued.add(neighbor) && isLogicGate(level,BlockPos.of(neighbor))) {
+            for (Direction dir : DIRECTIONS) {
+                long neighbor = offsetPacked(packedPos, dir);
+                if (queued.add(neighbor) && isLogicGate(level, BlockPos.of(neighbor))) {
                     queue.enqueue(neighbor);
                 }
             }
         }
 
+        // 建网时判定依赖图是否成环：无环网络（常见门链）后续可以从当前输出增量求值，
+        // 不必每次主输入变化都清零整网重算。成环则保守地保留「从全 0 迭代」的语义。
+        boolean hasFeedback = overflow || hasFeedbackCycle(nodes);
         // 创建网络
-        Network network = new Network(nodes, overflow, hasStateful, hasNot);
+        Network network = new Network(
+                nodes, overflow, hasStateful, hasNot, notGateNodes, statefulNodes, remoteNodes, hasFeedback);
         // 建网时的输出即视为「已通知」的基准：区块加载 / 拓扑重建不应误报一次全量邻居更新。
         network.lastNotified = snapshotOutputs(network);
         registerNetwork(network);
@@ -709,6 +810,63 @@ final class LevelNetworks {
         }
     }
 
+    /** 该面是否会向相邻方块输出信号（有状态门在到达事件 / 倒计时结束时也会向外写输出）。 */
+    private static boolean outputsSignal(FaceMode mode) {
+        return switch (mode) {
+            case NOT_GATE, AND_GATE, OUTPUT, COUNTER_GATE, LATCH_GATE, DELAY_GATE -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * 门间依赖图是否存在环：节点 A 的输出面朝向节点 B、且 B 有一面（输入门 / 延时输入门）读它，
+     * 就有一条 A → B 的依赖边。用 Kahn 拓扑排序判定，剩余节点即环上节点。
+     *
+     * <p>只算网内门之间的边：经红石粉 / 远程总线等外部方块的反馈跨游戏刻传播，
+     * 不依赖「清零整网」来打破自锁。</p>
+     */
+    private static boolean hasFeedbackCycle(Long2ObjectLinkedOpenHashMap<GateNode> nodes) {
+        Long2IntOpenHashMap indegree = new Long2IntOpenHashMap(nodes.size());
+        for (Long2ObjectMap.Entry<GateNode> entry : nodes.long2ObjectEntrySet()) {
+            long pos = entry.getLongKey();
+            GateNode node = entry.getValue();
+            for (Direction dir : DIRECTIONS) {
+                GateNode target = outputTarget(nodes, pos, node, dir);
+                if (target != null) indegree.addTo(target.pos().asLong(), 1);
+            }
+        }
+
+        LongArrayList queue = new LongArrayList();
+        for (Long2ObjectMap.Entry<GateNode> entry : nodes.long2ObjectEntrySet()) {
+            if (indegree.get(entry.getLongKey()) == 0) queue.add(entry.getLongKey());
+        }
+
+        int visited = 0;
+        for (int head = 0; head < queue.size(); head++) {
+            long pos = queue.getLong(head);
+            visited++;
+            GateNode node = nodes.get(pos);
+            for (Direction dir : DIRECTIONS) {
+                GateNode target = outputTarget(nodes, pos, node, dir);
+                if (target == null) continue;
+                long targetPos = target.pos().asLong();
+                if (indegree.addTo(targetPos, -1) == 0) queue.add(targetPos);
+            }
+        }
+        return visited < nodes.size();
+    }
+
+    /** 节点 {@code pos} 沿 {@code dir} 的输出面所指、且确实读取它的网内节点；无关时返回 {@code null}。 */
+    @Nullable
+    private static GateNode outputTarget(
+            Long2ObjectLinkedOpenHashMap<GateNode> nodes, long pos, GateNode node, Direction dir) {
+        if ((node.outputMask() & (1 << dir.ordinal())) == 0) return null;
+        GateNode target = nodes.get(offsetPacked(pos, dir));
+        if (target == null) return null;
+        if ((target.consumerMask() & (1 << dir.getOpposite().ordinal())) == 0) return null;
+        return target;
+    }
+
     /** 把存档中仍在倒计时的延时门登记为每 tick 推进对象。 */
     private void registerPendingDelays(Long2ObjectLinkedOpenHashMap<GateNode> nodes) {
         if (stateData == null) return;
@@ -717,7 +875,7 @@ final class LevelNetworks {
             if (statefulMask == 0) continue;
             BlockPos pos = BlockPos.of(entry.getLongKey());
             int pendingMask = 0;
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 if ((statefulMask & (1 << dir.ordinal())) != 0 && stateData.getRemaining(pos, dir) > 0) {
                     pendingMask |= 1 << dir.ordinal();
                 }
@@ -739,7 +897,8 @@ final class LevelNetworks {
             long chunkPos = ChunkPos.asLong(BlockPos.getX(pos) >> 4, BlockPos.getZ(pos) >> 4);
             byChunk.computeIfAbsent(chunkPos, k -> new ObjectOpenHashSet<>()).add(network);
 
-            addRemoteMembership(pos);
+            // 只有 BFS 时判出带远程面的节点才需要登记信道；绝大多数节点不必再读一遍方块 / 镶嵌数据。
+            if (network.remoteNodes.contains(pos)) addRemoteMembership(pos);
         }
     }
 
@@ -747,9 +906,9 @@ final class LevelNetworks {
     private long[] redstoneChannels(BlockPos pos, BlockInlays inlays) {
         if (!level.hasChunkAt(pos)) return NO_CHANNELS;
         if (level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock) return NO_CHANNELS;
-        long[] channels = new long[Direction.values().length];
+        long[] channels = new long[DIRECTIONS.length];
         int count = 0;
-        for (Direction dir : Direction.values()) {
+        for (Direction dir : DIRECTIONS) {
             if (inlays.getFace(dir) != FaceMode.REMOTE) continue;
             long channel = inlays.getChannel(dir).key();
             boolean seen = false;
@@ -857,7 +1016,9 @@ final class LevelNetworks {
         // 再迭代求最小不动点。若沿用上一次的输出作为迭代初值，纯反馈环（如 输出→输入→输出→…）
         // 会收敛到「全 15」这个非零不动点，于是没有任何信号源也会自锁持续输出（死锁）。
         // 从 0 出发则无源环必然收敛到 0；非门环会持续翻转，由振荡检测破坏。
-        boolean resetThisRound = network.needsReset || network.baseline == null;
+        // 只有主输入变化（needsReset）才清零整网。无环网络的增量更新不该被「baseline 为空」触发重算，
+        // 否则每次邻居变化都退化成整网清零。
+        boolean resetThisRound = network.needsReset;
         if (resetThisRound) {
             network.baseline = snapshotOutputs(network);
             resetOutputs(network);
@@ -866,7 +1027,7 @@ final class LevelNetworks {
             network.churningNotGates.clear();
             // 从全 0 起步：整网都要重新求值。
             network.dirtyNodes.clear();
-            network.dirtyNodes.addAll(network.nodes.keySet());
+            network.dirtyAll = true;
         }
         if (!propagate(network)) {
             // 预算用尽仍未静默：保留中间值继续下一轮（极端的长反馈环），
@@ -886,14 +1047,29 @@ final class LevelNetworks {
 
         // 只处理输出相对「上次已通知」快照真正变化的节点：视觉 / 持久化 / 邻居通知都不再全网络遍历。
         // 输入面 / 远程面的显示变化另由 evaluateNode 记入 visualDirty（见 markInputVisualDirty）。
-        LongOpenHashSet changed = collectChangedNodes(network, network.lastNotified);
+        // 「被求值改写过」的节点由求值 / 清零 / 时序门写回时记入 touchedNodes，这里只比较这一小撮，
+        // 不再分配快照、也不再全节点扫描。
+        LongOpenHashSet changed = collectChangedNodes(network);
+        // 无环网络不再整网清零，振荡判定改按「最终输出相对上次已通知的翻转」计数：
+        // 中间翻转本来就不会出现在 changed 里，与原 baseline 对比语义一致。
+        if (!resetThisRound && changed != null && network.hasNotGates) {
+            long now = level.getGameTime();
+            for (LongIterator it = changed.iterator(); it.hasNext();) {
+                long pos = it.nextLong();
+                if (network.notGateNodes.contains(pos)) recordNotGateToggle(pos, now);
+            }
+        }
         refreshCarrierVisuals(network, changed, visualDirty);
 
         // 只有输出相对「上次已通知」的状态真正变化时才同步 / 通知。
         if (changed != null) {
-            syncToData(network, changed);
             notifyNeighbors(network, changed);
-            network.lastNotified = snapshotOutputs(network);
+            // 已通知基准就地更新，避免每次结算重新快照整网。
+            for (LongIterator it = changed.iterator(); it.hasNext();) {
+                long pos = it.nextLong();
+                GateNode node = network.nodes.get(pos);
+                if (node != null) network.lastNotified.put(pos, node.getPacked());
+            }
             // 同信道对端不相邻：本网输出变化若源于输入面的重采样（总线上可能已变），显式传导过去。
             dirtyChannelPeers(network);
         }
@@ -902,7 +1078,16 @@ final class LevelNetworks {
         // 有状态门：用本轮收敛后的输入与上次记录比对，处理到达事件。
         if (applyGateArrivals(network)) {
             // 门的输出变了，依赖它们的门需要再结算一轮。
-            requestSignalUpdate(network);
+            if (network.hasFeedback) {
+                // 有环：从全 0 重新迭代，避免反馈环沿旧电平自锁。
+                requestSignalUpdate(network);
+            } else if (!network.touchedNodes.isEmpty()) {
+                // 无环：到达事件只改写了这几个节点的输出，从它们继续传播即可。
+                // 没有节点被改写（如计数门只累计）时下游不会变化，无需再结算一轮。
+                network.dirtyNodes.addAll(network.touchedNodes);
+                dirtySignals.add(network);
+                runUpdates();
+            }
         }
     }
 
@@ -919,11 +1104,23 @@ final class LevelNetworks {
     private boolean propagate(Network network) {
         propagateQueued.clear();
         propagateQueue.clear();
-        for (LongIterator it = network.dirtyNodes.iterator(); it.hasNext(); ) {
-            long pos = it.nextLong();
-            if (propagateQueued.add(pos)) propagateQueue.add(pos);
+        evaluatedNodes.clear();
+        if (network.dirtyAll) {
+            // 整网重采样：这里才真正遍历一次，避免每次标脏都复制一遍节点集合。
+            network.dirtyAll = false;
+            network.dirtyNodes.clear();
+            for (LongIterator it = network.nodes.keySet().iterator(); it.hasNext(); ) {
+                long pos = it.nextLong();
+                propagateQueued.add(pos);
+                propagateQueue.add(pos);
+            }
+        } else {
+            for (LongIterator it = network.dirtyNodes.iterator(); it.hasNext(); ) {
+                long pos = it.nextLong();
+                if (propagateQueued.add(pos)) propagateQueue.add(pos);
+            }
+            network.dirtyNodes.clear();
         }
-        network.dirtyNodes.clear();
 
         long budget = (long) MAX_SETTLING_EVALUATIONS_PER_NODE * network.nodes.size();
         // 下标即队头：出队只推进 head，不移动元素。
@@ -938,12 +1135,13 @@ final class LevelNetworks {
 
             long pos = propagateQueue.getLong(head);
             propagateQueued.remove(pos);
-            if (!evaluateNode(network, pos)) continue;
+            GateNode node = network.nodes.get(pos);
+            if (node == null || !evaluateNode(network, pos, node)) continue;
+            network.touchedNodes.add(pos);
 
             // 只有输出真的变了，邻居才需要重新求值。
-            BlockPos blockPos = BlockPos.of(pos);
-            for (Direction dir : Direction.values()) {
-                long neighbor = blockPos.relative(dir).asLong();
+            for (Direction dir : DIRECTIONS) {
+                long neighbor = offsetPacked(pos, dir);
                 if (network.nodes.containsKey(neighbor) && propagateQueued.add(neighbor)) {
                     propagateQueue.add(neighbor);
                 }
@@ -957,29 +1155,28 @@ final class LevelNetworks {
      *
      * @return 该节点是否有输出发生变化
      */
-    private boolean evaluateNode(Network network, long packedPos) {
-        GateNode node = network.nodes.get(packedPos);
-        if (node == null) return false;
-
-        BlockPos blockPos = BlockPos.of(packedPos);
+    private boolean evaluateNode(Network network, long packedPos, GateNode node) {
+        BlockPos blockPos = node.pos();
         // 区块已卸载的节点不再求值（网络会在卸载时失效）：读方块会强制加载区块。
         if (!level.hasChunkAt(blockPos)) return false;
-        BlockState state = level.getBlockState(blockPos);
 
-        // 每节点只取一次镶嵌数据；各方向的输入与设定值直接从它读，避免逐方向重复查 SavedData。
-        // 数据必须属于当前方块：方块已被移除 / 记录指向别的方块时不能再当作门求值。
-        BlockInlays inlays = logicGateData(level, blockPos, state);
-        if (inlays == null) return false;
-        Map<Direction, Integer> inputMap = collectNodeInputs(network, blockPos, inlays, scratchInputs);
-        markInputVisualDirty(packedPos, blockPos, inlays, inputMap);
+        // 不读方块状态：节点入网时已校验过「方块 / 数据一致」，而任何方块或面编程变更都会重建网络
+        // （见 topologyChanged）。这里直接取镶嵌记录（打包坐标键，一次哈希），省掉每个节点一次
+        // 区块调色板查询；方块类型（物流 / 普通载体）也已在建网时缓存进 GateNode。
+        BlockInlays inlays = BlockInlayManager.get(level, blockPos);
+        if (inlays.block() == Blocks.AIR) return false;
+        // 记下「这轮真的读到了它」，供到达检测只复查输入可能变化的门。
+        evaluatedNodes.add(packedPos);
+        int inputMask = fillNodeInputs(network, blockPos, inlays, node.logistics(), scratchInputs);
+        markInputVisualDirty(packedPos, blockPos, inlays, scratchInputs);
 
         boolean changed = false;
-        for (Direction outputDir : Direction.values()) {
+        for (Direction outputDir : DIRECTIONS) {
             FaceMode gateType = inlays.getFace(outputDir);
             // 有状态门（计数 / 锁存 / 延时）的输出由每 tick 驱动写入，不参与纯函数结算；
-            // 远程面不经本方法（它只把总线信号喂给本方块的门，自身不向外输出，见 collectNodeInputs）。
+            // 远程面不经本方法（它只把总线信号喂给本方块的门，自身不向外输出，见 fillNodeInputs）。
             if (gateType.isStateful()) continue;
-            int newSignal = gateType.calculate(inputMap, inlays.getValue(outputDir));
+            int newSignal = gateType.calculate(scratchInputs, inputMask, inlays.getValue(outputDir));
             int oldSignal = node.getOutput(outputDir);
             if (oldSignal != newSignal) {
                 node.setOutput(outputDir, newSignal);
@@ -1003,17 +1200,17 @@ final class LevelNetworks {
     private void countToggledNotGates(Network network) {
         if (network.baseline == null || !network.hasNotGates) return;
         long now = level.getGameTime();
-        for (Long2ObjectMap.Entry<GateNode> entry : network.nodes.long2ObjectEntrySet()) {
-            long pos = entry.getLongKey();
+        for (LongIterator it = network.notGateNodes.iterator(); it.hasNext();) {
+            long pos = it.nextLong();
             if (destroyed.contains(pos)) continue;
+            GateNode node = network.nodes.get(pos);
+            if (node == null) continue;
             int before = network.baseline.get(pos);
-            GateNode node = entry.getValue();
-            BlockPos blockPos = BlockPos.of(pos);
+            BlockPos blockPos = node.pos();
             if (!level.hasChunkAt(blockPos)) continue;
-            BlockState state = level.getBlockState(blockPos);
-            BlockInlays inlays = logicGateData(level, blockPos, state);
-            if (inlays == null) continue;
-            for (Direction dir : Direction.values()) {
+            BlockInlays inlays = BlockInlayManager.get(level, blockPos);
+            if (inlays.block() == Blocks.AIR) continue;
+            for (Direction dir : DIRECTIONS) {
                 if (inlays.getFace(dir) != FaceMode.NOT_GATE) continue;
                 int previous = (before >> (dir.ordinal() * 4)) & 0xF;
                 if (node.getOutput(dir) != previous) {
@@ -1052,24 +1249,27 @@ final class LevelNetworks {
         return snapshot;
     }
 
-    /** 当前输出与快照不同的节点集合；无变化返回 {@code null}，快照缺失时返回全部节点。 */
+    /**
+     * 本轮被改写过的节点里，输出相对「上次已通知」真正变化的集合；无变化返回 {@code null}。
+     *
+     * <p>比较完即清空 {@link Network#touchedNodes}：未收敛的续算会把改写记录留给下一轮，
+     * 而本轮已通知基准随后会被更新，不会重复通知。</p>
+     */
     @Nullable
-    private static LongOpenHashSet collectChangedNodes(Network network, @Nullable Long2IntOpenHashMap snapshot) {
-        if (snapshot == null || snapshot.size() != network.nodes.size()) {
-            LongOpenHashSet all = new LongOpenHashSet(network.nodes.size());
-            for (LongIterator it = network.nodes.keySet().iterator(); it.hasNext();) {
-                all.add(it.nextLong());
-            }
-            return all;
-        }
+    private static LongOpenHashSet collectChangedNodes(Network network) {
+        LongOpenHashSet touched = network.touchedNodes;
+        if (touched.isEmpty()) return null;
         LongOpenHashSet changed = null;
-        for (Long2ObjectMap.Entry<GateNode> entry : network.nodes.long2ObjectEntrySet()) {
-            long pos = entry.getLongKey();
-            if (snapshot.get(pos) != entry.getValue().getPacked()) {
+        Long2IntOpenHashMap notified = network.lastNotified;
+        for (LongIterator it = touched.iterator(); it.hasNext();) {
+            long pos = it.nextLong();
+            GateNode node = network.nodes.get(pos);
+            if (node != null && (notified == null || notified.get(pos) != node.getPacked())) {
                 if (changed == null) changed = new LongOpenHashSet();
                 changed.add(pos);
             }
         }
+        touched.clear();
         return changed;
     }
 
@@ -1079,14 +1279,17 @@ final class LevelNetworks {
             GateNode node = entry.getValue();
             int statefulMask = node.statefulMask();
             int keep = 0;
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 if ((statefulMask & (1 << dir.ordinal())) != 0) {
                     keep |= 0xF << (dir.ordinal() * 4);
                 }
             }
             int packed = node.getPacked();
             int cleared = packed & keep;
-            if (cleared != packed) node.setPacked(cleared);
+            if (cleared != packed) {
+                node.setPacked(cleared);
+                network.touchedNodes.add(entry.getLongKey());
+            }
         }
     }
 
@@ -1104,36 +1307,38 @@ final class LevelNetworks {
     }
 
     /**
-     * 收集单个节点各输入面的信号。
+     * 收集单个节点各输入面的信号，写入 {@code inputs}（下标同 {@link Direction#ordinal()}）。
      *
-     * <p>只把标记为 {@link FaceMode#INPUT} 的方向放入 map（值可为 0），
-     * 使 {@link FaceMode#calculate} 能区分「输入面存在但信号为 0」与「无输入面」。</p>
+     * <p>只有「输入面」（{@link FaceMode#INPUT}）、「远程面」与「延时输入门」三类面参与，
+     * 其余面不查询邻居。返回的位掩码标记这几类面，使 {@link FaceMode#calculate} 能区分
+     * 「输入面存在但信号为 0」与「无输入面」。</p>
      *
      * <p>{@link FaceMode#DELAY_INPUT_GATE} 也是本方块的一路输入，但它不读邻居：
      * 只有它自己的 1 tick 输入脉冲存在时才出现（见 {@link #delayInputPulses}）。</p>
      *
-     * @param inlays 该位置已取好的镶嵌数据，避免逐方向重复查 SavedData
+     * @param inlays    该位置已取好的镶嵌数据，避免逐方向重复查 SavedData
+     * @param logistics 该位置是否为物流载体（远程面不参与红石总线）；建网时已缓存，避免再读方块状态
+     * @param inputs    复用的 6 元数组，调用前内容会被覆盖
+     * @return 有输入的方向位掩码
      */
-    private Map<Direction, Integer> collectNodeInputs(Network network, BlockPos blockPos, BlockInlays inlays) {
-        return collectNodeInputs(network, blockPos, inlays, new EnumMap<>(Direction.class));
-    }
-
-    private Map<Direction, Integer> collectNodeInputs(
-            Network network, BlockPos blockPos, BlockInlays inlays, Map<Direction, Integer> inputs) {
-        inputs.clear();
+    private int fillNodeInputs(
+            Network network, BlockPos blockPos, BlockInlays inlays, boolean logistics, int[] inputs) {
+        Arrays.fill(inputs, 0);
+        int mask = 0;
 
         // 仅收集「输入面」（INPUT 门标记的方向）、「远程面」与「延时输入门」的信号，其余面不查询邻居。
-        // 这样输入信号映射只含这三类面，门的计算逻辑无需再过滤。
-        boolean logistics = level.getBlockState(blockPos).getBlock() instanceof LogisticsCarrierBlock;
+        // 这样输入信号数组只含这三类面，门的计算逻辑无需再过滤。
         long packedPos = blockPos.asLong();
-        for (Direction dir : Direction.values()) {
+        for (Direction dir : DIRECTIONS) {
             FaceMode face = inlays.getFace(dir);
+            int bit = 1 << dir.ordinal();
             if (face == FaceMode.DELAY_INPUT_GATE) {
                 // 延时输入门：它这一路输入不来自邻居，而是自己计时归零时产生的那 1 tick 脉冲
                 // （值 = 当初记录的信号）。只在脉冲存在的那一 tick 出现，其余时刻缺席，
                 // 恰好对应「该面这一 tick 收到了输入」。
-                if (stateData != null && (delayInputPulses.get(packedPos) & (1 << dir.ordinal())) != 0) {
-                    inputs.put(dir, stateData.getCount(blockPos, dir));
+                if (stateData != null && (delayInputPulses.get(packedPos) & bit) != 0) {
+                    inputs[dir.ordinal()] = stateData.getCount(blockPos, dir);
+                    mask |= bit;
                 }
                 continue;
             }
@@ -1142,14 +1347,18 @@ final class LevelNetworks {
                 // 必须排除本方块自己发布的那一份：否则刚在输入面收下的信号会经总线原样喂回自己，
                 // 造成自激，并让有状态门把同一个上升沿数两次。同信道对端之间互发则是总线的本意。
                 // 物流载体的远程面归物品传输网（见 LevelTransferNetworks），不参与红石总线。
-                if (!logistics) inputs.put(dir, busSignal(inlays.getChannel(dir).key(), blockPos));
+                if (!logistics) {
+                    inputs[dir.ordinal()] = busSignal(inlays.getChannel(dir).key(), blockPos);
+                    mask |= bit;
+                }
                 continue;
             }
             if (face != FaceMode.INPUT) continue;
-            inputs.put(dir, inputFaceSignal(network, blockPos, dir, inlays));
+            inputs[dir.ordinal()] = inputFaceSignal(network, blockPos, dir, inlays);
+            mask |= bit;
         }
 
-        return inputs;
+        return mask;
     }
 
     /**
@@ -1171,8 +1380,7 @@ final class LevelNetworks {
      * @param network 该面所在网络；为 {@code null} 时跳过「网内邻居」这条快路（仍能正确求值）
      */
     private int neighborSignal(@Nullable Network network, BlockPos blockPos, Direction dir) {
-        BlockPos neighborPos = blockPos.relative(dir);
-        long neighbor = neighborPos.asLong();
+        long neighbor = offsetPacked(blockPos.asLong(), dir);
 
         if (network != null && network.nodes.containsKey(neighbor)) {
             GateNode neighborNode = network.nodes.get(neighbor);
@@ -1185,6 +1393,7 @@ final class LevelNetworks {
         }
         // 邻居所在区块没加载时不读它：getSignal / getDirectSignal 同样会经 getBlockState 强制加载。
         // 按无信号处理，区块加载后由 markNetworksAroundChunkDirty 让本网重新采样。
+        BlockPos neighborPos = BlockPos.of(neighbor);
         if (!level.hasChunkAt(neighborPos)) return 0;
         // 外部输入：从世界读取红石信号。
         // vanilla 约定：getSignal/getDirectSignal 的 direction 参数是
@@ -1192,8 +1401,10 @@ final class LevelNetworks {
         // 中继器等方向敏感信号源按此约定输出，传反则读不到（红石粉不分方向所以不暴露）。
         // 取弱信号与强信号的最大值：红石粉只提供弱信号（getSignal），
         // 而中继器/比较器等只输出强信号（getDirectSignal），两者都需支持。
-        int weak = level.getSignal(neighborPos, dir);
-        int strong = level.getDirectSignal(neighborPos, dir);
+        // 直接对同一个 BlockState 取两次：level.getSignal / getDirectSignal 各自会再查一次方块状态。
+        BlockState neighborState = level.getBlockState(neighborPos);
+        int weak = neighborState.getSignal(level, neighborPos, dir);
+        int strong = neighborState.getDirectSignal(level, neighborPos, dir);
         return Math.max(weak, strong);
     }
 
@@ -1243,7 +1454,7 @@ final class LevelNetworks {
         BlockPos pos = BlockPos.of(packedPos);
         BlockInlays inlays = BlockInlayManager.get(level, pos);
         int max = 0;
-        for (Direction dir : Direction.values()) {
+        for (Direction dir : DIRECTIONS) {
             if (inlays.getFace(dir) != FaceMode.INPUT) continue;
             max = Math.max(max, inputFaceSignal(null, pos, dir, inlays));
         }
@@ -1265,9 +1476,10 @@ final class LevelNetworks {
      * 因此不会无限来回；真正的反馈环由 {@link LogicGateNetworkManager#MAX_SETTLING_PASSES} 兜底。</p>
      */
     void dirtyChannelPeers(Network network) {
-        if (nodeChannels.isEmpty()) return;
+        // 只有带远程面的网络才可能牵动总线：没有远程成员时直接返回，不必扫整网。
+        if (nodeChannels.isEmpty() || network.remoteNodes.isEmpty()) return;
         ObjectOpenHashSet<Network> peers = null;
-        for (LongIterator it = network.nodes.keySet().iterator(); it.hasNext();) {
+        for (LongIterator it = network.remoteNodes.iterator(); it.hasNext();) {
             long[] channels = nodeChannels.get(it.nextLong());
             if (channels == null) continue;
             for (long channel : channels) {
@@ -1283,25 +1495,16 @@ final class LevelNetworks {
         }
         if (peers == null) return;
         for (Network peer : peers) {
-            requestSignalUpdate(peer);
-        }
-    }
-
-    /**
-     * 同步到持久化存储
-     */
-    private void syncToData(Network network, LongOpenHashSet changed) {
-        for (LongIterator it = changed.iterator(); it.hasNext();) {
-            long packed = it.nextLong();
-            GateNode node = network.nodes.get(packed);
-            if (node == null) continue;
-            BlockPos pos = BlockPos.of(packed);
-            for (Direction dir : Direction.values()) {
-                int signal = node.getOutput(dir);
-                if (signal > 0) persistentData.setSignal(pos, dir, signal);
+            // 总线变化只会改变「带远程面」的节点读到的输入。
+            if (!peer.hasFeedback) {
+                for (LongIterator it = peer.remoteNodes.iterator(); it.hasNext();) {
+                    peer.dirtyNodes.add(it.nextLong());
+                }
+                dirtySignals.add(peer);
+            } else {
+                markSignalDirty(peer);
             }
         }
-        persistentData.setDirty();
     }
 
     /**
@@ -1313,10 +1516,11 @@ final class LevelNetworks {
      */
     private void notifyNeighbors(Network network, LongOpenHashSet changed) {
         for (LongIterator it = changed.iterator(); it.hasNext();) {
-            BlockPos blockPos = BlockPos.of(it.nextLong());
-            BlockState state = level.getBlockState(blockPos);
-            // 触发门周围所有方块（含红石粉）的 neighborChanged，使它们检测到门新输出
-            level.updateNeighborsAt(blockPos, state.getBlock());
+            GateNode node = network.nodes.get(it.nextLong());
+            if (node == null) continue;
+            // 触发门周围所有方块（含红石粉）的 neighborChanged，使它们检测到门新输出。
+            // 方块类型建网时已缓存，不必为拿 state.getBlock() 再读一次方块状态。
+            level.updateNeighborsAt(node.pos(), node.block());
         }
     }
 
@@ -1331,21 +1535,23 @@ final class LevelNetworks {
         LogicGateNetworkManager.runSuppressedTopologyChange(() -> {
             if (changed != null) {
                 for (LongIterator it = changed.iterator(); it.hasNext();) {
-                    refreshCarrierVisual(BlockPos.of(it.nextLong()));
+                    refreshCarrierVisual(network, it.nextLong());
                 }
             }
             for (LongIterator it = visualDirty.iterator(); it.hasNext();) {
-                refreshCarrierVisual(BlockPos.of(it.nextLong()));
+                refreshCarrierVisual(network, it.nextLong());
             }
         });
         visualDirty.clear();
     }
 
-    private void refreshCarrierVisual(BlockPos blockPos) {
+    private void refreshCarrierVisual(Network network, long packedPos) {
+        // 「是不是载体」建网时已缓存进节点：非载体（例如镶了门的石头）不必再查一次方块状态。
+        GateNode node = network.nodes.get(packedPos);
+        if (node == null || !node.carrier()) return;
+        BlockPos blockPos = node.pos();
         if (!level.hasChunkAt(blockPos)) return;
-        if (level.getBlockState(blockPos).getBlock() instanceof InlayCarrierBlock) {
-            InlayCarrierBlock.refreshState(level, blockPos);
-        }
+        InlayCarrierBlock.refreshState(level, blockPos);
     }
 
     /**
@@ -1355,13 +1561,19 @@ final class LevelNetworks {
      * 设定值更小（被截断）或延时输入 / 远程面时显示值另有来源，保守起见直接标脏。</p>
      */
     private void markInputVisualDirty(
-            long packedPos, BlockPos blockPos, BlockInlays inlays, Map<Direction, Integer> inputMap) {
-        for (Direction dir : Direction.values()) {
+            long packedPos, BlockPos blockPos, BlockInlays inlays, int[] inputs) {
+        InlayCarrierBlockEntity carrier = null;
+        boolean carrierResolved = false;
+        for (Direction dir : DIRECTIONS) {
             FaceMode face = inlays.getFace(dir);
             if (face == FaceMode.INPUT) {
+                if (!carrierResolved) {
+                    carrier = level.getBlockEntity(blockPos) instanceof InlayCarrierBlockEntity entity
+                            ? entity : null;
+                    carrierResolved = true;
+                }
                 if (inlays.getValue(dir) >= BlockInlays.DEFAULT_VALUE) {
-                    if (level.getBlockEntity(blockPos) instanceof InlayCarrierBlockEntity carrier
-                            && carrier.signal(dir) != inputMap.getOrDefault(dir, 0)) {
+                    if (carrier != null && carrier.signal(dir) != inputs[dir.ordinal()]) {
                         visualDirty.add(packedPos);
                         return;
                     }
@@ -1427,6 +1639,13 @@ final class LevelNetworks {
 
     private static long chunkOf(long packedPos) {
         return ChunkPos.asLong(BlockPos.getX(packedPos) >> 4, BlockPos.getZ(packedPos) >> 4);
+    }
+
+    private static long offsetPacked(long packedPos, Direction dir) {
+        return BlockPos.asLong(
+                BlockPos.getX(packedPos) + dir.getStepX(),
+                BlockPos.getY(packedPos) + dir.getStepY(),
+                BlockPos.getZ(packedPos) + dir.getStepZ());
     }
 
     private static void removeChunkPositions(LongOpenHashSet positions, long chunkPos) {

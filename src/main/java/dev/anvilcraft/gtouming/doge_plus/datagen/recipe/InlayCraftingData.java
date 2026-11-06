@@ -100,11 +100,6 @@ public record InlayCraftingData(
         return new InlayOutput.Fixed(item, InlayValue.of(count), InlayValue.perEnchantment(multiplier), false);
     }
 
-    /** 带 1 级消失诅咒的固定产物（前置珠宝复制的复制品）。 */
-    public static InlayOutput cursed(Item item) {
-        return new InlayOutput.Fixed(item, InlayValue.ONE, InlayValue.ONE, true);
-    }
-
     /** 盔甲纹饰推导产物（动态产物）。 */
     public static InlayOutput armorTrim() {
         return new InlayOutput.ArmorTrim();
@@ -286,48 +281,36 @@ public record InlayCraftingData(
     }
 
     /**
-     * 全部镶合配方：内置 + 前置（AnvilCraft）锻造配方 / 珠宝复制配方派生的镶合配方。
+     * 全部镶合配方：内置 + 前置（AnvilCraft）锻造配方派生的镶合配方。
      *
      * <p>由 {@link AnvilcraftSmithingRecipes.Entry} 派生：基材 + 全部成分 → 产物；
      * 配方 id 镜像前置配方的路径（见 {@link AnvilcraftSmithingRecipes#craftingId}）。
-     * 锻造类返还模板，珠宝复制类以被复制物为基材、产物为「带诅咒的复制品 + 干净的被复制物」。</p>
+     * 锻造类返还模板。</p>
      *
      * @param smithing 前置锻造配方
-     * @param jewel    前置珠宝复制配方（材料数已由读取器筛选）
      */
-    public static List<InlayCraftingData> all(
-            List<AnvilcraftSmithingRecipes.Entry> smithing,
-            List<AnvilcraftSmithingRecipes.Entry> jewel) {
+    public static List<InlayCraftingData> all(List<AnvilcraftSmithingRecipes.Entry> smithing) {
         List<InlayCraftingData> list = new ArrayList<>(VANILLA);
         for (AnvilcraftSmithingRecipes.Entry entry : smithing) {
-            list.add(of(entry, InlayCraftingRecipe.Kind.SMITHING));
-        }
-        for (AnvilcraftSmithingRecipes.Entry entry : jewel) {
-            list.add(of(entry, InlayCraftingRecipe.Kind.COPYING));
+            list.add(of(entry));
         }
         return list;
     }
 
-    private static InlayCraftingData of(AnvilcraftSmithingRecipes.Entry entry, InlayCraftingRecipe.Kind kind) {
+    private static InlayCraftingData of(AnvilcraftSmithingRecipes.Entry entry) {
         List<InlayMatcher> inlays = entry.ingredients().stream()
                 .map(InlayCraftingData::matcher)
                 .toList();
         List<InlayOutput> results = new ArrayList<>();
-        if (kind == InlayCraftingRecipe.Kind.COPYING) {
-            // 珠宝复制：复制品带消失诅咒，被复制物原样返还
-            results.add(cursed(entry.result()));
-            results.add(fixed(entry.result()));
-        } else {
-            // 锻造：成品 + 返还模板
-            results.add(fixed(entry.result()));
-            results.add(fixed(entry.template()));
-        }
+        // 锻造：成品 + 返还模板
+        results.add(fixed(entry.result()));
+        results.add(fixed(entry.template()));
         return new InlayCraftingData(
                 AnvilcraftSmithingRecipes.craftingId(entry.source()),
                 entry.template(),
                 inlays,
                 results,
-                kind);
+                InlayCraftingRecipe.Kind.SMITHING);
     }
 
     /** 前置成分（物品或标签）转成镶孔要求。 */

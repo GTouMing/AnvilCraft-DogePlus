@@ -73,14 +73,12 @@ public record InlayCraftingRecipe(
      *
      * <ul>
      *   <li>{@link #CRAFTING} 镶嵌合成——本 mod 手写配方；</li>
-     *   <li>{@link #SMITHING} 镶嵌锻造——来自锻造类配方（模板作为产物返还）；</li>
-     *   <li>{@link #COPYING} 镶嵌复制——来自前置珠宝复制配方。</li>
+     *   <li>{@link #SMITHING} 镶嵌锻造——来自锻造类配方（模板作为产物返还）。</li>
      * </ul>
      */
     public enum Kind implements StringRepresentable {
         CRAFTING("crafting"),
-        SMITHING("smithing"),
-        COPYING("copying");
+        SMITHING("smithing");
 
         public static final Codec<Kind> CODEC = StringRepresentable.fromEnum(Kind::values);
 
@@ -99,7 +97,6 @@ public record InlayCraftingRecipe(
         public String folder() {
             return switch (this) {
                 case SMITHING -> "inlay_smithing";
-                case COPYING -> "inlay_copying";
                 case CRAFTING -> "inlay_crafting";
             };
         }
@@ -328,7 +325,6 @@ public record InlayCraftingRecipe(
             }
             Kind kind = switch (buffer.readUtf()) {
                 case "smithing" -> Kind.SMITHING;
-                case "copying" -> Kind.COPYING;
                 default -> Kind.CRAFTING;
             };
             return new InlayCraftingRecipe(base, inlays, results, kind);

@@ -7,7 +7,6 @@ import dev.anvilcraft.gtouming.doge_plus.datagen.lang.ZhCnLanguageProvider;
 import dev.anvilcraft.gtouming.doge_plus.datagen.material.BaseMaterialData;
 import dev.anvilcraft.gtouming.doge_plus.datagen.material.InlayMaterialData;
 import dev.anvilcraft.gtouming.doge_plus.datagen.material.MaterialJsonProvider;
-import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.AnvilcraftJewelCraftingRecipes;
 import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.AnvilcraftSmithingRecipes;
 import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.InlayCraftingData;
 import dev.anvilcraft.gtouming.doge_plus.datagen.recipe.InlayCraftingRecipeProvider;
@@ -74,13 +73,11 @@ public class ModDataGen {
             // 前置（AnvilCraft）锻造配方：从 datagen 资源管理器读取，派生镶合四件套
             ResourceManager resourceManager = event.getResourceManager(PackType.SERVER_DATA);
             List<AnvilcraftSmithingRecipes.Entry> smithing = AnvilcraftSmithingRecipes.read(resourceManager);
-            // 前置珠宝复制配方（材料数小于 5 者）：同样派生四件套，复制品带消失诅咒
-            List<AnvilcraftSmithingRecipes.Entry> jewel = AnvilcraftJewelCraftingRecipes.read(resourceManager);
 
             // material（data/<ns>/material/base|inlay）
             generator.addProvider(event.includeServer(), new MaterialJsonProvider(
                     packOutput,
-                    BaseMaterialData.all(smithing, jewel),
+                    BaseMaterialData.all(smithing),
                     InlayMaterialData.all()));
 
             // attributes（data/<ns>/attributes/<属性>）：等级属性的每级数值
@@ -92,7 +89,7 @@ public class ModDataGen {
 
             // inlay_crafting（镶合）配方 —— 同上，路径 recipe/inlay_crafting/
             generator.addProvider(event.includeServer(),
-                    new InlayCraftingRecipeProvider(packOutput, InlayCraftingData.all(smithing, jewel)));
+                    new InlayCraftingRecipeProvider(packOutput, InlayCraftingData.all(smithing)));
         }
     }
 }

@@ -2,6 +2,9 @@ package dev.anvilcraft.gtouming.doge_plus.data;
 
 import dev.anvilcraft.gtouming.doge_plus.network.BlockInlaySyncPacket;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay.InlayProperty;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongIterator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -34,8 +37,10 @@ import java.util.*;
  * 其镶嵌属性必须用外部映射记录。本类按维度存一份 {@link SavedData}：
  * 持久化到世界存档，跨区块重载与重启存活。</p>
  *
- * <p>键为 {@link BlockPos}，值为镶嵌材料 ID 列表（与物品 {@code INLAY} 组件一致，
- * 支持多个性质叠加，如「磁性 + 永恒」）。所有方法在客户端（无维度数据）静默无效。</p>
+ * <p>键为方块坐标打包成的长整型（{@link BlockPos#asLong()}），值为镶嵌材料 ID 列表（与物品
+ * {@code INLAY} 组件一致，支持多个性质叠加，如「磁性 + 永恒」）。用长整型键是为了让
+ * {@link #get} 这条「每次红石查询都会走」的路径不再经过 {@code BlockPos} 的 hashCode / equals。
+ * 所有方法在客户端（无维度数据）静默无效。</p>
  */
 public class BlockInlayManager extends SavedData {
 
@@ -47,7 +52,7 @@ public class BlockInlayManager extends SavedData {
     /** 按 ServerLevel 对象身份缓存，避免热路径每次 new Factory + computeIfAbsent。 */
     private static final Map<ServerLevel, BlockInlayManager> CACHE = new IdentityHashMap<>();
 
-    private final Map<BlockPos, BlockInlays> INLAID_BLOCKS = new HashMap<>();
+    private final Long2ObjectOpenHashMap<BlockInlays> INLAID_BLOCKS = new Long2ObjectOpenHashMap<>();
 
     /** 获取指定维度的管理数据；客户端或不可持久化维度返回 null。 */
     @Nullable
@@ -70,8 +75,9 @@ public class BlockInlayManager extends SavedData {
         BlockInlays bi = get(level, pos);
         for (InlayEntry entry : bi.inlays()) {
             for (ResourceLocation propertyId : entry.attributes()) {
-                if (property.id() == propertyId) return true;
-
+                // 必须用 equals：存档 / 网络同步里的属性 ID 是重新解析出来的新实例，
+                // 引用比较只在「刚由材料定义构造」时偶然成立（重进世界后永恒 / 发电会失效）。
+                if (property.id().equals(propertyId)) return true;
             }
         }
         return false;
@@ -86,16 +92,16 @@ public class BlockInlayManager extends SavedData {
 
         // 服务端：从管理器获取
         BlockInlayManager manager = get(level);
-        return manager == null ? BlockInlays.nulls() : manager.INLAID_BLOCKS.getOrDefault(pos, BlockInlays.nulls());
+        return manager == null ? BlockInlays.nulls() : manager.INLAID_BLOCKS.getOrDefault(pos.asLong(), BlockInlays.nulls());
     }
 
     /** 记录坐标的镶嵌材料列表（覆盖旧值），并广播到客户端。 */
     public static void put(BlockGetter level, BlockPos pos, BlockInlays inlays) {
         BlockInlayManager manager = get(level);
         if (manager == null) return;
-        manager.INLAID_BLOCKS.put(pos.immutable(), inlays);
+        manager.INLAID_BLOCKS.put(pos.asLong(), inlays);
         manager.setDirty();
-        syncToClients((Level) level, pos, manager.INLAID_BLOCKS.get(pos));
+        syncToClients((Level) level, pos, inlays);
         if (level instanceof Level lv) PowerGridManager.addIfGenerator(lv, pos);
     }
 
@@ -122,29 +128,37 @@ public class BlockInlayManager extends SavedData {
         long packedChunk = chunkPos.toLong();
         List<Map.Entry<BlockPos, BlockInlays>> valid = new ArrayList<>();
         boolean changed = false;
-        Iterator<Map.Entry<BlockPos, BlockInlays>> it = manager.INLAID_BLOCKS.entrySet().iterator();
+        Iterator<Long2ObjectMap.Entry<BlockInlays>> it =
+                manager.INLAID_BLOCKS.long2ObjectEntrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<BlockPos, BlockInlays> entry = it.next();
-            BlockPos pos = entry.getKey();
-            if (ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4) != packedChunk) continue;
-            if (entry.getValue().block() != level.getBlockState(pos).getBlock()) {
+            Long2ObjectMap.Entry<BlockInlays> entry = it.next();
+            long packed = entry.getLongKey();
+            if (chunkOf(packed) != packedChunk) continue;
+            BlockInlays inlays = entry.getValue();
+            BlockPos pos = BlockPos.of(packed);
+            if (inlays.block() != level.getBlockState(pos).getBlock()) {
                 it.remove();
                 changed = true;
                 syncToClients(level, pos, BlockInlays.nulls());
                 PowerGridManager.addIfGenerator(level, pos);
                 continue;
             }
-            valid.add(Map.entry(pos, entry.getValue()));
+            valid.add(Map.entry(pos, inlays));
         }
         if (changed) manager.setDirty();
         return valid;
+    }
+
+    /** 坐标打包值所在区块（避免为筛区块反复构造 BlockPos）。 */
+    private static long chunkOf(long packedPos) {
+        return ChunkPos.asLong(BlockPos.getX(packedPos) >> 4, BlockPos.getZ(packedPos) >> 4);
     }
 
     /** 清除坐标的镶嵌记录（幂等：无记录时无操作），并广播到客户端。 */
     public static void remove(BlockGetter level, BlockPos pos) {
         BlockInlayManager manager = get(level);
         if (manager == null) return;
-        if (manager.INLAID_BLOCKS.remove(pos) != null ) {
+        if (manager.INLAID_BLOCKS.remove(pos.asLong()) != null ) {
             manager.setDirty();
             syncToClients((Level) level, pos, BlockInlays.nulls());
         }
@@ -162,9 +176,12 @@ public class BlockInlayManager extends SavedData {
     public static void syncChunkToPlayer(ServerLevel level, ChunkPos chunkPos, ServerPlayer player) {
         BlockInlayManager manager = get(level);
         if (manager == null) return;
-        for (Map.Entry<BlockPos, BlockInlays> entry : manager.INLAID_BLOCKS.entrySet()) {
-            if (chunkPos.equals(new ChunkPos(entry.getKey()))) {
-                PacketDistributor.sendToPlayer(player, new BlockInlaySyncPacket(entry.getKey(), entry.getValue()));
+        long packedChunk = chunkPos.toLong();
+        for (Long2ObjectMap.Entry<BlockInlays> entry : manager.INLAID_BLOCKS.long2ObjectEntrySet()) {
+            long packed = entry.getLongKey();
+            if (chunkOf(packed) == packedChunk) {
+                PacketDistributor.sendToPlayer(
+                        player, new BlockInlaySyncPacket(BlockPos.of(packed), entry.getValue()));
             }
         }
     }
@@ -182,7 +199,7 @@ public class BlockInlayManager extends SavedData {
             if (level.isClientSide()) return;
             BlockInlayManager manager = Objects.requireNonNull(get(level));
 
-            BlockInlays inlays = Objects.requireNonNull(manager.INLAID_BLOCKS.remove(pos));
+            BlockInlays inlays = Objects.requireNonNull(manager.INLAID_BLOCKS.remove(pos.asLong()));
 
             if (PENDING_MOVES.size() >= 64) PENDING_MOVES.poll();
             PENDING_MOVES.add(inlays);
@@ -205,7 +222,7 @@ public class BlockInlayManager extends SavedData {
             BlockInlays pending = it.next();
             if (pending.block() == block) {
                 it.remove();
-                manager.INLAID_BLOCKS.put(pos.immutable(), pending);
+                manager.INLAID_BLOCKS.put(pos.asLong(), pending);
                 manager.setDirty();
 
                 syncToClients(level, pos, pending);
@@ -220,14 +237,12 @@ public class BlockInlayManager extends SavedData {
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag list = new ListTag();
 
-        for (Map.Entry<BlockPos, BlockInlays> entry : INLAID_BLOCKS.entrySet()) {
+        for (Long2ObjectMap.Entry<BlockInlays> entry : INLAID_BLOCKS.long2ObjectEntrySet()) {
             CompoundTag entryTag = new CompoundTag();
-            BlockPos pos = entry.getKey();
-            BlockInlays inlays = entry.getValue();
 
             // 位置
-            entryTag.putLong("P", pos.asLong());
-            writeInlays(entryTag, inlays, registries);
+            entryTag.putLong("P", entry.getLongKey());
+            writeInlays(entryTag, entry.getValue(), registries);
 
             list.add(entryTag);
         }
@@ -334,9 +349,7 @@ public class BlockInlayManager extends SavedData {
             CompoundTag entryTag = list.getCompound(i);
 
             // 读取位置
-            BlockPos pos = BlockPos.of(entryTag.getLong("P"));
-
-            data.INLAID_BLOCKS.put(pos, readInlays(entryTag, registries));
+            data.INLAID_BLOCKS.put(entryTag.getLong("P"), readInlays(entryTag, registries));
         }
 
         return data;

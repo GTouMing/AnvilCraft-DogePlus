@@ -204,7 +204,10 @@ public class ModBlocks {
                             context, provider,
                             "carrier/logistics/core", null, null, null,
                             // 物流载体的远程门也不分通电与否（它整块都不参与红石）：通电变体传 null。
-                            "carrier/logistics/wire", null, "carrier/logistics/wire_remote", null,
+                            // 通道拆成实心边框（cutout）与半透明面板（translucent）：面板贴图带半透明像素，
+                            // 但边框必须留在会写深度的实心层，否则接头处会随 mip 变淡 / 断续。
+                            "carrier/logistics/wire", null, "carrier/logistics/wire_glass",
+                            "carrier/logistics/wire_remote", null,
                             "carrier/logistics/edge", null, "carrier/logistics/edge_vertical", null,
                             "carrier/logistics/corner"))
                     .loot(ModBlocks::dropSelfLoot)

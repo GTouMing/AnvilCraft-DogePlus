@@ -78,6 +78,15 @@
     },
     {
       "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
+        "x": 90
+      },
+      "when": {
+        "down": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
         "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote",
         "x": 270
       },
@@ -93,6 +102,15 @@
     {
       "apply": {
         "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
+        "x": 270
+      },
+      "when": {
+        "up": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
         "x": 270
       },
       "when": {
@@ -122,6 +140,14 @@
     },
     {
       "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass"
+      },
+      "when": {
+        "north": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
         "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote",
         "y": 180
       },
@@ -137,6 +163,15 @@
     {
       "apply": {
         "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
+        "y": 180
+      },
+      "when": {
+        "south": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
         "y": 180
       },
       "when": {
@@ -168,6 +203,15 @@
     },
     {
       "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
+        "y": 270
+      },
+      "when": {
+        "west": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
         "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote",
         "y": 90
       },
@@ -183,6 +227,15 @@
     {
       "apply": {
         "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
+        "y": 90
+      },
+      "when": {
+        "east": "unpowered|powered"
+      }
+    },
+    {
+      "apply": {
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
         "y": 90
       },
       "when": {

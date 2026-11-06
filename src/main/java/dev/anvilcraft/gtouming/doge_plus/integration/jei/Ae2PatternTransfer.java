@@ -42,9 +42,6 @@ final class Ae2PatternTransfer {
         registration.addRecipeTransferHandler(
                 new PatternTransfer<>(AnvilCraftDogePlusJeiPlugin.INLAY_SMITHING),
                 AnvilCraftDogePlusJeiPlugin.INLAY_SMITHING);
-        registration.addRecipeTransferHandler(
-                new PatternTransfer<>(AnvilCraftDogePlusJeiPlugin.INLAY_COPYING),
-                AnvilCraftDogePlusJeiPlugin.INLAY_COPYING);
     }
 
     private static final class PatternTransfer<R>

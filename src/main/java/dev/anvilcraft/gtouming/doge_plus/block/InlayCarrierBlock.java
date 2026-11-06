@@ -457,9 +457,9 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
     // ==================== 形状 ====================
 
-    /** 逻辑载体的中心体（与 {@code carrier/logic/core} 模型的外壳一致）。 */
+    /** 逻辑载体的中心体（与 {@code carrier/logic/core} 模型的外壳一致：5×5×5）。 */
     private static final VoxelShape LOGIC_CORE =
-            Shapes.box(5.5 / 16.0, 5.5 / 16.0, 5.5 / 16.0, 10.525 / 16.0, 10.5 / 16.0, 10.5 / 16.0);
+            Shapes.box(5.5 / 16.0, 5.5 / 16.0, 5.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0, 10.5 / 16.0);
 
     /**
      * 逻辑载体贯通（{@code hub=false}）时的中心体，对应 {@code carrier/logic/core_cross} 模型：
@@ -482,6 +482,16 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
     /** 物流载体的中心体：模型是逐面铺在未编程面上的 4×4 薄片，形状取其外接 4×4×4 立方。 */
     private static final VoxelShape LOGISTICS_CORE =
+            Shapes.box(6 / 16.0, 6 / 16.0, 6 / 16.0, 10 / 16.0, 10 / 16.0, 10 / 16.0);
+
+    /**
+     * 中心体的碰撞盒：横截面与 {@link #COLLISION_WIRE} 完全一致（中心 4×4×4）。
+     *
+     * <p>视觉中心体是 5×5，而通道碰撞只取中心 4×4；
+     * 若碰撞直接用视觉形状，交界处会多出一圈 0.5 的台阶，玩家贴着通道侧面走就会被顶住 / 卡住。
+     * 碰撞统一成 4×4 后，通道与中心体连成一根连续的方管。视觉上多出的 0.5 与四条棱一样不参与碰撞。</p>
+     */
+    private static final VoxelShape CORE_COLLISION =
             Shapes.box(6 / 16.0, 6 / 16.0, 6 / 16.0, 10 / 16.0, 10 / 16.0, 10 / 16.0);
 
     /**
@@ -572,6 +582,16 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
     /** 各面的通道形状（原始盒子取并集，碰撞用），下标同 {@link Direction#ordinal()}。 */
     private static final VoxelShape[] WIRE_SHAPES = new VoxelShape[6];
 
+    /**
+     * 通道的碰撞盒（canonical，朝北）：只保留中心 4×4×6 长方体，不再包含四条 1×1 细棱。
+     * 精细形状仍用于 {@link #getShape} / 描边 / {@link #pickFace}。
+     */
+    private static final AABB COLLISION_WIRE =
+            new AABB(6 / 16.0, 6 / 16.0, 0.0, 10 / 16.0, 10 / 16.0, 6 / 16.0);
+
+    /** 各面通道的碰撞形状（每面一个长方体）。 */
+    private static final VoxelShape[] COLLISION_WIRE_SHAPES = new VoxelShape[6];
+
     /** 各面的管线形状（物流载体用 {@link #LOGISTICS_WIRE_CANONICAL}），下标同 {@link Direction#ordinal()}。 */
     private static final VoxelShape[] LOGISTICS_WIRE_SHAPES = new VoxelShape[6];
 
@@ -607,12 +627,17 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
     /** 物流载体的形状缓存（棱件规则与盒子都不同，不能与上者共用）。 */
     private static final VoxelShape[] LOGISTICS_SHAPE_CACHE = new VoxelShape[1 << 13];
 
+    /** 碰撞形状缓存：通道已退化为长方体，与精细的 {@link #getShape} 分开缓存。 */
+    private static final VoxelShape[] COLLISION_SHAPE_CACHE = new VoxelShape[1 << 13];
+    private static final VoxelShape[] LOGISTICS_COLLISION_SHAPE_CACHE = new VoxelShape[1 << 13];
+
     static {
         // 通道 / 管线：与 blockstate 同一套旋转（上/下仅用 x，其余仅用 y）
         fillWires(WIRE_SHAPES, LOGIC_WIRE_CANONICAL);
         fillWires(LOGISTICS_WIRE_SHAPES, LOGISTICS_WIRE_CANONICAL);
         fillWires(REMOTE_WIRE_SHAPES, LOGIC_REMOTE_WIRE_CANONICAL);
         fillWires(LOGISTICS_REMOTE_WIRE_SHAPES, LOGISTICS_REMOTE_WIRE_CANONICAL);
+        fillWires(COLLISION_WIRE_SHAPES, List.of(COLLISION_WIRE));
 
         // 角件：8 条水平棱（x 先 y 后）+ 4 条竖棱（z 先 y 后），与 blockstate 对应。
         // 物流用同一张表，只是换成物流自己的两个 canonical 盒子（竖棱不再需要 z 旋转）。
@@ -715,8 +740,14 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         return block instanceof LogisticsCarrierBlock;
     }
 
-    /** 该方块在该状态下用哪个中心体形状：逻辑载体贯通时换成十字件（物流载体的中心体恒为实心块）。 */
-    private static VoxelShape coreShape(Block block, BlockState state) {
+    /**
+     * 该方块在该状态下用哪个中心体形状：逻辑载体贯通时换成十字件（物流载体的中心体恒为实心块）。
+     *
+     * <p>{@code collision} 为 true 时返回与通道一致的 {@link #CORE_COLLISION}，而不是视觉形状，
+     * 避免中心体比通道宽出一圈导致贴边移动被卡住。</p>
+     */
+    private static VoxelShape coreShape(Block block, BlockState state, boolean collision) {
+        if (collision) return CORE_COLLISION;
         if (block instanceof LogisticsCarrierBlock) return LOGISTICS_CORE;
         return state.getValue(HUB) ? LOGIC_CORE : union(coreCrossBoxes(state));
     }
@@ -803,6 +834,33 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        int index = shapeIndex(state);
+        // 物流与普通载体的棱件规则相反、盒子也不同，因此两者各用一份缓存（同一下标含义不同）。
+        VoxelShape[] cache = state.getBlock() instanceof LogisticsCarrierBlock ? LOGISTICS_SHAPE_CACHE : SHAPE_CACHE;
+        VoxelShape cached = cache[index];
+        if (cached == null) {
+            cached = buildShape(state, false);
+            cache[index] = cached;
+        }
+        return cached;
+    }
+
+    @Override
+    protected VoxelShape getCollisionShape(
+            BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        int index = shapeIndex(state);
+        VoxelShape[] cache = state.getBlock() instanceof LogisticsCarrierBlock
+                ? LOGISTICS_COLLISION_SHAPE_CACHE : COLLISION_SHAPE_CACHE;
+        VoxelShape cached = cache[index];
+        if (cached == null) {
+            cached = buildShape(state, true);
+            cache[index] = cached;
+        }
+        return cached;
+    }
+
+    /** 形状缓存下标：hub 位 + 六面「已镶嵌」位 + 六面「远程门」位。 */
+    private static int shapeIndex(BlockState state) {
         int index = state.getValue(HUB) ? SHAPE_INDEX_HUB : 0;
         for (Direction direction : Direction.values()) {
             CarrierWire wire = state.getValue(property(direction));
@@ -811,14 +869,7 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
             // 远程门面的形状与普通通道不同，必须单独占一位，否则两种形状会共用同一份缓存。
             if (wire == CarrierWire.REMOTE) index |= 1 << (SHAPE_INDEX_REMOTE_SHIFT + direction.ordinal());
         }
-        // 物流与普通载体的棱件规则相反、盒子也不同，因此两者各用一份缓存（同一下标含义不同）。
-        VoxelShape[] cache = state.getBlock() instanceof LogisticsCarrierBlock ? LOGISTICS_SHAPE_CACHE : SHAPE_CACHE;
-        VoxelShape cached = cache[index];
-        if (cached == null) {
-            cached = buildShape(state);
-            cache[index] = cached;
-        }
-        return cached;
+        return index;
     }
 
     /** 一组原始盒子取并集（碰撞用）。 */
@@ -830,20 +881,31 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         return shape;
     }
 
-    /** 中心体与各面通道的并集。 */
-    private static VoxelShape partShape(BlockState state) {
-        VoxelShape shape = coreShape(state.getBlock(), state);
+    /** 中心体与各面通道的并集；{@code collision} 时通道使用单长方体碰撞盒。 */
+    private static VoxelShape partShape(BlockState state, boolean collision) {
+        VoxelShape shape = coreShape(state.getBlock(), state, collision);
         for (Direction direction : Direction.values()) {
             if (state.getValue(property(direction)).isInlaid()) {
-                shape = Shapes.or(shape, wireShape(state, direction));
+                VoxelShape wire = collision
+                        ? COLLISION_WIRE_SHAPES[direction.ordinal()]
+                        : wireShape(state, direction);
+                shape = Shapes.or(shape, wire);
             }
         }
         return shape;
     }
 
-    /** 当前状态下可见部件的并集（含棱角件与物流固定框架）。 */
-    private static VoxelShape buildShape(BlockState state) {
-        VoxelShape shape = partShape(state);
+    /**
+     * 当前状态下可见部件的并集（含棱角件与物流固定框架）。
+     *
+     * <p>碰撞只保留通道与中心体：棱角件和物流固定框架都是 1×1 的装饰细件，外沿到
+     * {@code 5.5..10.5}，比通道 / 中心体的碰撞盒（中心 {@code 4×4}）多出 0.5。
+     * 若把它们也算进碰撞，玩家贴着通道或框架移动时会在交界处被顶住 / 卡住；
+     * 这些细件与通道的四条棱一样只参与视觉形状（{@code getShape} / 描边）。</p>
+     */
+    private static VoxelShape buildShape(BlockState state, boolean collision) {
+        VoxelShape shape = partShape(state, collision);
+        if (collision) return shape;
         for (Edge edge : edgeShapes(state.getBlock())) {
             if (showsEdge(state, edge)) {
                 shape = Shapes.or(shape, edge.shape());
@@ -905,7 +967,7 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
         }
 
         // 中心区域无论中心体是否绘制都按方块面判定（对侧镶嵌时中心体隐藏，该区域被通道贯通）。
-        BlockHitResult centerHit = coreShape(state.getBlock(), state).clip(from, to, pos);
+        BlockHitResult centerHit = coreShape(state.getBlock(), state, false).clip(from, to, pos);
         if (centerHit != null && centerHit.getLocation().distanceToSqr(from) < bestDistance) {
             best = null;
         }

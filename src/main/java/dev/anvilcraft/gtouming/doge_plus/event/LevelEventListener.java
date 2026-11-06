@@ -3,6 +3,7 @@ package dev.anvilcraft.gtouming.doge_plus.event;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
+import dev.anvilcraft.gtouming.doge_plus.data.PowerGridManager;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateOutputData;
 import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateStateData;
@@ -73,6 +74,7 @@ public class LevelEventListener {
             LogicGateNetworkManager.clear(serverLevel);
             ItemTransferNetworkManager.clear(serverLevel);
             BlockInlayManager.clear(serverLevel);
+            PowerGridManager.clear(serverLevel);
             LogicGateOutputData.clear(serverLevel);
             LogicGateStateData.clear(serverLevel);
         }

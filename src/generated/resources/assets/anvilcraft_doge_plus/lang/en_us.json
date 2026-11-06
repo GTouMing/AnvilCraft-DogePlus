@@ -18,7 +18,6 @@
   "entity.anvilcraft_doge_plus.doge_node": "Doge Node",
   "entity.anvilcraft_doge_plus.flying_anvil": "Flying Anvil",
   "gui.anvilcraft_doge_plus.jei.inlay": "Inlay",
-  "gui.anvilcraft_doge_plus.jei.inlay_copying": "Inlay Copying",
   "gui.anvilcraft_doge_plus.jei.inlay_crafting": "Inlay Crafting",
   "gui.anvilcraft_doge_plus.jei.inlay_crafting.chance": "Chance: %s%%",
   "gui.anvilcraft_doge_plus.jei.inlay_crafting.property_any_of": "(any of the following x%s)",

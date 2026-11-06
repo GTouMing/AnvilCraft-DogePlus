@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
 
 /**
  * 逻辑门网络 - 连通分量
@@ -23,6 +24,26 @@ final class Network {
 
     /** 网络内是否存在非门；没有非门时无需做振荡判定。 */
     final boolean hasNotGates;
+
+    /** 网络内带非门的节点位置；振荡判定只遍历这些节点，不再扫整网。 */
+    final LongOpenHashSet notGateNodes;
+
+    /** 网络内带非 NONE 面且「输出由时序状态驱动」的节点；到达事件只遍历这些节点。 */
+    final LongOpenHashSet statefulNodes;
+
+    /** 网络内参与红石总线的远程面节点；信道变化只标脏这些节点。 */
+    final LongOpenHashSet remoteNodes;
+
+    /**
+     * 网络的门间依赖图是否存在环。
+     *
+     * <p>无环时每个门的输出都是输入的唯一纯函数，从当前输出继续求值即可到达同一不动点，
+     * 不必每轮清零重算；有环时必须从全 0 迭代，否则纯反馈环会自锁在非零值。</p>
+     */
+    final boolean hasFeedback;
+
+    /** 本轮求值中被改写过的节点（含清零、时序门写回）；用于增量对比「已通知」快照。 */
+    final LongOpenHashSet touchedNodes = new LongOpenHashSet();
 
     /** 网络跨越的区块 */
     final LongOpenHashSet chunks = new LongOpenHashSet();
@@ -65,11 +86,25 @@ final class Network {
      */
     final LongOpenHashSet dirtyNodes = new LongOpenHashSet();
 
-    Network(Long2ObjectLinkedOpenHashMap<GateNode> nodes, boolean overflow, boolean hasStatefulGates, boolean hasNotGates) {
+    /**
+     * 整网都需要重新求值（主输入重采样 / 初始化）。
+     *
+     * <p>用标记代替「把所有节点塞进 {@link #dirtyNodes}」：同一 tick 里多个区块加载 / 多次标脏
+     * 会重复调用，标记只有一次开销，真正的遍历在传播开始时做一次。</p>
+     */
+    boolean dirtyAll = true;
+
+    Network(Long2ObjectLinkedOpenHashMap<GateNode> nodes, boolean overflow, boolean hasStatefulGates, boolean hasNotGates,
+            LongOpenHashSet notGateNodes, LongOpenHashSet statefulNodes, LongOpenHashSet remoteNodes,
+            boolean hasFeedback) {
         this.nodes = nodes;
         this.overflow = overflow;
         this.hasStatefulGates = hasStatefulGates;
         this.hasNotGates = hasNotGates;
+        this.notGateNodes = notGateNodes;
+        this.statefulNodes = statefulNodes;
+        this.remoteNodes = remoteNodes;
+        this.hasFeedback = hasFeedback;
 
         // 计算区块归属
         for (LongIterator it = nodes.keySet().iterator(); it.hasNext();) {
@@ -87,6 +122,7 @@ final class Network {
         GateNode node = nodes.get(pos);
         if (node != null) {
             node.setOutput(direction, signal);
+            touchedNodes.add(pos);
         }
     }
 }
@@ -94,10 +130,16 @@ final class Network {
 /**
  * 逻辑门节点 - 单扇门的数据
  *
- * @param data         门输出存储
- * @param statefulMask 该位置上有状态门（计数 / 锁存 / 延时）的方向位掩码
+ * @param data          门输出存储
+ * @param statefulMask  该位置上有状态门（计数 / 锁存 / 延时）的方向位掩码
+ * @param outputMask    该位置上「会向外输出信号」的方向位（非门 / 与门 / 输出门 / 三种输出型状态门）
+ * @param consumerMask  该位置上「读取邻居输出」的方向位（输入门 / 延时输入门）；建网时用于依赖图判环
+ * @param block         该位置的方块（建网时缓存，通知邻居时不必再查方块状态）
+ * @param logistics     该位置是否为物流载体（同上；求值热路径不再查方块状态）
+ * @param carrier       该位置是否为镶嵌载体（同上，供锁存门写回设定值用）
  */
-record GateNode(LogicGateOutputData data, BlockPos pos, int statefulMask) {
+record GateNode(LogicGateOutputData data, BlockPos pos, int statefulMask, int outputMask, int consumerMask,
+                Block block, boolean logistics, boolean carrier) {
 
     int getOutput(Direction direction) {
         return data == null ? 0 : data.getSignal(pos, direction);

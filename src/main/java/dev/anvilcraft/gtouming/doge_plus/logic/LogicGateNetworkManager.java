@@ -8,6 +8,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
@@ -38,6 +39,9 @@ public final class LogicGateNetworkManager {
 
     /** 维度隔离缓存 */
     private static final Map<ServerLevel, LevelNetworks> LEVELS = new IdentityHashMap<>();
+
+    /** 六个方向（{@link Direction#values()} 每次都会复制数组；本类的方法在每次红石查询里都会跑到）。 */
+    static final Direction[] DIRECTIONS = Direction.values();
 
     /**
      * 抑制拓扑更新的开关。
@@ -110,10 +114,11 @@ public final class LogicGateNetworkManager {
         }
 
         // 其余情况（跨网络的逻辑门、红石粉/中继器等外部方块）都只是让本网重采样输入。
+        // 受影响的只有本节点（它的输入面读的是这个邻居）；无环网络只重算它，
+        // 有环网络由 {@link LevelNetworks#requestNodeUpdate} 退回整网重算。
+        // 同信道对端不相邻，收不到这次邻居变化，一并让它们重采样远程总线。
         if (!network.overflow) {
-            state.requestSignalUpdate(network);
-            // 同信道对端不相邻，收不到这次邻居变化：显式让它们重采样远程总线。
-            state.dirtyChannelPeers(network);
+            state.requestNodeUpdate(network, packedPos);
         }
     }
 
@@ -239,7 +244,7 @@ public final class LogicGateNetworkManager {
 
     /** 该记录是否至少有一个非 NONE 的面（逻辑门 / 远程面）。 */
     private static boolean hasGateFace(BlockInlays data) {
-        for (Direction dir : Direction.values()) {
+        for (Direction dir : DIRECTIONS) {
             if (data.getFace(dir) != FaceMode.NONE) return true;
         }
         return false;
@@ -262,9 +267,27 @@ public final class LogicGateNetworkManager {
     }
 
     public static boolean isLogicGate(Level level, BlockPos pos) {
-        // 未加载的区块不读：getBlockState 会强制加载区块（关闭流程里会变成主线程自等待）。
+        // 先查镶嵌记录（一次哈希查询）：世界上的绝大多数位置根本没有记录，
+        // 直接返回，不必碰区块 / 方块状态。本方法挂在 getSignal / getDirectSignal 上，
+        // 每次红石查询都会走到，这一条快路径是整条链路最热的判断。
+        BlockInlays data = BlockInlayManager.get(level, pos);
+        if (data.block() == Blocks.AIR) return false;
+        // 已在某个已建网络里的位置：建网时已经校验过方块 / 数据一致，直接回答，不再碰区块与方块状态。
+        // 红石粉每 tick 会反复询问相邻的门，这条快路径省掉的是最热的那部分查询。
+        if (level instanceof ServerLevel serverLevel) {
+            LevelNetworks state = LEVELS.get(serverLevel);
+            if (state != null) {
+                Network network = state.byGate.get(pos.asLong());
+                if (network != null && network.valid) return true;
+            }
+        }
+        // 未被移除 / 记录仍属于当前方块才可能是门；未加载的区块不读（getBlockState 会强制加载）。
         if (!level.hasChunkAt(pos)) return false;
-        return logicGateData(level, pos, level.getBlockState(pos)) != null;
+        if (!BlockInlayManager.isConsistent(level.getBlockState(pos).getBlock(), data)) return false;
+        for (Direction dir : DIRECTIONS) {
+            if (data.getFace(dir) != FaceMode.NONE) return true;
+        }
+        return false;
     }
 
     /**
@@ -281,7 +304,7 @@ public final class LogicGateNetworkManager {
     static BlockInlays logicGateData(Level level, BlockPos pos, BlockState state) {
         BlockInlays data = BlockInlayManager.get(level, pos);
         if (!BlockInlayManager.isConsistent(state.getBlock(), data)) return null;
-        for (Direction dir : Direction.values()) {
+        for (Direction dir : DIRECTIONS) {
             if (data.getFace(dir) != FaceMode.NONE) return data;
         }
         return null;

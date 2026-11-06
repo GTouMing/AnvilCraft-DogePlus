@@ -18,7 +18,6 @@
   "entity.anvilcraft_doge_plus.doge_node": "Doge 节点",
   "entity.anvilcraft_doge_plus.flying_anvil": "飞行铁砧",
   "gui.anvilcraft_doge_plus.jei.inlay": "镶嵌",
-  "gui.anvilcraft_doge_plus.jei.inlay_copying": "镶嵌复制",
   "gui.anvilcraft_doge_plus.jei.inlay_crafting": "镶嵌合成",
   "gui.anvilcraft_doge_plus.jei.inlay_crafting.chance": "概率：%s%%",
   "gui.anvilcraft_doge_plus.jei.inlay_crafting.property_any_of": "（以下任一属性 ×%s）",

@@ -13,7 +13,6 @@ import net.minecraft.world.item.Items;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 载体单个面的方向性镶嵌属性：这个面「做什么」。
@@ -179,37 +178,49 @@ public enum FaceMode implements StringRepresentable, WheelOption {
         return this == LATCH_GATE ? 0 : 15;
     }
 
+    /** 六个方向（{@link Direction#values()} 每次都会复制数组，热路径共用这一份）。 */
+    private static final Direction[] DIRECTIONS = Direction.values();
+
     /**
      * 计算输出。
      *
-     * @param inputs 输入面输入信号（仅含标记为 {@link #INPUT} 的方向）
-     * @param value  该面逻辑门的设定值（仅 {@link #OUTPUT} 使用：输出取 max 输入与设定值的较小者）
+     * <p>输入用「按下标存值的数组 + 存在面位掩码」表示：热路径上每个门每次求值都会调用，
+     * 不必为它分配 {@code Map} / {@code EnumMap}。掩码同时表达「该面是输入面但信号为 0」，
+     * 与原先 {@code Map} 里存 0 值的语义一致。</p>
+     *
+     * @param inputs    各方向输入信号，下标同 {@link Direction#ordinal()}
+     * @param inputMask 有输入的方向位（bit {@code ordinal()}）
+     * @param value     该面逻辑门的设定值（仅 {@link #OUTPUT} 使用：输出取 max 输入与设定值的较小者）
      */
-    public int calculate(Map<Direction, Integer> inputs, int value) {
+    public int calculate(int[] inputs, int inputMask, int value) {
         return switch (this) {
             // 搬运角色与无、以及有状态门（输出由 LevelNetworks 每 tick 驱动写入）都不经本方法。
             case NONE, INSERT, CRAFT_INSERT, EXTRACT, INPUT, COUNTER_GATE, LATCH_GATE, DELAY_GATE, DELAY_INPUT_GATE, REMOTE -> 0;
             case NOT_GATE -> {
-                for (Map.Entry<Direction, Integer> face : inputs.entrySet()) {
-                    if (face.getValue() > 0) yield 0;
+                for (Direction dir : DIRECTIONS) {
+                    if ((inputMask & (1 << dir.ordinal())) != 0 && inputs[dir.ordinal()] > 0) yield 0;
                 }
                 yield 15;
             }
             case AND_GATE -> {
                 // 与运算需至少两个输入面，否则不满足条件，永远返回 0
-                if (inputs.size() < 2) yield 0;
+                if (Integer.bitCount(inputMask) < 2) yield 0;
                 int min = 15;
-                for (Map.Entry<Direction, Integer> face : inputs.entrySet()) {
-                    min = Math.min(min, face.getValue());
+                for (Direction dir : DIRECTIONS) {
+                    if ((inputMask & (1 << dir.ordinal())) != 0) {
+                        min = Math.min(min, inputs[dir.ordinal()]);
+                    }
                 }
                 yield min;
             }
             case OUTPUT -> {
                 // 输出门：取最大输入，并按设定值取小截断
-                if (inputs.isEmpty()) yield 0;
+                if (inputMask == 0) yield 0;
                 int max = 0;
-                for (Map.Entry<Direction, Integer> face : inputs.entrySet()) {
-                    max = Math.max(max, face.getValue());
+                for (Direction dir : DIRECTIONS) {
+                    if ((inputMask & (1 << dir.ordinal())) != 0) {
+                        max = Math.max(max, inputs[dir.ordinal()]);
+                    }
                 }
                 yield Math.min(max, value);
             }

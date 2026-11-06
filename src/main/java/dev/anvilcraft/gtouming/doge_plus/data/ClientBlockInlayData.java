@@ -1,9 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.data;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 客户端侧的方块级镶嵌数据：由 {@code BlockInlaySyncPacket} 从服务端同步填充，
@@ -11,17 +9,18 @@ import java.util.Map;
  */
 public class ClientBlockInlayData {
 
-    private static final Map<BlockPos, BlockInlays> INLAYS = new HashMap<>();
+    /** 与服务端一样按打包坐标存：客户端渲染 / 粒子路径上的查询也不必再走 BlockPos 哈希。 */
+    private static final Long2ObjectOpenHashMap<BlockInlays> INLAYS = new Long2ObjectOpenHashMap<>();
 
-    public static void put( BlockPos pos, BlockInlays inlays) {
-        INLAYS.put(pos.immutable(), inlays);
+    public static void put(BlockPos pos, BlockInlays inlays) {
+        INLAYS.put(pos.asLong(), inlays);
     }
 
     public static void remove(BlockPos pos) {
-        INLAYS.remove(pos);
+        INLAYS.remove(pos.asLong());
     }
 
     public static BlockInlays get(BlockPos pos) {
-        return INLAYS.getOrDefault(pos, BlockInlays.nulls());
+        return INLAYS.getOrDefault(pos.asLong(), BlockInlays.nulls());
     }
 }

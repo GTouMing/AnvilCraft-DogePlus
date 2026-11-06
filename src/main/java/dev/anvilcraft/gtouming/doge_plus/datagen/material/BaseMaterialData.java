@@ -157,26 +157,21 @@ public record BaseMaterialData(String name, int sockets, JsonArray ingredient) {
     }
 
     /**
-     * 全部基材定义：内置 + 前置（AnvilCraft）锻造模板 + 前置珠宝复制配方的被复制物。
+     * 全部基材定义：内置 + 前置（AnvilCraft）锻造模板。
      *
      * <p>模板基材由 {@link AnvilcraftSmithingRecipes.Entry} 派生：镶孔数 = 非模板成分数
-     * （普通锻造为 2：追加材料 + 基材；n 合一锻造为 n+1：材料 + n 个输入）。珠宝复制配方
-     * 以被复制物作模具，镶孔数 = 该配方材料数。同名基材只生成一次，内置定义优先。</p>
+     * （普通锻造为 2：追加材料 + 基材；n 合一锻造为 n+1：材料 + n 个输入）。
+     * 同名基材只生成一次，内置定义优先。</p>
      *
      * @param smithing 前置锻造配方
-     * @param jewel    前置珠宝复制配方（材料数已由读取器筛选）
      */
-    public static List<BaseMaterialData> all(
-            List<AnvilcraftSmithingRecipes.Entry> smithing,
-            List<AnvilcraftSmithingRecipes.Entry> jewel) {
+    public static List<BaseMaterialData> all(List<AnvilcraftSmithingRecipes.Entry> smithing) {
         List<BaseMaterialData> list = new ArrayList<>(BASE);
         Set<String> names = new HashSet<>();
         for (BaseMaterialData base : BASE) {
             names.add(base.name());
         }
-        List<AnvilcraftSmithingRecipes.Entry> entries = new ArrayList<>(smithing);
-        entries.addAll(jewel);
-        for (AnvilcraftSmithingRecipes.Entry entry : entries) {
+        for (AnvilcraftSmithingRecipes.Entry entry : smithing) {
             String name = AnvilcraftSmithingRecipes.itemPath(entry.template());
             if (names.add(name)) {
                 list.add(builder().name(name).item(entry.template()).sockets(entry.ingredients().size()).buildBase());

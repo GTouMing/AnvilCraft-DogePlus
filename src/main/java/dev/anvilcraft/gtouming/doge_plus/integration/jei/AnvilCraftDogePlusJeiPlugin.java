@@ -40,9 +40,6 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
     /** 镶嵌锻造：来自前置锻造配方，模具随产物一并消耗。 */
     public static final RecipeType<RecipeHolder<InlayCraftingRecipe>> INLAY_SMITHING =
             RecipeType.createRecipeHolderType(AnvilCraftDogePlus.of("inlay_smithing"));
-    /** 镶嵌复制：来自前置珠宝复制配方，返还模具并产出复制品。 */
-    public static final RecipeType<RecipeHolder<InlayCraftingRecipe>> INLAY_COPYING =
-            RecipeType.createRecipeHolderType(AnvilCraftDogePlus.of("inlay_copying"));
 
     @Override
     public ResourceLocation getPluginUid() {
@@ -55,9 +52,7 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
                 new InlayRecipeCategory(registration.getJeiHelpers().getGuiHelper()),
                 new InlayCraftingRecipeCategory(registration.getJeiHelpers().getGuiHelper()),
                 new InlayCraftingRecipeCategory(registration.getJeiHelpers().getGuiHelper(),
-                        INLAY_SMITHING, "gui.anvilcraft_doge_plus.jei.inlay_smithing"),
-                new InlayCraftingRecipeCategory(registration.getJeiHelpers().getGuiHelper(),
-                        INLAY_COPYING, "gui.anvilcraft_doge_plus.jei.inlay_copying"));
+                        INLAY_SMITHING, "gui.anvilcraft_doge_plus.jei.inlay_smithing"));
     }
 
     @Override
@@ -71,7 +66,6 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
                 .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get());
         registration.addRecipes(INLAY_CRAFTING, byKind(inlayCrafting, InlayCraftingRecipe.Kind.CRAFTING));
         registration.addRecipes(INLAY_SMITHING, byKind(inlayCrafting, InlayCraftingRecipe.Kind.SMITHING));
-        registration.addRecipes(INLAY_COPYING, byKind(inlayCrafting, InlayCraftingRecipe.Kind.COPYING));
     }
 
     /** 按镶合类别筛选配方。 */
@@ -95,8 +89,6 @@ public class AnvilCraftDogePlusJeiPlugin implements IModPlugin {
         registration.addRecipeCatalyst(ModBlocks.INLAY_CRAFTING_TABLE.get(), INLAY_CRAFTING);
         registration.addRecipeCatalyst(ModBlocks.INLAY_TABLE.get(), INLAY_SMITHING);
         registration.addRecipeCatalyst(ModBlocks.INLAY_CRAFTING_TABLE.get(), INLAY_SMITHING);
-        registration.addRecipeCatalyst(ModBlocks.INLAY_TABLE.get(), INLAY_COPYING);
-        registration.addRecipeCatalyst(ModBlocks.INLAY_CRAFTING_TABLE.get(), INLAY_COPYING);
         // 巨狗砧是这两条配方（多方块转化 / 多方块合成）的产物，登记成对应分类的催化方块后，
         // 对着它按 U（用途）就能翻到这两页配方；按 R（来源）则由产物槽给出。
         registration.addRecipeCatalyst(ModBlocks.GIANT_DOGE_ANVIL.get(), AnvilCraftJeiPlugin.MULTIBLOCK_CONVERSION);
