@@ -12,6 +12,9 @@ ae2 = "19.2.18"
 # Storage Drawers：必须用 NeoForge 版本 ID（px0CCB06），
 # 因为 "1.21.1-13.11.4" 被 fabric/forge/neoforge 共用，按版本号会拉到 fabric 版
 storagedrawers = "px0CCB06"
+# Sodium：仅开发环境验证半透明渲染（client-only）。1.21.1 的 LTS 分支为 0.6.x/0.8.x，
+# 本模组的 multipart 兼容性针对该分支，故固定到 1.21.1 的 0.8.13 版本号。
+sodium = "mc1.21.1-0.8.13-neoforge"
 modDevGradle = "2.0.142"
 lombok = "8.7.1"
 
@@ -24,6 +27,7 @@ curios = { group = "top.theillusivec4.curios", name = "curios-neoforge", version
 jade = { group = "maven.modrinth", name = "nvQzSEkH", version.ref = "jade" }
 ae2 = { group = "org.appliedenergistics", name = "appliedenergistics2", version.ref = "ae2" }
 storagedrawers = { group = "maven.modrinth", name = "storagedrawers", version.ref = "storagedrawers" }
+sodium = { group = "maven.modrinth", name = "sodium", version.ref = "sodium" }
 
 [plugins]
 modDevGradle = { id = "net.neoforged.moddev", version.ref = "modDevGradle" }

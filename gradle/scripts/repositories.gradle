@@ -50,10 +50,16 @@ repositories {
             includeGroup "top.theillusivec4.curios"
         }
     }
-    maven { // Jade（玉）
-        name = "Modrinth"
-        url = "https://api.modrinth.com/maven"
-        content {
+    // Modrinth（Jade / Storage Drawers / Sodium 等）。moddev 插件先挂的 NeoForge 仓库不可达时
+    // 会直接连接超时，导致依赖解析失败，因此该 group 固定只从 Modrinth 解析。
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter {
             includeGroup "maven.modrinth"
         }
     }

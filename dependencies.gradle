@@ -27,4 +27,7 @@ dependencies {
     // AE2（应用能源2）— 开发环境软兼容与测试
     compileOnly(libs.ae2)
     runtimeOnly(libs.ae2)
+
+    // Sodium — 仅开发环境验证载体半透明渲染（client-only，不参与编译）
+    runtimeOnly(libs.sodium)
 }
