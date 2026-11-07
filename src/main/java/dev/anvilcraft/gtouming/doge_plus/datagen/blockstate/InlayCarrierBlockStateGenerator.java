@@ -19,7 +19,8 @@ import java.util.List;
  * 镶嵌载体方块状态生成器（仿前置 {@code RedstoneWireBlockStateGenerator}）。
  *
  * <p>以 multipart 声明「哪个状态用哪个模型（含朝向旋转）」：中心体 + 6 面通道（每面已镶嵌即画，
- * 并按面朝向旋转）+ 12 条棱件（两面都落在 {@link InlayCarrierBlock#edgeStates} 时画）。</p>
+ * 并按面朝向旋转）+ 物流载体的 12 条棱件（两面都落在 {@link InlayCarrierBlock#edgeStates} 时画；
+ * 逻辑 / 普通载体的棱件已移除）。</p>
  *
  * <p>通道与棱件都不再分通电 / 未通电：通电与否由 overlay 那层的颜色表现（见 {@code CarrierColorHandler}），
  * 所以两者各只有一套模型，全部规则都能落在 blockstate 上。</p>
@@ -199,8 +200,9 @@ public final class InlayCarrierBlockStateGenerator {
                             .end();
                 }
             }
-            // 通道本身（实心边框）与半透明面板是两个模型、两个渲染层：边框先写深度，面板再混合，
-            // 这样接头处不会因为半透明层不写深度而在 mip 距离上断续。
+            // 通道本身（实心边框）与半透明面板是两个模型、两个渲染层：边框先写深度，面板再混合。
+            // Sodium 的 multipart 会对渲染类型并集逐层发射每个子模型的全部 quad；由
+            // SimpleBakedModelRenderTypeMixin 按 renderType 过滤后，边框与面板各只出现在自己的层。
             if (wirePoweredModel == null) {
                 addWireParts(multipart, provider, face, wireModel, wireGlassModel,
                         CarrierWire.UNPOWERED, CarrierWire.POWERED);
@@ -243,6 +245,9 @@ public final class InlayCarrierBlockStateGenerator {
      *
      * <p>两者贴图不同、渲染层也不同（{@code cutout} / {@code translucent}），但几何位置完全重合，
      * 因此朝向与条件必须完全一致；面板传 {@code null} 表示该通道没有半透明部分。</p>
+     *
+     * <p>Sodium 的 multipart 会对渲染类型并集逐层重复发射子模型。{@link SimpleBakedModelRenderTypeMixin}
+     * 让 {@code SimpleBakedModel} 按 {@code renderType} 过滤，避免面板在 cutout 趟被画成不透明。</p>
      */
     private static void addWireParts(
             MultiPartBlockStateBuilder multipart,
@@ -257,7 +262,12 @@ public final class InlayCarrierBlockStateGenerator {
         }
     }
 
-    /** 加一个通道部件模型：按面朝向旋转，条件为「该面落在 {@code states}」。 */
+    /**
+     * 加一个通道部件模型：按面朝向旋转，条件为「该面落在 {@code states}」。
+     *
+     * <p>通道使用面专用的动态模型（{@code <model>_<face>}）：模型自己读邻居决定画普通 wire
+     * 还是 port 变体，几何仍由这里的旋转负责。</p>
+     */
     private static void addWirePart(
             MultiPartBlockStateBuilder multipart,
             RegistrumBlockstateProvider provider,
@@ -265,7 +275,7 @@ public final class InlayCarrierBlockStateGenerator {
             String model,
             CarrierWire... states) {
         multipart.part()
-                .modelFile(existing(provider, model))
+                .modelFile(existing(provider, model + "_" + face.getSerializedName()))
                 .rotationX(rotX(face))
                 .rotationY(rotY(face))
                 .addModel()

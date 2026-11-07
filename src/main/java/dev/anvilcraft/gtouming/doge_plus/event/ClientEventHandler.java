@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.event;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCraftingTableBlock;
@@ -12,7 +13,9 @@ import dev.anvilcraft.gtouming.doge_plus.client.gui.wheel.CarrierWheelModel;
 import dev.anvilcraft.gtouming.doge_plus.client.renderer.blockentity.InlayCarrierRenderer;
 import dev.anvilcraft.gtouming.doge_plus.client.renderer.blockentity.InlayCraftingTableRenderer;
 import dev.anvilcraft.gtouming.doge_plus.client.renderer.blockentity.InlayTableRenderer;
+import dev.anvilcraft.gtouming.doge_plus.client.renderer.model.BlockStateItemModel;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
+import dev.anvilcraft.gtouming.doge_plus.data.CarrierWire;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
@@ -37,11 +40,16 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.BlockModelShaper;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -353,10 +361,10 @@ public class ClientEventHandler {
         HudTooltipManager.INSTANCE.registerBlockEntityTooltip(new CarrierInspectionProvider());
 
         event.enqueueWork(() -> {
-            // 载体的玻璃区依赖模型自己的 render_type（cutout / translucent 分层）。部分渲染器
-            // （如 Sodium）拿不到逐部件 render_type 时会退回方块级渲染层，默认 solid 会把玻璃画成
-            // 不透明。这里把三个载体整体登记到 translucent 作为兜底：原版渲染器仍优先用各部件模型
-            // 的 render_type（边框依旧是 cutout），只有读不到逐部件信息时才整体走半透明。
+            // 载体的玻璃区依赖逐部件的 render_type（cutout / translucent 分层）。Sodium 的 multipart
+            // 会跨层重复发射子模型，由 SimpleBakedModelRenderTypeMixin 按 renderType 过滤修复。
+            // 这里把三个载体整体登记到 translucent 作为兜底：没有逐部件 render_type 时
+            // （例如其它模组替换了部件模型）仍走半透明层。
             ItemBlockRenderTypes.setRenderLayer(ModBlocks.INLAY_CARRIER.get(), RenderType.translucent());
             ItemBlockRenderTypes.setRenderLayer(ModBlocks.LOGIC_CARRIER.get(), RenderType.translucent());
             ItemBlockRenderTypes.setRenderLayer(ModBlocks.LOGISTICS_CARRIER.get(), RenderType.translucent());
@@ -368,6 +376,42 @@ public class ClientEventHandler {
         for (ModelResourceLocation model : InlayCarrierRenderer.MODELS) {
             event.register(model);
         }
+    }
+
+    /**
+     * 逻辑 / 物流载体的物品图标直接复用方块模型：选一个「四个水平面已镶嵌、上下未镶嵌」的代表状态，
+     * 把该状态的 baked model 包成物品模型。这样 item 不再维护一套手写几何，形状与方块完全一致。
+     */
+    @SubscribeEvent
+    public static void replaceCarrierItemModels(ModelEvent.ModifyBakingResult event) {
+        replaceCarrierItemModel(event, ModBlocks.LOGIC_CARRIER.get());
+        replaceCarrierItemModel(event, ModBlocks.LOGISTICS_CARRIER.get());
+    }
+
+    private static void replaceCarrierItemModel(ModelEvent.ModifyBakingResult event, Block block) {
+        BlockState state = representativeItemState(block);
+        ModelResourceLocation blockModel = BlockModelShaper.stateToModelLocation(state);
+        BakedModel bakedBlockModel = event.getModels().get(blockModel);
+        if (bakedBlockModel == null) {
+            AnvilCraftDogePlus.LOGGER.warn("Carrier item: missing block model {}", blockModel);
+            return;
+        }
+        Item item = block.asItem();
+        if (item == Items.AIR) return;
+        event.getModels().put(
+                ModelResourceLocation.inventory(BuiltInRegistries.ITEM.getKey(item)),
+                new BlockStateItemModel(bakedBlockModel, state));
+    }
+
+    /** 物品图标代表状态：东西南北已镶嵌（未通电），上下空、中心体绘制。 */
+    private static BlockState representativeItemState(Block block) {
+        BlockState state = block.defaultBlockState();
+        for (Direction face : Direction.values()) {
+            state = state.setValue(
+                    InlayCarrierBlock.property(face),
+                    face.getAxis().isHorizontal() ? CarrierWire.UNPOWERED : CarrierWire.NONE);
+        }
+        return state.setValue(InlayCarrierBlock.HUB, true);
     }
 
     @SubscribeEvent

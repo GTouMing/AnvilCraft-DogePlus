@@ -69,16 +69,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
-        "x": 90
-      },
-      "when": {
-        "down": "unpowered|powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_combined_down",
         "x": 90
       },
       "when": {
@@ -101,16 +92,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
-        "x": 270
-      },
-      "when": {
-        "up": "unpowered|powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_combined_up",
         "x": 270
       },
       "when": {
@@ -132,15 +114,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire"
-      },
-      "when": {
-        "north": "unpowered|powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass"
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_combined_north"
       },
       "when": {
         "north": "unpowered|powered"
@@ -162,16 +136,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
-        "y": 180
-      },
-      "when": {
-        "south": "unpowered|powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_combined_south",
         "y": 180
       },
       "when": {
@@ -194,16 +159,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
-        "y": 270
-      },
-      "when": {
-        "west": "unpowered|powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_combined_west",
         "y": 270
       },
       "when": {
@@ -226,16 +182,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire",
-        "y": 90
-      },
-      "when": {
-        "east": "unpowered|powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
+        "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_combined_east",
         "y": 90
       },
       "when": {

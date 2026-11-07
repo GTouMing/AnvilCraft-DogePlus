@@ -27,6 +27,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -176,7 +177,12 @@ public final class GateChainPreviewRenderer {
         SelectionGeometry geometry = OUTLINE_GEOMETRY.get(state);
         if (geometry == null) {
             List<ConvexShape> shapes = new ArrayList<>();
-            for (AABB box : state.getShape(level, pos).toAabbs()) {
+            // 幽灵之间还不存在于世界里，不能让描边把「空气邻居」当成 port 面；
+            // 载体预览统一用不带 port 判定的基础形状，和 ModelData.EMPTY 的幽灵模型一致。
+            VoxelShape shape = state.getBlock() instanceof InlayCarrierBlock
+                    ? InlayCarrierBlock.baseShape(state)
+                    : state.getShape(level, pos);
+            for (AABB box : shape.toAabbs()) {
                 if (box.getXsize() * box.getYsize() < MIN_OUTLINE_EDGE_PRODUCT
                         || box.getYsize() * box.getZsize() < MIN_OUTLINE_EDGE_PRODUCT
                         || box.getZsize() * box.getXsize() < MIN_OUTLINE_EDGE_PRODUCT) {

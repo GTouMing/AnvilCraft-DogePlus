@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.util;
 
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
@@ -51,7 +52,9 @@ public final class InlayInspection {
         if (focus != null) {
             addFace(lines, state, data, inlays, focus, carrier);
         } else if (used == 0) {
-            lines.add(Component.translatable(KEY + "empty").withStyle(ChatFormatting.DARK_GRAY));
+            if (hasSockets(state)) {
+                lines.add(Component.translatable(KEY + "empty").withStyle(ChatFormatting.DARK_GRAY));
+            }
         } else {
             for (Direction direction : Direction.values()) {
                 if (state.getValue(InlayCarrierBlock.property(direction)).isInlaid()) {
@@ -59,9 +62,18 @@ public final class InlayInspection {
                 }
             }
         }
-        lines.add(Component.translatable(KEY + "sockets", used, InlayCarrierBlock.SOCKETS)
-                .withStyle(ChatFormatting.GRAY));
+        // 逻辑 / 物流载体没有镶孔，HUD 不显示镶孔计数。
+        if (hasSockets(state)) {
+            lines.add(Component.translatable(KEY + "sockets", used, InlayCarrierBlock.SOCKETS)
+                    .withStyle(ChatFormatting.GRAY));
+        }
         return lines;
+    }
+
+    /** 只有普通镶嵌载体有镶孔；逻辑 / 物流载体的面是编程出来的。 */
+    private static boolean hasSockets(BlockState state) {
+        return !(state.getBlock() instanceof LogicCarrierBlock)
+                && !(state.getBlock() instanceof LogisticsCarrierBlock);
     }
 
     // ==================== 内部工具 ====================
@@ -75,12 +87,18 @@ public final class InlayInspection {
             Direction direction,
             InlayCarrierBlockEntity carrier) {
         if (!state.getValue(InlayCarrierBlock.property(direction)).isInlaid()) {
-            lines.add(Component.translatable(KEY + "face_empty", faceName(direction))
-                    .withStyle(ChatFormatting.DARK_GRAY));
+            // 特殊载体没有镶孔；未编程的面不显示“未镶嵌”占位行。
+            if (hasSockets(state)) {
+                lines.add(Component.translatable(KEY + "face_empty", faceName(direction))
+                        .withStyle(ChatFormatting.DARK_GRAY));
+            }
             return;
         }
         lines.add(faceLine(data, inlays, direction));
-        lines.add(Component.translatable(KEY + "signal", carrier.signal(direction)).withStyle(ChatFormatting.GRAY));
+        // 物流载体不参与红石，信号强度没有意义，HUD 不显示这一行。
+        if (!(state.getBlock() instanceof LogisticsCarrierBlock)) {
+            lines.add(Component.translatable(KEY + "signal", carrier.signal(direction)).withStyle(ChatFormatting.GRAY));
+        }
         // 物流「存入 / 合成存入」面：物流量在上、过滤在下（与世界渲染里「物品层在数字层之下」对应）。
         // 普通载体的存入 / 取出来自材料，但「合成存入」在普通载体上同样需要显示过滤与物流量。
         if ((state.getBlock() instanceof LogisticsCarrierBlock && data.getFace(direction) == FaceMode.INSERT)
@@ -124,8 +142,8 @@ public final class InlayInspection {
             return Component.translatable(KEY + "line_material", faceName(direction), modeName(mode))
                     .withStyle(ChatFormatting.GRAY);
         }
-        // 镶嵌载体：门种（若该面的材料是门）与材料名并列；搬运 / 远程材料走纯材料行。
-        Component line = mode.isRedstone()
+        // 镶嵌载体：门种 / 搬运角色 / 远程模式与材料名并列；没有面模式时只显示材料。
+        Component line = mode != FaceMode.NONE
                 ? Component.translatable(KEY + "line_gate", faceName(direction), modeName(mode), material)
                 : Component.translatable(KEY + "line_material", faceName(direction), material);
         return line.copy().withStyle(ChatFormatting.GRAY);

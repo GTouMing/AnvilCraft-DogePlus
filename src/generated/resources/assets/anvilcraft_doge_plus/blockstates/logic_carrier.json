@@ -224,7 +224,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_down",
         "x": 90
       },
       "when": {
@@ -233,7 +233,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered_down",
         "x": 90
       },
       "when": {
@@ -306,7 +306,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_up",
         "x": 270
       },
       "when": {
@@ -315,7 +315,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered_up",
         "x": 270
       },
       "when": {
@@ -382,7 +382,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire"
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_north"
       },
       "when": {
         "north": "unpowered"
@@ -390,7 +390,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered"
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered_north"
       },
       "when": {
         "north": "powered"
@@ -462,7 +462,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_south",
         "y": 180
       },
       "when": {
@@ -471,7 +471,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered_south",
         "y": 180
       },
       "when": {
@@ -544,7 +544,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_west",
         "y": 270
       },
       "when": {
@@ -553,7 +553,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered_west",
         "y": 270
       },
       "when": {
@@ -626,7 +626,7 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_east",
         "y": 90
       },
       "when": {
@@ -635,374 +635,11 @@
     },
     {
       "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered",
+        "model": "anvilcraft_doge_plus:block/carrier/logic/wire_powered_east",
         "y": 90
       },
       "when": {
         "east": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge"
-      },
-      "when": {
-        "north": "unpowered|remote",
-        "up": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered"
-      },
-      "when": {
-        "north": "unpowered|powered|remote",
-        "up": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered"
-      },
-      "when": {
-        "north": "powered",
-        "up": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge",
-        "y": 90
-      },
-      "when": {
-        "east": "unpowered|remote",
-        "up": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "y": 90
-      },
-      "when": {
-        "east": "unpowered|powered|remote",
-        "up": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "y": 90
-      },
-      "when": {
-        "east": "powered",
-        "up": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge",
-        "y": 180
-      },
-      "when": {
-        "south": "unpowered|remote",
-        "up": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "y": 180
-      },
-      "when": {
-        "south": "unpowered|powered|remote",
-        "up": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "y": 180
-      },
-      "when": {
-        "south": "powered",
-        "up": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge",
-        "y": 270
-      },
-      "when": {
-        "up": "unpowered|remote",
-        "west": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "y": 270
-      },
-      "when": {
-        "up": "powered",
-        "west": "unpowered|powered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "y": 270
-      },
-      "when": {
-        "up": "unpowered|remote",
-        "west": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge",
-        "x": 180
-      },
-      "when": {
-        "down": "unpowered|remote",
-        "south": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "x": 180
-      },
-      "when": {
-        "down": "powered",
-        "south": "unpowered|powered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "x": 180
-      },
-      "when": {
-        "down": "unpowered|remote",
-        "south": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge",
-        "x": 180,
-        "y": 90
-      },
-      "when": {
-        "down": "unpowered|remote",
-        "west": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "x": 180,
-        "y": 90
-      },
-      "when": {
-        "down": "powered",
-        "west": "unpowered|powered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "x": 180,
-        "y": 90
-      },
-      "when": {
-        "down": "unpowered|remote",
-        "west": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge",
-        "x": 180,
-        "y": 180
-      },
-      "when": {
-        "down": "unpowered|remote",
-        "north": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "x": 180,
-        "y": 180
-      },
-      "when": {
-        "down": "powered",
-        "north": "unpowered|powered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "x": 180,
-        "y": 180
-      },
-      "when": {
-        "down": "unpowered|remote",
-        "north": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge",
-        "x": 180,
-        "y": 270
-      },
-      "when": {
-        "down": "unpowered|remote",
-        "east": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "x": 180,
-        "y": 270
-      },
-      "when": {
-        "down": "powered",
-        "east": "unpowered|powered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_powered",
-        "x": 180,
-        "y": 270
-      },
-      "when": {
-        "down": "unpowered|remote",
-        "east": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical"
-      },
-      "when": {
-        "east": "unpowered|remote",
-        "north": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical_powered"
-      },
-      "when": {
-        "east": "unpowered|powered|remote",
-        "north": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical_powered"
-      },
-      "when": {
-        "east": "powered",
-        "north": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical",
-        "y": 90
-      },
-      "when": {
-        "east": "unpowered|remote",
-        "south": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical_powered",
-        "y": 90
-      },
-      "when": {
-        "east": "unpowered|powered|remote",
-        "south": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical_powered",
-        "y": 90
-      },
-      "when": {
-        "east": "powered",
-        "south": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical",
-        "y": 180
-      },
-      "when": {
-        "south": "unpowered|remote",
-        "west": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical_powered",
-        "y": 180
-      },
-      "when": {
-        "south": "powered",
-        "west": "unpowered|powered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical_powered",
-        "y": 180
-      },
-      "when": {
-        "south": "unpowered|remote",
-        "west": "powered"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical",
-        "y": 270
-      },
-      "when": {
-        "north": "unpowered|remote",
-        "west": "unpowered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical_powered",
-        "y": 270
-      },
-      "when": {
-        "north": "powered",
-        "west": "unpowered|powered|remote"
-      }
-    },
-    {
-      "apply": {
-        "model": "anvilcraft_doge_plus:block/carrier/logic/edge_vertical_powered",
-        "y": 270
-      },
-      "when": {
-        "north": "unpowered|remote",
-        "west": "powered"
       }
     }
   ]

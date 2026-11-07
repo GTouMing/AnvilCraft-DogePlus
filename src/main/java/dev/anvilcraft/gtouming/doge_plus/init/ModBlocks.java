@@ -162,7 +162,15 @@ public class ModBlocks {
                     // 载体的碰撞盒只是中心体等薄件，形状判定的 isSolid() 为 false，水流会把这种
                     // 「非实心」方块冲掉；强制判为实心后水流不再灌入，载体就不会被冲走。
                     .properties(p -> p.isValidSpawn(Blocks::never).forceSolidOn())
-                    .blockstate(InlayCarrierBlockStateGenerator::generate)
+                    // 镶嵌载体单独一套 inlay 模型：默认中心件用物流配色纹理；
+                    // wire 由面级动态模型按镶嵌材料在逻辑 / 物流两套几何之间切换。
+                    .blockstate((context, provider) -> InlayCarrierBlockStateGenerator.generate(
+                            context, provider,
+                            "carrier/inlay/core", "carrier/inlay/core_powered",
+                            "carrier/inlay/core", "carrier/inlay/core_powered",
+                            "carrier/inlay/wire", "carrier/inlay/wire_powered", null,
+                            "carrier/logic/wire_remote", "carrier/logic/wire_remote_powered",
+                            "carrier/logic/edge", null, "carrier/logic/edge_vertical", null, null))
                     .loot(ModBlocks::dropSelfLoot)
                     // 方块状态是 multipart，Registrum 取不到「默认变体的模型」，只能自己指定物品模型。
                     // 部件模型是家族目录，不再按 id 推导，三个载体都得显式给。
@@ -204,9 +212,10 @@ public class ModBlocks {
                             context, provider,
                             "carrier/logistics/core", null, null, null,
                             // 物流载体的远程门也不分通电与否（它整块都不参与红石）：通电变体传 null。
-                            // 通道拆成实心边框（cutout）与半透明面板（translucent）：面板贴图带半透明像素，
-                            // 但边框必须留在会写深度的实心层，否则接头处会随 mip 变淡 / 断续。
-                            "carrier/logistics/wire", null, "carrier/logistics/wire_glass",
+                            // 边框（cutout）与半透明面板（translucent）仍是两个模型，但由 composite 包装成
+                            // blockstate 的单个部件：每个面只生成一个 part，子模型各走自己的渲染层。
+                            // Sodium 的子模型跨层发射由 SimpleBakedModelRenderTypeMixin 按 renderType 过滤。
+                            "carrier/logistics/wire_combined", null, null,
                             "carrier/logistics/wire_remote", null,
                             "carrier/logistics/edge", null, "carrier/logistics/edge_vertical", null,
                             "carrier/logistics/corner"))

@@ -23,4 +23,8 @@ public class DogePlusClientConfig {
      */
     @Comment("像素点阵列改为竖向：镶孔沿纵向排列、属性沿横向展开；关闭时镶孔横向、属性纵向。")
     public boolean verticalInlayDots = false;
+
+    /** 是否在载体面上绘制数值（远程信道号 / 逻辑门设定值 / 物流量）。 */
+    @Comment("在载体面上绘制数字（远程信道号、逻辑门设定值、物流量）；默认关闭。")
+    public boolean showCarrierNumbers = false;
 }

@@ -1,0 +1,11 @@
+{
+	"loader": "anvilcraft_doge_plus:carrier_wire",
+	"face": "up",
+	"normal": "anvilcraft_doge_plus:block/carrier/logic/wire_powered",
+	"port": "anvilcraft_doge_plus:block/carrier/logic/wire_port_powered",
+	"logistics": "anvilcraft_doge_plus:block/carrier/logistics/wire_combined",
+	"logistics_port": "anvilcraft_doge_plus:block/carrier/logistics/wire_port_combined",
+	"textures": {
+		"particle": "anvilcraft_doge_plus:block/inlay_carrier"
+	}
+}

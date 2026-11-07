@@ -180,7 +180,7 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
                 // 远程面：聚焦时只显示信道数字（信道物品由 BER 画在珍珠负块凹槽里，见 renderChannelItem）。
                 float channelOffset = logistics ? LOGISTICS_VALUE_SIDE_OFFSET : GATE_VALUE_SIDE_OFFSET;
                 renderGateValue(poseStack, buffer, focused, inlays.getChannel(focused).number(), packedLight,
-                        channelOffset);
+                        channelOffset, true);
             } else if (logistics) {
                 // 物流「存入」面：过滤物品先画（在数字层之下），物流量数字压在其上层。
                 // 两者都要躲开通道棱件与搬运箭头，故用更大的横向偏移（见 LOGISTICS_VALUE_SIDE_OFFSET）。
@@ -224,6 +224,14 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
     /** 过滤物品比物流量数字再靠里一点：两者同向平行，靠这点深度差保证数字稳定压在物品之上。 */
     private static final float LOGISTICS_FILTER_SIDE_OFFSET = LOGISTICS_VALUE_SIDE_OFFSET;
 
+    /**
+     * 数字沿自身“下”方向（即 {@code -along}，朝核心）的偏移：把数字中心从 0.4 拉到过滤物品中心的 0.3。
+     */
+    private static final float VALUE_DOWN_OFFSET = 0.1F;
+
+    /** 数字沿侧面法线再向外一点：越过被压扁的过滤物品表面，悬浮在物品之上而不是完全重合。 */
+    private static final float VALUE_OUTWARD_OFFSET = 0.01F;
+
     /** 把设定值绘制在通道部件垂直于通道方向的四个侧面上（每个面都朝向该侧外侧）。 */
     private static void renderGateValue(
             PoseStack poseStack,
@@ -242,6 +250,22 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             int value,
             int packedLight,
             float sideOffset) {
+        renderGateValue(poseStack, buffer, face, value, packedLight, sideOffset, false);
+    }
+
+    /**
+     * 同上；{@code remote} 为 true 时数字沿面轴对齐到最小珍珠块的中心坐标，
+     * 而不是走普通面的下移 / 过滤物品对齐。
+     */
+    private static void renderGateValue(
+            PoseStack poseStack,
+            MultiBufferSource buffer,
+            Direction face,
+            int value,
+            int packedLight,
+            float sideOffset,
+            boolean remote) {
+        if (!AnvilCraftDogePlus.CLIENT_CONFIG.showCarrierNumbers) return;
         Font font = Minecraft.getInstance().font;
         String text = String.valueOf(value);
         // 字体以“像素”为单位绘制（行高 9），需缩到通道部件的横截面尺寸：约 1.75/16 格高。
@@ -265,11 +289,14 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             ).getNormalizedRotation(new Quaternionf());
 
             poseStack.pushPose();
-            // 沿通道向方块外侧偏移，避开靠近核心的棱角件对文字的遮挡。
+            // 沿通道向方块外侧偏移，避开靠近核心的棱角件对文字的遮挡；
+            // 普通面沿文字自身的“下”方向（-along）落到过滤物品中心；远程面直接对齐最小珍珠块中心。
+            float alongOffset = remote ? 0.5F - SOCKET_CENTER_Z : 0.4F - VALUE_DOWN_OFFSET;
+            float outward = sideOffset + VALUE_OUTWARD_OFFSET;
             poseStack.translate(
-                    0.5 + along.x() * 0.4F + normal.x() * sideOffset,
-                    0.5 + along.y() * 0.4F + normal.y() * sideOffset,
-                    0.5 + along.z() * 0.4F + normal.z() * sideOffset);
+                    0.5 + along.x() * alongOffset + normal.x() * outward,
+                    0.5 + along.y() * alongOffset + normal.y() * outward,
+                    0.5 + along.z() * alongOffset + normal.z() * outward);
             poseStack.mulPose(rotation);
             // 原版字体以 +Y 为“下”，这里翻转 Y 使文字在世界上正立。
             poseStack.scale(scale, -scale, scale);

@@ -1,0 +1,156 @@
+{
+    "format_version":  "1.9.0",
+    "credit":  "Made with Blockbench",
+    "parent":  "minecraft:block/block",
+    "render_type":  "minecraft:translucent",
+    "textures":  {
+                     "lc":  "anvilcraft_doge_plus:block/inlay_carrier",
+                     "particle":  "anvilcraft_doge_plus:block/inlay_carrier"
+                 },
+    "elements":  [
+                     {
+                         "name":  "c_powered",
+                         "from":  [
+                                      5.5,
+                                      5.5,
+                                      5.5
+                                  ],
+                         "to":  [
+                                    10.5,
+                                    10.5,
+                                    10.5
+                                ],
+                         "faces":  {
+                                       "north":  {
+                                                     "uv":  [
+                                                                11,
+                                                                0,
+                                                                16,
+                                                                5
+                                                            ],
+                                                     "texture":  "#lc"
+                                                 },
+                                       "east":  {
+                                                    "uv":  [
+                                                               11,
+                                                               0,
+                                                               16,
+                                                               5
+                                                           ],
+                                                    "texture":  "#lc"
+                                                },
+                                       "south":  {
+                                                     "uv":  [
+                                                                11,
+                                                                0,
+                                                                16,
+                                                                5
+                                                            ],
+                                                     "texture":  "#lc"
+                                                 },
+                                       "west":  {
+                                                    "uv":  [
+                                                               11,
+                                                               0,
+                                                               16,
+                                                               5
+                                                           ],
+                                                    "texture":  "#lc"
+                                                },
+                                       "up":  {
+                                                  "uv":  [
+                                                             11,
+                                                             0,
+                                                             16,
+                                                             5
+                                                         ],
+                                                  "texture":  "#lc"
+                                              },
+                                       "down":  {
+                                                    "uv":  [
+                                                               11,
+                                                               0,
+                                                               16,
+                                                               5
+                                                           ],
+                                                    "texture":  "#lc"
+                                                }
+                                   }
+                     },
+                     {
+                         "name":  "c1_powered",
+                         "from":  [
+                                      7,
+                                      7,
+                                      7
+                                  ],
+                         "to":  [
+                                    9,
+                                    9,
+                                    9
+                                ],
+                         "faces":  {
+                                       "north":  {
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                2,
+                                                                2
+                                                            ],
+                                                     "texture":  "#lc",
+                                                     "tintindex":  0
+                                                 },
+                                       "east":  {
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               2,
+                                                               2
+                                                           ],
+                                                    "texture":  "#lc",
+                                                    "tintindex":  0
+                                                },
+                                       "south":  {
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                2,
+                                                                2
+                                                            ],
+                                                     "texture":  "#lc",
+                                                     "tintindex":  0
+                                                 },
+                                       "west":  {
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               2,
+                                                               2
+                                                           ],
+                                                    "texture":  "#lc",
+                                                    "tintindex":  0
+                                                },
+                                       "up":  {
+                                                  "uv":  [
+                                                             0,
+                                                             0,
+                                                             2,
+                                                             2
+                                                         ],
+                                                  "texture":  "#lc",
+                                                  "tintindex":  0
+                                              },
+                                       "down":  {
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               2,
+                                                               2
+                                                           ],
+                                                    "texture":  "#lc",
+                                                    "tintindex":  0
+                                                }
+                                   }
+                     }
+                 ]
+}

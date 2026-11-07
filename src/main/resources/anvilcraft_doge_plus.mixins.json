@@ -28,6 +28,7 @@
     "ModelBlockSelectionMixin",
     "ItemEntityRendererMixin",
     "ItemRendererMixin",
+    "SimpleBakedModelRenderTypeMixin",
     "SoundEngineMixin"
   ],
   "injectors": {

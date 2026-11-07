@@ -1,0 +1,9 @@
+{
+	"loader": "anvilcraft_doge_plus:carrier_wire",
+	"face": "east",
+	"normal": "anvilcraft_doge_plus:block/carrier/logic/wire_powered",
+	"port": "anvilcraft_doge_plus:block/carrier/logic/wire_port_powered",
+	"textures": {
+		"particle": "anvilcraft_doge_plus:block/logic_carrier_powered"
+	}
+}

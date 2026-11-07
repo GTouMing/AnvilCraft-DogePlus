@@ -1,0 +1,16 @@
+{
+	"loader": "neoforge:composite",
+	"textures": {
+		"particle": "anvilcraft_doge_plus:block/logistics_carrier"
+	},
+	"children": {
+		"frame": {
+			"parent": "anvilcraft_doge_plus:block/carrier/logistics/wire",
+			"render_type": "minecraft:cutout"
+		},
+		"glass": {
+			"parent": "anvilcraft_doge_plus:block/carrier/logistics/wire_glass",
+			"render_type": "minecraft:translucent"
+		}
+	}
+}

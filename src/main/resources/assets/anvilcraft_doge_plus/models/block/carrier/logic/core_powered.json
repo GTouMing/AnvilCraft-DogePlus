@@ -28,8 +28,7 @@
                                                                 16,
                                                                 5
                                                             ],
-                                                     "texture":  "#lc",
-                                                     "cullface":  "north"
+                                                     "texture":  "#lc"
                                                  },
                                        "east":  {
                                                     "uv":  [
@@ -38,8 +37,7 @@
                                                                16,
                                                                5
                                                            ],
-                                                    "texture":  "#lc",
-                                                    "cullface":  "east"
+                                                    "texture":  "#lc"
                                                 },
                                        "south":  {
                                                      "uv":  [
@@ -48,8 +46,7 @@
                                                                 16,
                                                                 5
                                                             ],
-                                                     "texture":  "#lc",
-                                                     "cullface":  "south"
+                                                     "texture":  "#lc"
                                                  },
                                        "west":  {
                                                     "uv":  [
@@ -58,8 +55,7 @@
                                                                16,
                                                                5
                                                            ],
-                                                    "texture":  "#lc",
-                                                    "cullface":  "west"
+                                                    "texture":  "#lc"
                                                 },
                                        "up":  {
                                                   "uv":  [
@@ -68,8 +64,7 @@
                                                              16,
                                                              5
                                                          ],
-                                                  "texture":  "#lc",
-                                                  "cullface":  "up"
+                                                  "texture":  "#lc"
                                               },
                                        "down":  {
                                                     "uv":  [
@@ -78,8 +73,7 @@
                                                                16,
                                                                5
                                                            ],
-                                                    "texture":  "#lc",
-                                                    "cullface":  "down"
+                                                    "texture":  "#lc"
                                                 }
                                    }
                      },
@@ -104,7 +98,6 @@
                                                                 2
                                                             ],
                                                      "texture":  "#lc",
-                                                     "cullface":  "north",
                                                      "tintindex":  0
                                                  },
                                        "east":  {
@@ -115,7 +108,6 @@
                                                                2
                                                            ],
                                                     "texture":  "#lc",
-                                                    "cullface":  "east",
                                                     "tintindex":  0
                                                 },
                                        "south":  {
@@ -126,7 +118,6 @@
                                                                 2
                                                             ],
                                                      "texture":  "#lc",
-                                                     "cullface":  "south",
                                                      "tintindex":  0
                                                  },
                                        "west":  {
@@ -137,7 +128,6 @@
                                                                2
                                                            ],
                                                     "texture":  "#lc",
-                                                    "cullface":  "west",
                                                     "tintindex":  0
                                                 },
                                        "up":  {
@@ -148,7 +138,6 @@
                                                              2
                                                          ],
                                                   "texture":  "#lc",
-                                                  "cullface":  "up",
                                                   "tintindex":  0
                                               },
                                        "down":  {
@@ -159,7 +148,6 @@
                                                                2
                                                            ],
                                                     "texture":  "#lc",
-                                                    "cullface":  "down",
                                                     "tintindex":  0
                                                 }
                                    }

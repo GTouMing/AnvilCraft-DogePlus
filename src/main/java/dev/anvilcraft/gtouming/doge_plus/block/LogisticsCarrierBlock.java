@@ -1,6 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.block;
 
 import com.mojang.serialization.MapCodec;
+import dev.anvilcraft.gtouming.doge_plus.data.CarrierWire;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -45,6 +46,9 @@ public class LogisticsCarrierBlock extends InlayCarrierBlock {
      * 相邻方块也是镶嵌载体、且本面与它朝向本方的面都开通了通道时，两侧通道对接：剔除本面通道端盖，
      * 免得两层端盖在方块交界处重叠闪烁。只要有一侧未开通通道，端盖就保留。
      *
+     * <p>任一侧是远程面时不再对接剔除：远程面看到的应该是 port 变体的法兰正面，
+     * 不能因为两边都「已镶嵌」就把法兰也剔掉。</p>
+     *
      * <p>通道模型本就给端盖标了 {@code cullface}，只是载体的形状不是满方，默认遮挡判定不会把它当实心，
      * 所以相邻两个载体之间从不触发。相邻的是普通方块时交给默认判定。</p>
      */
@@ -52,7 +56,9 @@ public class LogisticsCarrierBlock extends InlayCarrierBlock {
     public boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
         return adjacentBlockState.getBlock() instanceof InlayCarrierBlock
                 && state.getValue(property(side)).isInlaid()
-                && adjacentBlockState.getValue(property(side.getOpposite())).isInlaid();
+                && adjacentBlockState.getValue(property(side.getOpposite())).isInlaid()
+                && state.getValue(property(side)) != CarrierWire.REMOTE
+                && adjacentBlockState.getValue(property(side.getOpposite())) != CarrierWire.REMOTE;
     }
 
     @Nullable
