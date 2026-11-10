@@ -2,8 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.logic;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.data.CarrierKind;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlocks;
@@ -105,15 +104,16 @@ public final class GateChainBuilder {
         int max = AnvilCraftDogePlus.CONFIG.maxGateChainLength;
         boolean creative = player.getAbilities().instabuild;
         // 链首决定这次拆的是哪一族载体（物流 / 逻辑），后续逐格按同一族校验并返还。
-        boolean logistics = level.getBlockState(requested.getFirst()).getBlock() instanceof LogisticsCarrierBlock;
+        CarrierKind firstKind = InlayCarrierBlock.kindOf(level.getBlockState(requested.getFirst()).getBlock());
+        boolean logistics = firstKind == CarrierKind.LOGISTICS;
+        CarrierKind family = logistics ? CarrierKind.LOGISTICS : CarrierKind.LOGIC;
         BlockPos prev = null;
         int removed = 0;
         for (BlockPos pos : requested) {
             if (removed >= max) break;
             if (prev != null && directionBetween(prev, pos) == null) break;                          // 非相邻：停止
             BlockState state = level.getBlockState(pos);
-            if (logistics ? !(state.getBlock() instanceof LogisticsCarrierBlock)
-                     : !(state.getBlock() instanceof LogicCarrierBlock)) {
+            if (InlayCarrierBlock.kindOf(state.getBlock()) != family) {
                 break;                                                                              // 非同类载体：停止
             }
             level.removeBlock(pos, false);
@@ -198,7 +198,7 @@ public final class GateChainBuilder {
         BlockState originState = level.getBlockState(originPos);
         if (headFaces != null
                 && headFaces.get(originFace.getOpposite()) == FaceMode.INPUT
-                && originState.getBlock() instanceof LogicCarrierBlock
+                && InlayCarrierBlock.kindOf(originState.getBlock()) == CarrierKind.LOGIC
                 && BlockInlayManager.get(level, originPos).getFace(originFace) == FaceMode.NONE) {
             changes.computeIfAbsent(originPos, key -> new HashMap<>()).putIfAbsent(originFace, gate);
         }
@@ -213,7 +213,7 @@ public final class GateChainBuilder {
         // 与上面的出口面取法一致：有最终点击面时写进它的反向（朝向被点击方块），否则背离链条。
         Direction exitFace = finalFace == null ? tailInFace.getOpposite() : finalFace.getOpposite();
         BlockPos beyond = tail.relative(exitFace);
-        if (level.getBlockState(beyond).getBlock() instanceof LogicCarrierBlock
+        if (InlayCarrierBlock.kindOf(level.getBlockState(beyond).getBlock()) == CarrierKind.LOGIC
                 && BlockInlayManager.get(level, beyond).getFace(exitFace.getOpposite()) == FaceMode.NONE) {
             changes.computeIfAbsent(beyond, key -> new HashMap<>())
                     .putIfAbsent(exitFace.getOpposite(), FaceMode.INPUT);
@@ -314,7 +314,7 @@ public final class GateChainBuilder {
             BlockPos pos,
             Direction face,
             FaceMode fill) {
-        if (!(level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock)) return;
+        if (InlayCarrierBlock.kindOf(level.getBlockState(pos).getBlock()) != CarrierKind.LOGISTICS) return;
         if (BlockInlayManager.get(level, pos).getFace(face) != FaceMode.NONE) return;
         changes.computeIfAbsent(pos, key -> new HashMap<>()).putIfAbsent(face, fill);
     }

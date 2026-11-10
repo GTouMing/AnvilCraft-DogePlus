@@ -2,10 +2,10 @@ package dev.anvilcraft.gtouming.doge_plus.logic;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
+import dev.anvilcraft.gtouming.doge_plus.data.CarrierKind;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import it.unimi.dsi.fastutil.longs.*;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
@@ -749,8 +749,9 @@ final class LevelNetworks {
             int outputMask = 0;
             int consumerMask = 0;
             boolean remote = false;
-            boolean logistics = state.getBlock() instanceof LogisticsCarrierBlock;
-            boolean carrier = state.getBlock() instanceof InlayCarrierBlock;
+            CarrierKind carrierKind = InlayCarrierBlock.kindOf(state.getBlock());
+            boolean logistics = carrierKind == CarrierKind.LOGISTICS;
+            boolean carrier = carrierKind != null;
             for (Direction dir : DIRECTIONS) {
                 FaceMode mode = inlays.getFace(dir);
                 int bit = 1 << dir.ordinal();
@@ -905,7 +906,7 @@ final class LevelNetworks {
     /** 该位置上参与红石总线的远程面信道键（物流载体不参与红石总线，返回空）。 */
     private long[] redstoneChannels(BlockPos pos, BlockInlays inlays) {
         if (!level.hasChunkAt(pos)) return NO_CHANNELS;
-        if (level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock) return NO_CHANNELS;
+        if (InlayCarrierBlock.kindOf(level.getBlockState(pos).getBlock()) == CarrierKind.LOGISTICS) return NO_CHANNELS;
         long[] channels = new long[DIRECTIONS.length];
         int count = 0;
         for (Direction dir : DIRECTIONS) {
@@ -1415,7 +1416,7 @@ final class LevelNetworks {
         if (!level.hasChunkAt(pos)) return 0;
         BlockInlays inlays = BlockInlayManager.get(level, pos);
         if (inlays.getFace(dir) != FaceMode.REMOTE) return 0;
-        if (level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock) return 0;
+        if (InlayCarrierBlock.kindOf(level.getBlockState(pos).getBlock()) == CarrierKind.LOGISTICS) return 0;
         return busSignal(inlays.getChannel(dir).key());
     }
 

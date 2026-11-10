@@ -12,15 +12,16 @@ items:
 
 <block id="anvilcraft_doge_plus:doge_anvil"/>
 
-A special anvil: feed it raw meat to raise its growth, and once the limit is reached it turns into the [Giant Doge Anvil](giant_doge_anvil.md).
+An anvil that grows when fed. It also works as an ordinary anvil and can perform anvil-strike processing.
 
-- Hold **raw meat** (beef, porkchop, chicken, mutton or rabbit) and right-click the anvil.
-- Each piece of raw meat adds growth (default `+1`, adjustable in the server config).
-- When growth reaches the limit (default `128`, configurable), the anvil tries to turn into a Giant Doge Anvil in place.
-- If the conversion fails, the growth is kept.
+## Use
+
+1. Place the small anvil and right-click it with raw meat. Each piece adds 1 growth by default; at 128 it attempts to become a [Giant Doge Anvil](giant_doge_anvil.md).
+2. Leave a 3×3 footprint and 3 layers of space with the small anvil at the bottom-center; the other 26 cells must be replaceable.
+3. Blocked growth preserves progress; clear the obstruction and right-click again without feeding more meat.
+
+Before full growth, an ordinary non-feeding right-click opens the anvil interface. See the [Doge Line](../mechanics/doge.md) for accepted meat and magnet transport limits.
+
+## Recipe
 
 <recipe id="anvilcraft_doge_plus:crafting_shaped/doge_anvil"/>
-
-::: tip
-Growth can be adjusted in the server config (`maxGrowth` and `growthPerMeat`).
-:::

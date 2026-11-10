@@ -6,10 +6,10 @@ import com.mojang.math.Axis;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
+import dev.anvilcraft.gtouming.doge_plus.data.CarrierKind;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import dev.dubhe.anvilcraft.block.RedstoneWireBlock;
 import net.minecraft.client.Minecraft;
@@ -125,7 +125,7 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         BlockPos pos = blockEntity.getBlockPos();
         BlockState state = blockEntity.getBlockState();
         BlockInlays inlays = BlockInlayManager.get(level, pos);
-        boolean logistics = state.getBlock() instanceof LogisticsCarrierBlock;
+        boolean logistics = InlayCarrierBlock.kindOf(state.getBlock()) == CarrierKind.LOGISTICS;
 
         // 信道物品可能带半透明贴图，走 translucent：镂空只按 0.1 阈值做 alpha 裁剪，模型贴图的透明度通道
         // 会失效（半透明像素被当成不透明）。连接件与方向指示件仍是镂空。

@@ -12,18 +12,18 @@ items:
 
 <block id="anvilcraft_doge_plus:inlay_crafting_table"/>
 
-镶合配方的工作方块：
+按镶合配方把基材与材料变成新产物。
 
-- 一个基材槽 + 由目标产物过滤/配方决定数量的材料槽（最多 6 个）；每个材料槽只接受对应镶孔要求的材料。
-- 顶面手持放入物品（优先并入空槽/同类槽，槽位全满时替换并返还旧内容物），空手右键取出全部。
-- 铁砧砸落在台面时，先对基材执行材料槽里的全部**静默镶嵌**，再匹配镶合配方；一次砸击产出，产物掉落在下方，使用漏斗/溜槽自动化收集。
+## 使用
 
-镶合台与[镶嵌台](inlay_table.md)可以相互合成：
+1. 顶面右键放入配方基材与材料，空手右键取出全部。
+2. 用铁砧砸击台面，产物掉落在下方。
+3. 需限定收料时，主手持铁砧锤、副手拿目标产物，右键水平侧面设置过滤；空副手清除。
+
+一个基材槽、最多 6 个材料槽。已有镶嵌参与匹配，材料顺序不限，但非空镶嵌的数量必须与配方一致。一次砸击按现有材料支持的份数批量处理；无匹配配方不消耗。规则见[镶嵌与镶合](../mechanics/inlay.md)。
+
+添加或取下镶嵌用[镶嵌台](inlay_table.md)。
 
 <recipe id="anvilcraft_doge_plus:crafting_shapeless/inlay_crafting_table_from_inlay_table"/>
 
 <recipe id="anvilcraft_doge_plus:crafting_shapeless/inlay_table_from_inlay_crafting_table"/>
-
-::: info
-完整的镶嵌与镶合机制见 [机制](../mechanics.md)。
-:::

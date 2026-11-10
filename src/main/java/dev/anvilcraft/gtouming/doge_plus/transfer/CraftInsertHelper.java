@@ -1,8 +1,8 @@
 package dev.anvilcraft.gtouming.doge_plus.transfer;
 
+import dev.anvilcraft.gtouming.doge_plus.util.LogisticsFilterMatcher;
 import dev.dubhe.anvilcraft.api.itemhandler.ItemHandlerUtil;
 import dev.dubhe.anvilcraft.init.item.ModItems;
-import dev.dubhe.anvilcraft.item.FilterItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -82,7 +82,7 @@ final class CraftInsertHelper {
             ItemStack result = recipe.getResultItem(level.registryAccess());
             if (result.isEmpty()) continue;
             if (!ItemStack.isSameItemSameComponents(result, filter)) continue;
-            if (!passesChain(result, chain)) continue;
+            if (!passesChain(level, result, chain)) continue;
 
             int resultCount = result.getCount();
             if (resultCount <= 0) continue;
@@ -102,9 +102,9 @@ final class CraftInsertHelper {
         return 0;
     }
 
-    private static boolean passesChain(ItemStack product, List<ItemStack> chain) {
+    private static boolean passesChain(Level level, ItemStack product, List<ItemStack> chain) {
         for (ItemStack filter : chain) {
-            if (!filter.isEmpty() && !FilterItem.filter(filter, product)) return false;
+            if (!LogisticsFilterMatcher.matches(level, filter, product)) return false;
         }
         return true;
     }

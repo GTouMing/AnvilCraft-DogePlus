@@ -3,6 +3,7 @@ package dev.anvilcraft.gtouming.doge_plus.datagen.blockstate;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.CarrierWire;
+import dev.anvilcraft.gtouming.doge_plus.mixin.SimpleBakedModelRenderTypeMixin;
 import dev.anvilcraft.lib.v2.registrum.providers.DataGenContext;
 import dev.anvilcraft.lib.v2.registrum.providers.RegistrumBlockstateProvider;
 import net.minecraft.core.Direction;

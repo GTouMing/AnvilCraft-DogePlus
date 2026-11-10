@@ -1,30 +1,19 @@
 package dev.anvilcraft.gtouming.doge_plus.block;
 
 import com.mojang.serialization.MapCodec;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.AbstractProcessingTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.shapes.BooleanOp;
-import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -35,14 +24,7 @@ import org.jetbrains.annotations.Nullable;
  * 顶部被铁砧砸击时执行镶嵌（见 {@link InlayTableBlockEntity#processInlay}），
  * 产物与旧材料以掉落物形式生成。</p>
  */
-public class InlayTableBlock extends Block implements EntityBlock {
-
-    private static final VoxelShape AABB = Shapes.or(
-            Block.box(2.0, 12.0, 2.0, 14.0, 16.0, 14.0),
-            Block.box(2.0, 0.0, 2.0, 14.0, 10.0, 14.0),
-            Block.box(4.0, 0.0, 0.0, 12.0, 10.0, 16.0),
-            Block.box(0.0, 0.0, 4.0, 16.0, 10.0, 12.0));
-    private static final VoxelShape SHAPE = Shapes.join(Shapes.block(), AABB, BooleanOp.ONLY_FIRST);
+public class InlayTableBlock extends AbstractInlayTableBlock {
 
     public InlayTableBlock(Properties properties) {
         super(properties);
@@ -67,52 +49,25 @@ public class InlayTableBlock extends Block implements EntityBlock {
                 : null;
     }
 
+    /** 空手取出基材与材料。 */
     @Override
-    protected ItemInteractionResult useItemOn(
-            ItemStack stack,
-            BlockState state,
-            Level level,
-            BlockPos pos,
-            Player player,
-            InteractionHand hand,
-            BlockHitResult hit) {
-        if (hand != InteractionHand.MAIN_HAND) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-        BlockEntity be = level.getBlockEntity(pos);
-        if (!(be instanceof InlayTableBlockEntity table)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-        boolean top = hit.getDirection() == Direction.UP;
-
-        // 放入仅限顶面（输入区）
-        if (!stack.isEmpty() && !top) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-        if (level.isClientSide) return ItemInteractionResult.SUCCESS;
-
-        if (stack.isEmpty()) {
-            // 空手右键：取出基材与材料
-            retrieve(table, level, pos, player, InlayTableBlockEntity.SLOT_BASE);
-            retrieve(table, level, pos, player, InlayTableBlockEntity.SLOT_MATERIAL);
-        } else {
-            // 顶面放入：材料与基材按栈式交互
-            placeStack(table, level, pos, player, stack);
+    protected void retrieve(AbstractProcessingTableBlockEntity table, Level level, BlockPos pos, Player player) {
+        for (int slot = 0; slot < InlayTableBlockEntity.SLOT_COUNT; slot++) {
+            ItemStack slotStack = table.getItemHandler().getStackInSlot(slot);
+            if (slotStack.isEmpty()) continue;
+            player.getInventory().placeItemBackInInventory(slotStack.copy());
+            table.setStackInSlot(slot, ItemStack.EMPTY);
+            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.6f, 1.0f);
         }
-        return ItemInteractionResult.sidedSuccess(false);
-    }
-
-    /** 空手取出指定槽位的物品。 */
-    private static void retrieve(InlayTableBlockEntity table, Level level, BlockPos pos, Player player, int slot) {
-        ItemStack slotStack = table.getItemHandler().getStackInSlot(slot);
-        if (slotStack.isEmpty()) return;
-        player.getInventory().placeItemBackInInventory(slotStack.copy());
-        table.setStackInSlot(slot, ItemStack.EMPTY);
-        level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.6f, 1.0f);
     }
 
     /**
      * 放入：基材槽为空则放基材，否则放镶嵌材料（材料槽已有则替换，旧材料返还玩家）。
-     * 掉落物统一收集为材料（见 {@code InlayTableBlockEntity#tick}），基材经右键放入。
+     * 掉落物统一收集为材料（见 {@link AbstractProcessingTableBlockEntity#tick}），基材经右键放入。
      */
-    private static void placeStack(InlayTableBlockEntity table, Level level, BlockPos pos, Player player, ItemStack stack) {
+    @Override
+    protected void place(
+            AbstractProcessingTableBlockEntity table, Level level, BlockPos pos, Player player, ItemStack stack) {
         int target = table.getItemHandler().getStackInSlot(InlayTableBlockEntity.SLOT_BASE).isEmpty()
                 ? InlayTableBlockEntity.SLOT_BASE
                 : InlayTableBlockEntity.SLOT_MATERIAL;
@@ -135,34 +90,5 @@ public class InlayTableBlock extends Block implements EntityBlock {
             player.getInventory().placeItemBackInInventory(existing.copy());
         }
         level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 0.8f, 1.0f);
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        // 方块被移除（换成了其它方块/空气）时，返还所有槽位物品
-        if (!state.is(newState.getBlock())) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof InlayTableBlockEntity table) {
-                for (int i = 0; i < InlayTableBlockEntity.SLOT_COUNT; i++) {
-                    ItemStack stack = table.getItemHandler().getStackInSlot(i);
-                    if (!stack.isEmpty()) {
-                        ItemEntity item = new ItemEntity(
-                                level,
-                                pos.getX() + 0.5,
-                                pos.getY() + 0.5,
-                                pos.getZ() + 0.5,
-                                stack);
-                        item.setDefaultPickUpDelay();
-                        level.addFreshEntity(item);
-                    }
-                }
-            }
-        }
-        super.onRemove(state, level, pos, newState, moved);
-    }
-
-    @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
     }
 }

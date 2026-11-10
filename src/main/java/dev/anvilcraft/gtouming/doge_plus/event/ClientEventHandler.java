@@ -2,11 +2,8 @@ package dev.anvilcraft.gtouming.doge_plus.event;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
-import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.AbstractInlayTableBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.InlayCraftingTableBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.InlayTableBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.screen.MobileSilencerScreen;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.tooltip.CarrierInspectionProvider;
 import dev.anvilcraft.gtouming.doge_plus.client.gui.wheel.CarrierWheelModel;
@@ -160,8 +157,7 @@ public class ClientEventHandler {
 
             // 镶嵌台 / 镶合台：点按水平侧面 → 用副手物品设定配方过滤（不呼出轮盘）。
             recipeFilterPos = null;
-            if ((state.getBlock() instanceof InlayTableBlock
-                    || state.getBlock() instanceof InlayCraftingTableBlock)
+            if (state.getBlock() instanceof AbstractInlayTableBlock
                     && hit.getDirection().getAxis().isHorizontal()) {
                 recipeFilterPos = pos;
                 return;
@@ -178,8 +174,8 @@ public class ClientEventHandler {
             carrierWheelPos = pos;
             carrierWheelFace = picked != null ? picked : hit.getDirection();
             // 只有逻辑 / 物流载体能呼出轮盘；普通载体只支持点按设信道。
-            carrierWheelCapable = state.getBlock() instanceof LogicCarrierBlock
-                    || state.getBlock() instanceof LogisticsCarrierBlock;
+            carrierWheelCapable = state.getBlock() instanceof InlayCarrierBlock carrierBlock
+                    && carrierBlock.isProgrammable();
             return;
         }
 
@@ -213,9 +209,9 @@ public class ClientEventHandler {
                 if (mode == FaceMode.REMOTE) {
                     PacketDistributor.sendToServer(
                             new SetRemoteChannelItemPacket(carrierWheelPos, carrierWheelFace, held));
-                } else if (mode == FaceMode.CRAFT_INSERT
-                        || (mode == FaceMode.INSERT
-                            && client.level.getBlockState(carrierWheelPos).getBlock() instanceof LogisticsCarrierBlock)) {
+                } else if (client.level.getBlockState(carrierWheelPos).getBlock()
+                        instanceof InlayCarrierBlock carrierBlock
+                        && carrierBlock.supportsTransferSettings(mode)) {
                     PacketDistributor.sendToServer(
                             new SetLogisticsFilterPacket(carrierWheelPos, carrierWheelFace, held));
                 }
@@ -265,14 +261,8 @@ public class ClientEventHandler {
      * {@link SetCarrierFacePacket}，由服务端按方块类型校验取值域。</p>
      */
     private static void openFaceWheel(BlockPos pos, Direction face, BlockState state) {
-        List<FaceMode> options;
-        if (state.getBlock() instanceof LogicCarrierBlock) {
-            options = FaceMode.redstoneValues();
-        } else if (state.getBlock() instanceof LogisticsCarrierBlock) {
-            options = FaceMode.transferValues();
-        } else {
-            return;
-        }
+        if (!(state.getBlock() instanceof InlayCarrierBlock carrier) || !carrier.isProgrammable()) return;
+        List<FaceMode> options = carrier.wheelModes();
         WheelMenuModel model = CarrierWheelModel.build(
                 options,
                 mode -> PacketDistributor.sendToServer(new SetCarrierFacePacket(pos, face, mode)));
@@ -293,8 +283,9 @@ public class ClientEventHandler {
         if (!CarrierQuickEdit.isHeldCarrierOf(player.getMainHandItem(), target)) return false;
         BlockPos otherPos = pos.relative(face);
         Block other = player.level().getBlockState(otherPos).getBlock();
-        return CarrierQuickEdit.isSameType(target, other)
-                || CarrierQuickEdit.isEndpoint(player.level(), otherPos, face.getOpposite(), target);
+        if (CarrierQuickEdit.isSameType(target, other)) return true;
+        return target instanceof InlayCarrierBlock carrier
+                && carrier.supportsEndpoint(player.level(), otherPos, face.getOpposite());
     }
 
     private static void resetCarrierWheel() {
@@ -329,8 +320,8 @@ public class ClientEventHandler {
 
         // 物流载体的「存入 / 合成存入」面：调节物流量。范围比门设定值大，Shift 步幅取 10。
         FaceMode scrollMode = inlays.getFace(face);
-        if ((state.getBlock() instanceof LogisticsCarrierBlock && scrollMode == FaceMode.INSERT)
-                || scrollMode == FaceMode.CRAFT_INSERT) {
+        if (state.getBlock() instanceof InlayCarrierBlock scrollCarrier
+                && scrollCarrier.supportsTransferSettings(scrollMode)) {
             int step = (int) Math.signum(event.getScrollDeltaY()) * (Screen.hasShiftDown() ? 10 : 1);
             if (step == 0) return;
             PacketDistributor.sendToServer(new AdjustLogisticsThroughputPacket(pos, face, step));

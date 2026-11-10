@@ -1,20 +1,19 @@
 ---
 navigation:
   title: "Flying Anvil"
+  icon: "anvilcraft_doge_plus:doge_anvil"
 categories:
   - items
 ---
 
 # Flying Anvil
 
-An anvil launched by the [Doge Magnet](../item/doge_magnet.md). Damage is decided by the server config (`baseDamage` + `perMark` for every mark on the target), the flight speed is configurable, and it disappears forcibly after `flyLifetime` ticks.
+An anvil entity launched by the [Hand Doge Magnet](../item/doge_magnet.md), not a separate craftable item.
 
-## Related config
+## Launching and recovery
 
-| Option        | Default | Meaning                                                              |
-|---------------|---------|----------------------------------------------------------------------|
-| `baseDamage`  | 10      | Base damage when the flying anvil hits an entity.                    |
-| `perMark`     | 2       | Extra damage for every mark on the target.                           |
-| `anvilSpeed`  | 2.5     | Flight speed of the anvil.                                           |
-| `markRange`   | 64      | Line-of-sight ray range (in blocks) for the magnet to mark a target. |
-| `flyLifetime` | 400     | Hard timeout for the anvil's flight (in ticks).                      |
+1. Load an anvil into the magnet, hold right-click on air or a living entity without Shift, then release.
+2. A flying anvil hits each living entity at most once and excludes its owner; it can continue flying after a hit.
+3. A block collision or lifetime timeout drops a recoverable anvil item for reloading; it does not place an anvil block.
+
+Right-click a target along your line of sight with an AnvilCraft Magnet Ingot to add a mark; each consumes 1 ingot. Default damage is 10 + marks × 2. The Doge Magnet is not the marking tool. See the [Doge Line](../mechanics/doge.md) for the rules.

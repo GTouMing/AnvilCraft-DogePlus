@@ -1,8 +1,6 @@
 package dev.anvilcraft.gtouming.doge_plus.util;
 
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
@@ -72,8 +70,7 @@ public final class InlayInspection {
 
     /** 只有普通镶嵌载体有镶孔；逻辑 / 物流载体的面是编程出来的。 */
     private static boolean hasSockets(BlockState state) {
-        return !(state.getBlock() instanceof LogicCarrierBlock)
-                && !(state.getBlock() instanceof LogisticsCarrierBlock);
+        return !(state.getBlock() instanceof InlayCarrierBlock carrier) || carrier.acceptsInlays();
     }
 
     // ==================== 内部工具 ====================
@@ -95,14 +92,18 @@ public final class InlayInspection {
             return;
         }
         lines.add(faceLine(data, inlays, direction));
+        FaceMode mode = data.getFace(direction);
         // 物流载体不参与红石，信号强度没有意义，HUD 不显示这一行。
-        if (!(state.getBlock() instanceof LogisticsCarrierBlock)) {
+        if (!(state.getBlock() instanceof InlayCarrierBlock signalCarrier)
+                || signalCarrier.showsRedstoneSignal()) {
             lines.add(Component.translatable(KEY + "signal", carrier.signal(direction)).withStyle(ChatFormatting.GRAY));
         }
         // 物流「存入 / 合成存入」面：物流量在上、过滤在下（与世界渲染里「物品层在数字层之下」对应）。
         // 普通载体的存入 / 取出来自材料，但「合成存入」在普通载体上同样需要显示过滤与物流量。
-        if ((state.getBlock() instanceof LogisticsCarrierBlock && data.getFace(direction) == FaceMode.INSERT)
-                || data.getFace(direction) == FaceMode.CRAFT_INSERT) {
+        boolean transferSettings = state.getBlock() instanceof InlayCarrierBlock settingsCarrier
+                ? settingsCarrier.supportsTransferSettings(mode)
+                : mode == FaceMode.CRAFT_INSERT;
+        if (transferSettings) {
             lines.add(Component.translatable(KEY + "throughput", data.getThroughput(direction))
                     .withStyle(ChatFormatting.GRAY));
             ItemStack filter = data.getFilter(direction);
@@ -110,7 +111,6 @@ public final class InlayInspection {
                             filter.isEmpty() ? Component.translatable(KEY + "filter_none") : filter.getHoverName())
                     .withStyle(ChatFormatting.GRAY));
         }
-        FaceMode mode = data.getFace(direction);
         if (mode.isRemote()) {
             lines.add(Component.translatable(KEY + "channel", data.getChannel(direction).describe())
                     .withStyle(ChatFormatting.GRAY));

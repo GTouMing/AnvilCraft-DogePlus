@@ -2,7 +2,6 @@ package dev.anvilcraft.gtouming.doge_plus.network;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
@@ -44,14 +43,12 @@ public record AdjustLogisticsThroughputPacket(BlockPos pos, Direction face, int 
         if (player.level().isClientSide) return;
         Level level = player.level();
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof InlayCarrierBlock)) return;
+        if (!(state.getBlock() instanceof InlayCarrierBlock carrier)) return;
 
         BlockInlays inlays = BlockInlayManager.get(level, pos);
         // 「存入 / 合成存入」面有物流量语义（取出面固定整叠）。
         FaceMode mode = inlays.getFace(face);
-        boolean allowed = mode == FaceMode.CRAFT_INSERT
-                || (state.getBlock() instanceof LogisticsCarrierBlock && mode == FaceMode.INSERT);
-        if (!allowed) return;
+        if (!carrier.supportsTransferSettings(mode)) return;
 
         int value = Math.clamp(inlays.getThroughput(face) + delta, 1, AnvilCraftDogePlus.CONFIG.logisticsThroughputMax);
         BlockInlayManager.put(level, pos, inlays.withThroughput(face, value));

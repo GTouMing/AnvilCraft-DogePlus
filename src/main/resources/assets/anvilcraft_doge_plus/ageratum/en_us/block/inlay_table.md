@@ -12,14 +12,16 @@ items:
 
 <block id="anvilcraft_doge_plus:inlay_table"/>
 
-The workstation of the inlay system (only **explicit inlay recipes**):
+Adds, replaces or removes inlays on a socketed base; an explicit recipe determines what fits.
 
-- First right-click to insert the item to be inlaid. The base material provides the **sockets**.
-- Then right-click to insert the material to embed; the material must have a matching `recipe/inlay` recipe. Use the [Inlay Crafting Table](inlay_crafting_table.md) for silent-inlay materials.
-- An anvil landing on the table performs the inlay; products drop below, and can be collected automatically with hoppers/chutes.
+## Use
+
+1. Right-click a socketed base into the table, then insert the recipe's material.
+2. Strike the table with an anvil; outputs drop below it.
+3. To remove an inlay, insert only the base, leave the material slot empty and strike again.
+
+Adding fills the first empty socket. A full base has its selected inlay replaced and the old material returned; removal does not shift later sockets. See [Inlay and Inlay Crafting](../mechanics/inlay.md) for the full rules.
+
+Hold an Anvil Hammer in the main hand and a sample base in the offhand, then right-click a horizontal side to set a filter; it cannot replace a recipe. To craft a new product, use the [Inlay Crafting Table](inlay_crafting_table.md).
 
 <recipe id="anvilcraft_doge_plus:crafting_shaped/inlay_table"/>
-
-::: info
-For a full explanation of the inlay mechanics, see [Mechanics](../mechanics.md).
-:::

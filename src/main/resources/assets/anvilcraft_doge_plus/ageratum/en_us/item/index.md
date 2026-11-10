@@ -6,13 +6,13 @@ navigation:
 
 # Items
 
-Items added by this mod, grouped by use:
+Items added by this mod, grouped by use. For block items, see [Blocks](../block/index.md).
 
 ## Materials
 
-- [Doge Steel Ingot](doge_steel_ingot.md): The mod's core material, super-heated from Iron Ingots and Bone Meal.
+- [Doge Steel Ingot](doge_steel_ingot.md)
 
-## Tools & Equipment
+## Tools and equipment
 
-- [Hand Doge Magnet](doge_magnet.md): Stores and launches anvils; attracts items and experience.
-- [Mobile Silencer](mobile_silencer.md): A wearable active silencer.
+- [Hand Doge Magnet](doge_magnet.md)
+- [Mobile Silencer](mobile_silencer.md)

@@ -1,29 +1,19 @@
 package dev.anvilcraft.gtouming.doge_plus.block;
 
+import com.mojang.serialization.MapCodec;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.AbstractProcessingTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCraftingTableBlockEntity;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.shapes.BooleanOp;
-import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -34,17 +24,15 @@ import org.jetbrains.annotations.Nullable;
  * （见 {@link InlayCraftingTableBlockEntity#processCrafting}），产物以掉落物形式生成在台体下方，
  * 供漏斗/溜槽等自动化收集。</p>
  */
-public class InlayCraftingTableBlock extends Block implements EntityBlock {
-
-    private static final VoxelShape AABB = Shapes.or(
-            Block.box(2.0, 12.0, 2.0, 14.0, 16.0, 14.0),
-            Block.box(2.0, 0.0, 2.0, 14.0, 10.0, 14.0),
-            Block.box(4.0, 0.0, 0.0, 12.0, 10.0, 16.0),
-            Block.box(0.0, 0.0, 4.0, 16.0, 10.0, 12.0));
-    private static final VoxelShape SHAPE = Shapes.join(Shapes.block(), AABB, BooleanOp.ONLY_FIRST);
+public class InlayCraftingTableBlock extends AbstractInlayTableBlock {
 
     public InlayCraftingTableBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public MapCodec<InlayCraftingTableBlock> codec() {
+        return simpleCodec(InlayCraftingTableBlock::new);
     }
 
     @Override
@@ -61,38 +49,9 @@ public class InlayCraftingTableBlock extends Block implements EntityBlock {
                 : null;
     }
 
-    @Override
-    protected ItemInteractionResult useItemOn(
-            ItemStack stack,
-            BlockState state,
-            Level level,
-            BlockPos pos,
-            Player player,
-            InteractionHand hand,
-            BlockHitResult hit) {
-        if (hand != InteractionHand.MAIN_HAND) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-        BlockEntity be = level.getBlockEntity(pos);
-        if (!(be instanceof InlayCraftingTableBlockEntity table)) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-        }
-
-        boolean top = hit.getDirection() == Direction.UP;
-        // 放入仅限顶面（输入区）
-        if (!stack.isEmpty() && !top) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-        if (level.isClientSide) return ItemInteractionResult.SUCCESS;
-
-        if (stack.isEmpty()) {
-            retrieve(table, level, pos, player);
-        } else {
-            placeStack(table, level, pos, player, stack);
-        }
-        return ItemInteractionResult.sidedSuccess(false);
-    }
-
     /** 空手取出全部槽位物品。 */
-    private static void retrieve(InlayCraftingTableBlockEntity table, Level level, BlockPos pos, Player player) {
+    @Override
+    protected void retrieve(AbstractProcessingTableBlockEntity table, Level level, BlockPos pos, Player player) {
         boolean any = false;
         for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
             ItemStack slotStack = table.getItemHandler().getStackInSlot(slot);
@@ -107,8 +66,9 @@ public class InlayCraftingTableBlock extends Block implements EntityBlock {
     }
 
     /** 放入：优先并入可合并的空槽/同类槽；全满时替换第一个接受的槽，旧物返还玩家。 */
-    private static void placeStack(
-            InlayCraftingTableBlockEntity table, Level level, BlockPos pos, Player player, ItemStack stack) {
+    @Override
+    protected void place(
+            AbstractProcessingTableBlockEntity table, Level level, BlockPos pos, Player player, ItemStack stack) {
         for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
             if (!table.accepts(slot, stack)) continue;
             ItemStack existing = table.getItemHandler().getStackInSlot(slot);
@@ -134,33 +94,5 @@ public class InlayCraftingTableBlock extends Block implements EntityBlock {
             level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 0.8f, 1.0f);
             return;
         }
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        // 方块被移除（换成了其它方块/空气）时，返还全部槽位物品
-        if (!state.is(newState.getBlock())) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof InlayCraftingTableBlockEntity table) {
-                for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
-                    ItemStack stack = table.getItemHandler().getStackInSlot(slot);
-                    if (stack.isEmpty()) continue;
-                    ItemEntity item = new ItemEntity(
-                            level,
-                            pos.getX() + 0.5,
-                            pos.getY() + 0.5,
-                            pos.getZ() + 0.5,
-                            stack);
-                    item.setDefaultPickUpDelay();
-                    level.addFreshEntity(item);
-                }
-            }
-        }
-        super.onRemove(state, level, pos, newState, moved);
-    }
-
-    @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
     }
 }

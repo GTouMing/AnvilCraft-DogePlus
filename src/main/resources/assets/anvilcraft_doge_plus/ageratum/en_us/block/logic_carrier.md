@@ -12,12 +12,14 @@ items:
 
 <block id="anvilcraft_doge_plus:logic_carrier"/>
 
-- The logic gate type of each face can be programmed; hold an Anvil Hammer and long-press right-click to open the wheel.
-- Setting value: aim at the face and adjust it with **Ctrl + scroll wheel**.
-- Faces that have not been programmed neither accept redstone input nor output redstone signals.
+A socketless programmable redstone block that selects a logic gate or Remote mode independently for each face.
+
+## Use
+
+1. Place it between a signal source and a target. Hold an Anvil Hammer, long-press right-click the source-facing side and select Input.
+2. Set the target-facing side to Output; aim at a face and use Ctrl + scroll to adjust its signal limit or gate setting.
+3. Extend a line by connecting the output gate to the next carrier's Input face.
+
+Remote connections need Input and Remote on the sender, and a matching Remote face plus an output gate on the receiver. See [Carrier mechanics](../mechanics/carriers.md) for gates, remote channels, quick editing and chains.
 
 <recipe id="anvilcraft_doge_plus:inlay_crafting/logic_carrier"/>
-
-::: info
-For gate behavior and setting values, see [Mechanics](../mechanics.md).
-:::

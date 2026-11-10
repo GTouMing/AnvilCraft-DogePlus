@@ -12,13 +12,16 @@ items:
 
 <item id="anvilcraft_doge_plus:doge_magnet"/>
 
-A hand-held magnet that stores and launches anvils:
+A tool for storing, placing and launching anvils, attracting items and XP, and placing [Doge Nodes](../entity/doge_node.md).
 
-- **Right-click an Anvil** to store it in the magnet.
-- **Right-click a block** to place the stored anvil.
-- **(With an anvil stored) Right-click the air or an entity** to charge, then **release** to fire; hitting an entity deals damage.
-- **(With no anvil stored) Right-click the air**: attracts nearby items and experience orbs.
-- **Shift + right-click**: place a [Doge Node](../entity/doge_node.md).
-- Can be repaired with Doge Steel Ingots.
+## Use
+
+- Right-click an anvil with an empty magnet to store it; with an anvil stored, right-click a valid position to place it, or hold right-click on air or a living entity without Shift and release to launch a [Flying Anvil](../entity/flying_anvil.md).
+
+- With an empty magnet and no anvil to load, right-click air without Shift to attract items and XP; Shift + right-click a support to operate a Doge Node.
+
+The magnet has 255 durability and is repaired with [Doge Steel Ingots](doge_steel_ingot.md); storage keeps only the anvil type, not growth. See the [Doge Line](../mechanics/doge.md) for the full controls.
+
+## Recipe
 
 <recipe id="anvilcraft_doge_plus:crafting_shaped/doge_magnet"/>

@@ -10,10 +10,17 @@ items:
 
 # 巨型 Doge 砧
 
-<item id="anvilcraft_doge_plus:giant_doge_anvil"/>
+<block id="anvilcraft_doge_plus:giant_doge_anvil"/>
 
-Doge 砧成长满值后转化而成的 3×3×3 多方块结构，也可使用多方块转化配方。继承巨型铁砧的全部功能，这意味着能够绕过腐化信标，通过不同的方式获取巨型铁砧。
+占据 3×3×3 空间的巨型铁砧，用于需要巨型铁砧砸击的加工。
 
-<recipe id="anvilcraft_doge_plus:multiblock_conversion/giant_doge_anvil"/>
+## 使用
+
+- **喂食成长**：给 [Doge 砧](doge_anvil.md)喂生肉达到成长上限。小砧是巨型结构的底层中心，其余 26 格必须可被替换。
+- **结构转化**：也可由 19 个 [Doge 钢块](doge_steel_block.md)按下方结构搭建转化。
+
+成长参数与重试规则见 [Doge 系列](../mechanics/doge.md)。
+
+## 结构
 
 <structure id="../../structures/giant_doge_anvil_multiblock_conversion.nbt"/>

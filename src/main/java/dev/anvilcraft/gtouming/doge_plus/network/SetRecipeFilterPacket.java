@@ -1,11 +1,7 @@
 package dev.anvilcraft.gtouming.doge_plus.network;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
-import dev.anvilcraft.gtouming.doge_plus.block.InlayCraftingTableBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.InlayTableBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCraftingTableBlockEntity;
-import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayTableBlockEntity;
-import dev.anvilcraft.gtouming.doge_plus.util.RecipeFilterUtil;
+import dev.anvilcraft.gtouming.doge_plus.block.entity.RecipeFilterHost;
 import dev.anvilcraft.lib.v2.network.packet.IInsensitiveBiPacket;
 import dev.anvilcraft.lib.v2.network.packet.IPacket;
 import net.minecraft.core.BlockPos;
@@ -17,7 +13,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -52,20 +47,12 @@ public record SetRecipeFilterPacket(BlockPos pos, ItemStack filter) implements I
         Level level = player.level();
         if (player.distanceToSqr(Vec3.atCenterOf(pos)) > MAX_DISTANCE_SQR) return;
 
-        BlockState state = level.getBlockState(pos);
         BlockEntity blockEntity = level.getBlockEntity(pos);
-        ItemStack normalized = filter.isEmpty() ? ItemStack.EMPTY : filter.copyWithCount(1);
+        if (!(blockEntity instanceof RecipeFilterHost host)) return;
 
-        if (state.getBlock() instanceof InlayTableBlock && blockEntity instanceof InlayTableBlockEntity table) {
-            if (!RecipeFilterUtil.canSetInlayTableFilter(normalized, level)) return;
-            table.setRecipeFilter(normalized);
-        } else if (state.getBlock() instanceof InlayCraftingTableBlock
-                && blockEntity instanceof InlayCraftingTableBlockEntity crafting) {
-            if (!RecipeFilterUtil.canSetCraftingTableFilter(normalized, level)) return;
-            crafting.setRecipeFilter(normalized);
-        } else {
-            return;
-        }
+        ItemStack normalized = filter.isEmpty() ? ItemStack.EMPTY : filter.copyWithCount(1);
+        if (!host.canSetFilter(normalized, level)) return;
+        host.setRecipeFilter(normalized);
 
         level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.6f, 1.0f);
     }

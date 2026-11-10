@@ -4,17 +4,11 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCraftingTableBlockEntity;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,7 +18,7 @@ import java.util.List;
  * （1 居中、2 分开、3 对角、4 正方、5 分岔、6 两列）；未放入的材料槽不占位。
  * 材料缩放与镶嵌台材料槽保持一致。
  */
-public class InlayCraftingTableRenderer implements BlockEntityRenderer<InlayCraftingTableBlockEntity> {
+public class InlayCraftingTableRenderer extends AbstractTableRenderer<InlayCraftingTableBlockEntity> {
 
     /** 骰子点数布局（x, z）；下标即材料槽序号。 */
     private static final float[][] DICE_1 = {{0.5F, 0.5F}};
@@ -52,6 +46,7 @@ public class InlayCraftingTableRenderer implements BlockEntityRenderer<InlayCraf
     }
 
     public InlayCraftingTableRenderer(BlockEntityRendererProvider.Context context) {
+        super(context);
     }
 
     @Override
@@ -116,27 +111,6 @@ public class InlayCraftingTableRenderer implements BlockEntityRenderer<InlayCraf
             poseStack.popPose();
         }
 
-        FilterIconRenderer.renderOnHorizontalSides(
-                poseStack, bufferSource, blockEntity.getLevel(), blockEntity.getBlockPos(),
-                blockEntity.getRecipeFilter(), packedLight, packedOverlay);
-    }
-
-    @Override
-    public AABB getRenderBoundingBox(InlayCraftingTableBlockEntity blockEntity) {
-        // 过滤图标贴在四个水平侧面外侧，包围盒略外扩避免被视锥剔除。
-        return new AABB(blockEntity.getBlockPos()).inflate(0.5);
-    }
-
-    private void renderItem(ItemStack stack, int packedLight, int packedOverlay,
-                            PoseStack poseStack, MultiBufferSource bufferSource, @Nullable Level level, int seed) {
-        Minecraft.getInstance().getItemRenderer().renderStatic(
-                stack,
-                ItemDisplayContext.NONE,
-                packedLight,
-                packedOverlay,
-                poseStack,
-                bufferSource,
-                level,
-                seed);
+        renderFilter(poseStack, bufferSource, blockEntity, packedLight, packedOverlay);
     }
 }

@@ -1,13 +1,14 @@
 package dev.anvilcraft.gtouming.doge_plus.transfer;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
-import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
+import dev.anvilcraft.gtouming.doge_plus.data.CarrierKind;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
+import dev.anvilcraft.gtouming.doge_plus.util.LogisticsFilterMatcher;
 import dev.dubhe.anvilcraft.api.itemhandler.ItemHandlerUtil;
 import dev.dubhe.anvilcraft.init.item.ModItems;
-import dev.dubhe.anvilcraft.item.FilterItem;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -22,6 +23,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -560,7 +562,7 @@ final class LevelTransferNetworks {
                     SourceRoute route = rf.sources.get(rf.pointer);
                     IItemHandler handler = this.sourceHandler(handlers, route.source());
                     if (handler != null
-                            && canSupply(handler, rf.target, rf.limit, rf.filter, route.chainFilters())) break;
+                            && canSupply(this.level, handler, rf.target, rf.limit, rf.filter, route.chainFilters())) break;
                     rf.pointer++;
                     progress = true;
                 }
@@ -619,7 +621,7 @@ final class LevelTransferNetworks {
                 RoundFace rf = group.get(i);
                 // 服务面自身的过滤 + 沿途每一道「存入」面的过滤，逐级校验。
                 ObjectArrayList<ItemStack> chain = rf.sources.get(rf.pointer).chainFilters();
-                boolean ok = moveOneStack(handler, rf.target, shares[i], rf.filter, chain);
+                boolean ok = moveOneStack(this.level, handler, rf.target, shares[i], rf.filter, chain);
                 // 把这次用到的取出源（在 rf.pointer，未必是队首）转到队尾，下一轮先试新的队首：
                 // 成功 → 多取出对一个存入时轮流取货，不会一直压着最近的；失败 → 下一轮别再先选它，
                 // 免得它（模拟与实际不一致等情形下）一直挡住后面的货源。轮转状态就存在这份缓存列表里。
@@ -674,11 +676,12 @@ final class LevelTransferNetworks {
      * 表现为「一个取不到货的近端源把远端源全都挡住」。这里直接跳过这类源，顺延到下一个。</p>
      */
     private static boolean canSupply(
-            IItemHandler source, IItemHandler target, int limit, ItemStack serviceFilter, List<ItemStack> chain) {
+            Level level, IItemHandler source, IItemHandler target, int limit,
+            ItemStack serviceFilter, List<ItemStack> chain) {
         for (int slot = 0; slot < source.getSlots(); slot++) {
             ItemStack available = source.extractItem(slot, limit, true);
             if (available.isEmpty()) continue;
-            if (!passesAll(available, serviceFilter, chain)) continue;
+            if (!passesAll(level, available, serviceFilter, chain)) continue;
             ItemStack leftover = ItemHandlerUtil.insertItem(target, available, true);
             if (leftover.getCount() < available.getCount()) return true;
         }
@@ -686,10 +689,11 @@ final class LevelTransferNetworks {
     }
 
     /** 物品是否通过服务面过滤与沿途每一道「存入」面的过滤（逐级 AND）。 */
-    private static boolean passesAll(ItemStack item, ItemStack serviceFilter, List<ItemStack> chain) {
-        if (!serviceFilter.isEmpty() && !FilterItem.filter(serviceFilter, item)) return false;
+    private static boolean passesAll(
+            Level level, ItemStack item, ItemStack serviceFilter, List<ItemStack> chain) {
+        if (!LogisticsFilterMatcher.matches(level, serviceFilter, item)) return false;
         for (ItemStack filter : chain) {
-            if (!filter.isEmpty() && !FilterItem.filter(filter, item)) return false;
+            if (!LogisticsFilterMatcher.matches(level, filter, item)) return false;
         }
         return true;
     }
@@ -730,12 +734,12 @@ final class LevelTransferNetworks {
      * @return 是否真的搬动了物品
      */
     private static boolean moveOneStack(
-            IItemHandler source, IItemHandler target, int limit,
+            Level level, IItemHandler source, IItemHandler target, int limit,
             ItemStack serviceFilter, List<ItemStack> chainFilters) {
         for (int slot = 0; slot < source.getSlots(); slot++) {
             ItemStack available = source.extractItem(slot, limit, true);
             if (available.isEmpty()) continue;
-            if (!passesAll(available, serviceFilter, chainFilters)) continue;
+            if (!passesAll(level, available, serviceFilter, chainFilters)) continue;
             ItemStack leftover = ItemHandlerUtil.insertItem(target, available, true);
             int accepted = available.getCount() - leftover.getCount();
             if (accepted <= 0) continue;
@@ -833,7 +837,7 @@ final class LevelTransferNetworks {
     private long[] remoteChannels(BlockPos pos, BlockInlays data) {
         // 未加载时不强制加载区块：等它加载后由 chunkLoaded 重新播种。
         if (!this.level.hasChunkAt(pos)) return NO_CHANNELS;
-        if (!(this.level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock)) return NO_CHANNELS;
+        if (InlayCarrierBlock.kindOf(this.level.getBlockState(pos).getBlock()) != CarrierKind.LOGISTICS) return NO_CHANNELS;
         long[] channels = new long[Direction.values().length];
         int count = 0;
         for (Direction dir : Direction.values()) {

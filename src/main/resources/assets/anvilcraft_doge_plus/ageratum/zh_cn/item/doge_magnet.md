@@ -12,13 +12,16 @@ items:
 
 <item id="anvilcraft_doge_plus:doge_magnet"/>
 
-可收纳和发射铁砧的手持磁铁：
+能收纳、放置、发射铁砧，也能吸引物品与经验、放置 [Doge 节点](../entity/doge_node.md)的工具。
 
-- **右键铁砧** 收纳进磁铁。
-- **右键方块** 放置存储的铁砧。
-- **（装有铁砧时）右键空气或实体** 蓄力，**松开**发射，命中实体造成伤害。
-- **（未装铁砧时）右键空气**： 吸引附近物品与经验球。
-- **Shift + 右键**： 放置 [Doge 节点](../entity/doge_node.md)。
-- 可用 Doge 钢锭修复。
+## 使用
+
+- 空磁铁右键铁砧收纳；已收纳右键合适位置放回，不按 Shift 按住右键空气或生物后松开发射[飞行铁砧](../entity/flying_anvil.md)。
+
+- 空磁铁且无待装铁砧时，不按 Shift 右键空气吸物；Shift + 右键支撑方块操作 Doge 节点。
+
+耐久 255，可用 [Doge 钢锭](doge_steel_ingot.md)修复；收纳不保存成长值。完整动作见 [Doge 系列](../mechanics/doge.md)。
+
+## 配方
 
 <recipe id="anvilcraft_doge_plus:crafting_shaped/doge_magnet"/>

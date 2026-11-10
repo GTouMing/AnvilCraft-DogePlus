@@ -4,23 +4,16 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayTableBlockEntity;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
-
-import javax.annotation.Nullable;
 
 
 /**
  * 渲染镶嵌台各槽位物品：基材与镶嵌材料平躺居中于平台（基材占满平台、材料缩小至中央孔洞）。
  */
-public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEntity> {
+public class InlayTableRenderer extends AbstractTableRenderer<InlayTableBlockEntity> {
 
     private static final float[] ITEM_Y = {
             0.75F,   // SLOT_BASE 平台中央
@@ -44,6 +37,7 @@ public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEn
     };
 
     public InlayTableRenderer(BlockEntityRendererProvider.Context context) {
+        super(context);
     }
 
     @Override
@@ -76,27 +70,6 @@ public class InlayTableRenderer implements BlockEntityRenderer<InlayTableBlockEn
             poseStack.popPose();
         }
 
-        FilterIconRenderer.renderOnHorizontalSides(
-                poseStack, bufferSource, blockEntity.getLevel(), blockEntity.getBlockPos(),
-                blockEntity.getRecipeFilter(), packedLight, packedOverlay);
-    }
-
-    @Override
-    public AABB getRenderBoundingBox(InlayTableBlockEntity blockEntity) {
-        // 过滤图标贴在四个水平侧面外侧，包围盒略外扩避免被视锥剔除。
-        return new AABB(blockEntity.getBlockPos()).inflate(0.5);
-    }
-
-    private void renderItem(ItemStack stack, int packedLight, int packedOverlay,
-                            PoseStack poseStack, MultiBufferSource bufferSource, @Nullable Level level, int seed) {
-        Minecraft.getInstance().getItemRenderer().renderStatic(
-                stack,
-                ItemDisplayContext.NONE,
-                packedLight,
-                packedOverlay,
-                poseStack,
-                bufferSource,
-                level,
-                seed);
+        renderFilter(poseStack, bufferSource, blockEntity, packedLight, packedOverlay);
     }
 }

@@ -2,11 +2,22 @@ package dev.anvilcraft.gtouming.doge_plus.block;
 
 import com.mojang.serialization.MapCodec;
 import dev.anvilcraft.gtouming.doge_plus.block.entity.InlayCarrierBlockEntity;
+import dev.anvilcraft.gtouming.doge_plus.data.CarrierKind;
+import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
+import dev.anvilcraft.gtouming.doge_plus.data.FaceRole;
 import dev.anvilcraft.gtouming.doge_plus.init.ModBlockEntities;
+import dev.anvilcraft.gtouming.doge_plus.logic.LogicGateNetworkManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 逻辑载体：没有任何镶孔，六个面的门类型由玩法即时编程。
@@ -26,15 +37,64 @@ public class LogicCarrierBlock extends InlayCarrierBlock {
         super(properties);
     }
 
-    /**
-     * 没有镶孔：不接受用镶嵌材料写入面属性，面属性只能通过轮盘 / 门链编程。
-     *
-     * <p>这项限制同时让材料镶嵌路径上的配方校验自动拒绝本方块（它没有
-     * {@code material/base} 定义），无需在交互事件里额外判断。</p>
-     */
+    @Override
+    public CarrierKind kind() {
+        return CarrierKind.LOGIC;
+    }
+
     @Override
     public boolean acceptsInlays() {
         return false;
+    }
+
+    @Override
+    public boolean acceptsMode(FaceMode mode) {
+        return mode == FaceMode.NONE || mode.isRemote() || mode.isRedstone();
+    }
+
+    @Override
+    public FaceMode inputMode() {
+        return FaceMode.INPUT;
+    }
+
+    @Override
+    public FaceMode outputMode() {
+        return FaceMode.OUTPUT;
+    }
+
+    @Override
+    public List<FaceMode> wheelModes() {
+        return FaceMode.redstoneValues();
+    }
+
+    @Override
+    public FaceRole faceRole(FaceMode mode) {
+        if (mode == FaceMode.NONE) return FaceRole.EMPTY;
+        return mode == FaceMode.INPUT || mode == FaceMode.DELAY_INPUT_GATE
+                ? FaceRole.INPUT
+                : FaceRole.OUTPUT;
+    }
+
+    @Override
+    public void clearFaceRuntime(Level level, BlockPos pos, Set<Direction> faces) {
+        for (Direction face : faces) {
+            LogicGateNetworkManager.clearFaceSignal(level, pos, face);
+        }
+    }
+
+    @Override
+    protected VoxelShape visualCoreShape(BlockState state) {
+        return state.getValue(HUB) ? LOGIC_CORE : union(coreCrossBoxes(state));
+    }
+
+    @Override
+    protected VoxelShape[] shapeCache() {
+        return LOGIC_SHAPE_CACHE;
+    }
+
+    @Override
+    protected Map<Integer, VoxelShape> portShapeCache() {
+        return LOGIC_PORT_SHAPE_CACHE;
     }
 
     @Override

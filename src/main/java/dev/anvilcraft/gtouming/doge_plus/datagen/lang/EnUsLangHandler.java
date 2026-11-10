@@ -80,10 +80,10 @@ public class EnUsLangHandler {
         // ===== Item descriptions (mirrors base tooltip.anvilcraft.item.<id>, looked up by item id) =====
         provider.add("tooltip.anvilcraft_doge_plus.item.doge_steel_ingot", "A piece of iron with good malleability");
         provider.add("tooltip.anvilcraft_doge_plus.item.doge_steel_block", "A large block of iron with good malleability");
-        provider.add("tooltip.anvilcraft_doge_plus.item.chute_dispenser", "A combination of a Chute/Magnetic Chute and a Dispenser/Dropper, dispensing/dropping up to nine times the amount");
-        provider.add("tooltip.anvilcraft_doge_plus.item.chute_dropper", "A combination of a Chute/Magnetic Chute and a Dispenser/Dropper, dispensing/dropping up to nine times the amount");
-        provider.add("tooltip.anvilcraft_doge_plus.item.magnetic_chute_dispenser", "A combination of a Chute/Magnetic Chute and a Dispenser/Dropper, dispensing/dropping up to nine times the amount");
-        provider.add("tooltip.anvilcraft_doge_plus.item.magnetic_chute_dropper", "A combination of a Chute/Magnetic Chute and a Dispenser/Dropper, dispensing/dropping up to nine times the amount");
+        provider.add("tooltip.anvilcraft_doge_plus.item.chute_dispenser", "A Chute and Dispenser combined; dispensing up to nine times the amount");
+        provider.add("tooltip.anvilcraft_doge_plus.item.chute_dropper", "A Chute and Dropper combined; dropping up to nine times the amount");
+        provider.add("tooltip.anvilcraft_doge_plus.item.magnetic_chute_dispenser", "A Magnetic Chute and Dispenser combined; dispensing up to nine times the amount");
+        provider.add("tooltip.anvilcraft_doge_plus.item.magnetic_chute_dropper", "A Magnetic Chute and Dropper combined; dropping up to nine times the amount");
         provider.add("tooltip.anvilcraft_doge_plus.item.doge_anvil", "Try feeding it raw meat?");
         provider.add("tooltip.anvilcraft_doge_plus.item.giant_doge_anvil", "Big doge anvil");
         provider.add("tooltip.anvilcraft_doge_plus.item.doge_magnet", "A more powerful handheld magnet");

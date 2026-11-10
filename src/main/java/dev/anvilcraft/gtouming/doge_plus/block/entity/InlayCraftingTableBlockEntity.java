@@ -4,34 +4,16 @@ import dev.anvilcraft.gtouming.doge_plus.init.ModRecipeTypes;
 import dev.anvilcraft.gtouming.doge_plus.recipe.inlay_crafting.InlayCraftingRecipe;
 import dev.anvilcraft.gtouming.doge_plus.util.InlayUtil;
 import dev.anvilcraft.gtouming.doge_plus.util.RecipeFilterUtil;
-import dev.dubhe.anvilcraft.api.itemhandler.IItemHandlerHolder;
-import lombok.Getter;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -41,7 +23,7 @@ import java.util.List;
  * （物品 + 全部镶孔）；命中则一次耗尽整叠：按份生成配方声明的全部产物（含返还的模具），
  * 均落在台体下方，供漏斗/溜槽等自动化收集；产物区域位于收集区之外，不会被自身 tick 吸回。</p>
  */
-public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemHandlerHolder {
+public class InlayCraftingTableBlockEntity extends AbstractProcessingTableBlockEntity {
 
     public static final int SLOT_BASE = 0;
     public static final int SLOT_MATERIAL_START = 1;
@@ -49,146 +31,12 @@ public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemH
     public static final int MATERIAL_SLOTS = 6;
     public static final int SLOT_COUNT = SLOT_MATERIAL_START + MATERIAL_SLOTS;
 
-    private final ItemStack[] slots = new ItemStack[SLOT_COUNT];
-
-    /** 副手铁砧锤设定的配方过滤物品：镶合台按目标产物解释；空栈表示不过滤。
-     * -- GETTER --
-     * 当前配方过滤物品；空栈表示不过滤。
-     */
-    @Getter
-    private ItemStack recipeFilter = ItemStack.EMPTY;
-
-    // ==================== IItemHandler 实现 ====================
-
-    /**
-     * 内部存储：读写抽取都正常，供本方块自身与玩家交互使用。
-     *
-     * <p>与前置加工台 {@code ProcessingTableBlockEntity} 一样，真正存放材料的是这份内部
-     * handler，对外只暴露下面的 {@link #proxy}——「存储输入材料、不存储输出产物」，
-     * 产物由镶合流程从台体下方掉出。</p>
-     */
-    private final ItemStackHandler input = new ItemStackHandler(SLOT_COUNT) {
-        @Override
-        public ItemStack getStackInSlot(int slot) {
-            return isValidSlot(slot) ? slots[slot] : ItemStack.EMPTY;
-        }
-
-        @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (!isValidSlot(slot) || stack.isEmpty()) return stack.copy();
-            if (!accepts(slot, stack)) return stack.copy();
-
-            ItemStack existing = slots[slot];
-            ItemStack remaining = stack.copy();
-            if (existing.isEmpty()) {
-                if (!simulate) {
-                    slots[slot] = remaining;
-                    syncToClient();
-                }
-                return ItemStack.EMPTY;
-            }
-
-            if (!ItemStack.isSameItemSameComponents(existing, stack)) {
-                return remaining;
-            }
-            int space = existing.getMaxStackSize() - existing.getCount();
-            int toMove = Math.min(space, stack.getCount());
-            remaining.shrink(toMove);
-
-            if (!simulate) {
-                existing.grow(toMove);
-                syncToClient();
-            }
-            return remaining;
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (!isValidSlot(slot)) return ItemStack.EMPTY;
-            ItemStack existing = slots[slot];
-            int extracted = Math.min(amount, existing.getCount());
-            ItemStack result = existing.copyWithCount(extracted);
-            if (!simulate) {
-                existing.shrink(extracted);
-                syncToClient();
-            }
-            return result;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return 64;
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return isValidSlot(slot) && !stack.isEmpty() && accepts(slot, stack);
-        }
-
-        @Override
-        public int getSlots() {
-            return SLOT_COUNT;
-        }
-    };
-
-    /**
-     * 对外暴露给漏斗 / 溜槽 / 物流的代理（同前置加工台的 {@code proxy}）：可以放入基材，
-     * 但**一律拒绝抽取**——存储的基材只由镶合流程消耗或玩家手动取用，因此溜槽只会吸到
-     * 从台下方掉出的产物，不会把材料槽里的基材吸走。
-     */
-    private final ItemStackHandler proxy = new ItemStackHandler(SLOT_COUNT) {
-        @Override
-        public ItemStack getStackInSlot(int slot) {
-            return input.getStackInSlot(slot);
-        }
-
-        @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            return input.insertItem(slot, stack, simulate);
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            return ItemStack.EMPTY;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return input.getSlotLimit(slot);
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return input.isItemValid(slot, stack);
-        }
-
-        @Override
-        public void setSize(int size) {
-        }
-
-        @Override
-        public void setStackInSlot(int slot, ItemStack stack) {
-            input.setStackInSlot(slot, stack);
-        }
-
-        @Override
-        public int getSlots() {
-            return input.getSlots();
-        }
-    };
-
-    /** 对外（能力）暴露的代理：只进不出。 */
-    @Override
-    public IItemHandler getItemHandler() {
-        return proxy;
-    }
-
-    /** 内部存储，供本方块自身读写。 */
-    public IItemHandler getInput() {
-        return input;
+    public InlayCraftingTableBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state, SLOT_COUNT);
     }
 
     /** 该槽位是否接受该物品（基材槽按产物过滤；材料槽按过滤决定的数量与对应 matcher）。 */
+    @Override
     public boolean accepts(int slot, ItemStack stack) {
         if (slot == SLOT_BASE) {
             return RecipeFilterUtil.acceptsCraftingTable(recipeFilter, stack, level);
@@ -205,78 +53,25 @@ public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemH
         return RecipeFilterUtil.craftingTableMaterialSlotCount(recipeFilter, slots[SLOT_BASE], level);
     }
 
-    /** 设定 / 清除配方过滤物品（服务端调用）。 */
-    public void setRecipeFilter(ItemStack stack) {
-        this.recipeFilter = stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(1);
-        syncToClient();
-    }
-
-    // ==================== 构造 ====================
-
-    public InlayCraftingTableBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
-        super(type, pos, state);
-        Arrays.fill(slots, ItemStack.EMPTY);
-    }
-
-    private boolean isValidSlot(int slot) {
-        return slot >= 0 && slot < SLOT_COUNT;
-    }
-
-    public void setStackInSlot(int slot, ItemStack stack) {
-        if (!isValidSlot(slot)) return;
-        slots[slot] = stack.copy();
-        syncToClient();
-    }
-
-    // ==================== 客户端同步 ====================
-
-    private void syncToClient() {
-        setChanged();
-        if (level == null || level.isClientSide) return;
-        level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
-    }
-
+    /** 收集掉落物：按槽位顺序依次插入，直到装不下。 */
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        CompoundTag tag = super.getUpdateTag(registries);
-        saveAdditional(tag, registries);
-        return tag;
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    // ==================== Tick：收集投入的物品 ====================
-
-    public void tick() {
-        if (level == null || level.isClientSide) return;
-
-        // 仅收集投进顶部凹槽内（水平 2..14/16、高度 10..16 像素）的掉落物；
-        // 产物生成在台体下方（见 dropItem），位于此 AABB 之外，不会被吸回。
-        AABB box = new AABB(
-                getBlockPos().getX() + 0.125, getBlockPos().getY() + 0.625, getBlockPos().getZ() + 0.125,
-                getBlockPos().getX() + 0.875, getBlockPos().getY() + 1.0, getBlockPos().getZ() + 0.875);
-
-        for (ItemEntity entity : level.getEntitiesOfClass(ItemEntity.class, box)) {
-            if (entity.isRemoved() || entity.getItem().isEmpty()) continue;
-
-            ItemStack item = entity.getItem();
-            ItemStack remaining = item;
-            for (int slot = 0; slot < SLOT_COUNT && !remaining.isEmpty(); slot++) {
-                if (!accepts(slot, remaining)) continue;
-                remaining = input.insertItem(slot, remaining, false);
-            }
-            if (remaining.getCount() == item.getCount()) continue;
-
-            if (remaining.isEmpty()) {
-                entity.discard();
-            } else {
-                entity.setItem(remaining);
-            }
-            syncToClient();
+    protected ItemStack collectInto(ItemStack stack, ItemEntity entity) {
+        ItemStack remaining = stack;
+        for (int slot = 0; slot < SLOT_COUNT && !remaining.isEmpty(); slot++) {
+            if (!accepts(slot, remaining)) continue;
+            remaining = getInput().insertItem(slot, remaining, false);
         }
+        return remaining;
+    }
+
+    @Override
+    public boolean canSetFilter(ItemStack stack, Level level) {
+        return RecipeFilterUtil.canSetCraftingTableFilter(stack, level);
+    }
+
+    @Override
+    public boolean onAnvilStrike(Level level, BlockPos pos, float fallDistance) {
+        return processCrafting();
     }
 
     // ==================== 核心：镶合处理 ====================
@@ -417,69 +212,5 @@ public class InlayCraftingTableBlockEntity extends BlockEntity implements IItemH
             if (recipe.matches(base)) return recipe;
         }
         return null;
-    }
-
-    // ==================== 产物输出 ====================
-
-    /** 在台体正下方生成 count 份掉落物；超出单堆上限时按堆叠上限分堆。 */
-    private void dropItem(ItemStack stack, int count) {
-        if (level == null || level.isClientSide || stack.isEmpty() || count <= 0) return;
-        int max = stack.getMaxStackSize();
-        while (count > 0) {
-            int batch = Math.min(count, max);
-            dropItem(stack.copyWithCount(batch));
-            count -= batch;
-        }
-    }
-
-    /** 在台体正下方生成一个掉落物（位于顶部收集 AABB 外，不会被自身 tick 吸回）。 */
-    private void dropItem(ItemStack stack) {
-        if (level == null || level.isClientSide || stack.isEmpty()) return;
-        BlockPos pos = getBlockPos();
-        ItemEntity item = new ItemEntity(
-                level,
-                pos.getX() + 0.5,
-                pos.getY(),
-                pos.getZ() + 0.5,
-                stack,
-                0.0, 0.0, 0.0);
-        item.setDefaultPickUpDelay();
-        level.addFreshEntity(item);
-    }
-
-    private void playEffects(Level level) {
-        level.playSound(null, getBlockPos(), SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0f, 1.0f);
-        if (level instanceof ServerLevel server) {
-            server.sendParticles(
-                    ParticleTypes.CRIT,
-                    getBlockPos().getX() + 0.5,
-                    getBlockPos().getY() + 1.0,
-                    getBlockPos().getZ() + 0.5,
-                    12, 0.3, 0.2, 0.3, 0.05
-            );
-        }
-    }
-
-    // ==================== 持久化 ====================
-
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        ListTag list = new ListTag();
-        for (ItemStack slot : slots) {
-            list.add(slot.saveOptional(registries));
-        }
-        tag.put("Slots", list);
-        tag.put("RecipeFilter", recipeFilter.saveOptional(registries));
-    }
-
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        ListTag list = tag.getList("Slots", Tag.TAG_COMPOUND);
-        for (int i = 0; i < Math.min(list.size(), slots.length); i++) {
-            slots[i] = ItemStack.parseOptional(registries, list.getCompound(i));
-        }
-        recipeFilter = ItemStack.parseOptional(registries, tag.getCompound("RecipeFilter"));
     }
 }

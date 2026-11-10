@@ -1,12 +1,12 @@
 ---
 navigation:
   title: "Entities"
-  icon: "anvilcraft_doge_plus:doge_node"
+  icon: "anvilcraft_doge_plus:doge_magnet"
 ---
 
 # Entities
 
-Entities added by this mod:
+These entities are created with the [Hand Doge Magnet](../item/doge_magnet.md), not crafted as standalone items:
 
-- [Doge Node](doge_node.md): A special magnetized node placed with the Doge Magnet.
-- [Flying Anvil](flying_anvil.md): An anvil launched by the Doge Magnet.
+- [Doge Node](doge_node.md)
+- [Flying Anvil](flying_anvil.md)

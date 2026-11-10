@@ -2,8 +2,7 @@ package dev.anvilcraft.gtouming.doge_plus.client.chain;
 
 import dev.anvilcraft.gtouming.doge_plus.AnvilCraftDogePlus;
 import dev.anvilcraft.gtouming.doge_plus.block.InlayCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogicCarrierBlock;
-import dev.anvilcraft.gtouming.doge_plus.block.LogisticsCarrierBlock;
+import dev.anvilcraft.gtouming.doge_plus.data.CarrierKind;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlayManager;
 import dev.anvilcraft.gtouming.doge_plus.data.BlockInlays;
 import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
@@ -92,6 +91,9 @@ public final class GateChainGesture {
 
         ItemStack main = player.getMainHandItem();
         BlockPos pos = hit.getBlockPos().immutable();
+        InlayCarrierBlock targetCarrier = level.getBlockState(pos).getBlock() instanceof InlayCarrierBlock carrier
+                ? carrier
+                : null;
         if (main.is(ModBlocks.LOGIC_CARRIER.asItem()) || main.is(ModBlocks.LOGISTICS_CARRIER.asItem())) {
             mode = Mode.PLACE;
             logistics = main.is(ModBlocks.LOGISTICS_CARRIER.asItem());
@@ -100,10 +102,9 @@ public final class GateChainGesture {
             originFace = pickedFace(player, level, hit, pos);
             gateType = resolveGateType(player.getOffhandItem());
         } else if (main.is(ModItemTags.ANVIL_HAMMER)
-                && (level.getBlockState(pos).getBlock() instanceof LogicCarrierBlock
-                    || level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock)) {
+                && targetCarrier != null && targetCarrier.isProgrammable()) {
             mode = Mode.REMOVE;
-            logistics = level.getBlockState(pos).getBlock() instanceof LogisticsCarrierBlock;
+            logistics = targetCarrier.kind() == CarrierKind.LOGISTICS;
             // 移除：链首就是点击的载体本身，之后沿准星跟随相邻的同类载体。
             originPos = pos;
             originFace = pickedFace(player, level, hit, pos);
@@ -233,7 +234,7 @@ public final class GateChainGesture {
         if (mode == Mode.REMOVE) {
             return (from, step, next) -> {
                 Block block = level.getBlockState(next).getBlock();
-                if (logistics ? !(block instanceof LogisticsCarrierBlock) : !(block instanceof LogicCarrierBlock)) return false;
+                if (InlayCarrierBlock.kindOf(block) != (logistics ? CarrierKind.LOGISTICS : CarrierKind.LOGIC)) return false;
                 // 链首是玩家点击的那个载体，没有「上一格」可比。
                 if (from == null || step == null) return true;
                 return logistics ? transferLinked(level, from, step, next) : signalLinked(level, from, step, next);

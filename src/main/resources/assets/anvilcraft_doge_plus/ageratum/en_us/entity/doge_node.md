@@ -1,22 +1,21 @@
 ---
 navigation:
   title: "Doge Node"
-  icon: "anvilcraft_doge_plus:doge_node"
+  icon: "anvilcraft_doge_plus:doge_magnet"
 categories:
   - items
-items:
-  - anvilcraft_doge_plus:doge_node
 ---
 
 # Doge Node
 
 <entity id="anvilcraft_doge_plus:doge_node"/>
 
-A special magnetized node placed by **Shift + right-click** with the [Hand Doge Magnet](../item/doge_magnet.md):
+An item-buffer node created with the [Hand Doge Magnet](../item/doge_magnet.md).
 
-- Captures up to **8 stacks of items**, usable as external storage for all kinds of processing tables.
-- Inherits the item-attraction behavior of the magnetized node.
-- Right-click it with an empty hand to retrieve the captured items.
-- Shift + right-click with the magnet to remove the node.
-- When a chute outputs toward the node, items are captured straight into it, which is handy for automation.
-- When the block it is attached to is moved by a slide rail or a piston, the node does not disappear immediately; together with the previous point, this makes assembling block sequences and pushing items into blocks much easier.
+## Placement and retrieval
+
+1. Hold an empty magnet in the main hand and Shift + right-click a support; the node appears at the top-center and captures up to 8 stacks.
+
+2. With an empty main hand, right-click the node's support to retrieve items; hold a Doge Magnet and Shift + right-click to remove the node and release its contents.
+
+See the [Doge Line](../mechanics/doge.md) for the rules.

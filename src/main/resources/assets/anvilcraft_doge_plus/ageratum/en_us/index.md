@@ -1,27 +1,34 @@
 ---
 navigation:
-  title: "Doge+ Intro"
+  title: "About Doge+"
   icon: "anvilcraft_doge_plus:doge_steel_ingot"
-  position: -1
+  weight: -1
 ---
 
-# AnvilCraft: Doge+ Manual
+# AnvilCraft: Doge+ Guide
 
-Welcome to **AnvilCraft: Doge+**, an add-on for [AnvilCraft](https://github.com/Anvil-Dev/AnvilCraft) built around the **Doge** series of materials.
+AnvilCraft: Doge+ is an addon for [AnvilCraft](https://github.com/Anvil-Dev/AnvilCraft). Inlays and inlay crafting extend item properties, redstone logic and item transport, alongside the Doge line of tools and blocks.
 
-This mod brings three major pieces of content:
+Run `/ageratum anvilcraft_doge_plus` to open the guide. Hover over an item with a guide entry in your inventory and hold `W` to open its page.
 
-- **Inlay System** A brand-new mechanic: apply explicit inlay recipes at the Inlay Table, or process silent-inlay materials together with the base at the Inlay Crafting Table, to grant items special properties.
-- **Inlay Crafting Recipes** Recipes built on the inlay system that combine items/blocks carrying the specified inlays into new items/blocks.
-- **Quality of Life** Chute dispenser/dropper variants, a stronger-attracting Doge Node, a Doge Magnet that stores/launches anvils, and a wearable Mobile Silencer.
+## Getting started
 
-::: info
-Feedback and suggestions for this mod are welcome at [AnvilCraft: Doge+](https://github.com/GtouMing/AnvilCraft-DogePlus).
-:::
+1. Superheat iron ingots with bone meal into [Doge Steel Ingots](item/doge_steel_ingot.md), then craft an [Inlay Table](block/inlay_table.md).
+2. Place a base with sockets and a suitable material in the table, then strike it with an anvil. See [Inlay and Inlay Crafting](mechanics/inlay.md) for sockets, properties and removal.
+3. Continue as needed: build redstone or transport networks with [Carriers](mechanics/carriers.md), dispense or throw items with [Chutes](mechanics/chutes.md), or explore the [Doge Line](mechanics/doge.md).
 
-## Navigation
+## Contents
 
-- [Mechanics](mechanics.md) An in-depth explanation of the inlay system and inlay crafting recipes.
-- [Items](item/index.md) Items added by this mod, with uses and recipes.
-- [Blocks](block/index.md) Blocks added by this mod, with uses and recipes.
-- [Entities](entity/index.md) Entities added by this mod.
+| Section | Contents |
+|---|---|
+| [Mechanics](mechanics/index.md) | Shared rules, controls, limits and terminology |
+| [Blocks](block/index.md) | Uses and recipes for processing tables, carriers, chutes and Doge blocks |
+| [Items](item/index.md) | Doge Steel Ingot, Hand Doge Magnet and Mobile Silencer |
+| [Entities](entity/index.md) | Doge Node and Flying Anvil |
+
+## Requirements and feedback
+
+- Minecraft 1.21.1, NeoForge and Java 21; requires the AnvilCraft 1.6.0 line.
+- Optional integrations: Curios (Mobile Silencer accessory slot) and JEI (recipe lookup).
+- Values in this guide are defaults; server configuration and data packs may change them.
+- Report issues and suggestions at [AnvilCraft: Doge+](https://github.com/GtouMing/AnvilCraft-DogePlus).

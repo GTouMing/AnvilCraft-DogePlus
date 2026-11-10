@@ -12,9 +12,14 @@ items:
 
 <block id="anvilcraft_doge_plus:doge_steel_block"/>
 
-Doge 钢锭的九合一配方，同时也是巨型 Doge 砧多方块结构的材料。
+[Doge 钢锭](../item/doge_steel_ingot.md)的储存块，也是 Doge 砧配方与[巨型 Doge 砧](giant_doge_anvil.md)转化结构的材料。
 
-- 合成：9 锭 → 1 块（分解：1 块 → 9 锭）。
-- 高温熔炼铁块与骨块也可直接获得 Doge 钢块：
+- 9 个钢锭合成 1 个钢块，1 个钢块可拆回 9 个钢锭。
+- 铁块与骨块可通过本体的超温配方直接制成钢块。
+- 巨型结构使用钢块搭建；给小砧喂肉成长是另一条路线，不需要在小砧周围放钢块。
+
+<recipe id="anvilcraft_doge_plus:crafting_shaped/doge_steel_block"/>
 
 <recipe id="anvilcraft_doge_plus:super_heating/doge_steel_block"/>
+
+规则见 [Doge 系列](../mechanics/doge.md)。
