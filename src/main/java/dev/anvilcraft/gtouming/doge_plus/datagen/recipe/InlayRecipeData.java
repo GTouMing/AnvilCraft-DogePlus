@@ -61,7 +61,7 @@ public record InlayRecipeData(String inlay, String base) {
             new InlayRecipeData(ETERNAL, ENCHANTABLES),
             new InlayRecipeData(GENERATOR, ACCELERATION_RING),
             new InlayRecipeData(GENERATOR, DEFLECTION_RING),
-            new InlayRecipeData(IRON_INGOT, HOLLOW_MAGNET_BLOCK),
+            // 空心磁铁块 + 铁锭 → 磁铁锭已迁到镶合配方（InlayCraftingData），不再生成镶嵌配方
             new InlayRecipeData(LIFE, ARMORS),
             new InlayRecipeData(MAGNETIC, DOGE_STEEL_BLOCK),
             new InlayRecipeData(RESONANCE, ENCHANTABLES),

@@ -19,8 +19,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * 镶嵌台：镶嵌配方的工作方块。
  *
- * <p>顶面为输入区：手持物品放入时按栈式交互（全空→基材，否则→镶嵌材料，
- * 替换仅能替换镶嵌材料）；空手右键取出全部（基材+材料）。
+ * <p>顶面为输入区：手持物品放入时按栈式交互（基材槽只接受带镶孔的物品，
+ * 否则放入镶嵌材料；替换仅能替换镶嵌材料）；空手右键取出全部（基材+材料）。
  * 顶部被铁砧砸击时执行镶嵌（见 {@link InlayTableBlockEntity#processInlay}），
  * 产物与旧材料以掉落物形式生成。</p>
  */
@@ -74,11 +74,11 @@ public class InlayTableBlock extends AbstractInlayTableBlock {
 
         // 配方过滤：优先按栈式规则选槽；该槽不接受时，若另一槽为空且接受则改放另一槽，
         // 避免设定过滤后只能先放基材才能放材料。
-        if (!table.accepts(target, stack)) {
+        if (!table.canPlace(target, stack)) {
             int other = target == InlayTableBlockEntity.SLOT_BASE
                     ? InlayTableBlockEntity.SLOT_MATERIAL
                     : InlayTableBlockEntity.SLOT_BASE;
-            if (!table.getItemHandler().getStackInSlot(other).isEmpty() || !table.accepts(other, stack)) return;
+            if (!table.getItemHandler().getStackInSlot(other).isEmpty() || !table.canPlace(other, stack)) return;
             target = other;
         }
 

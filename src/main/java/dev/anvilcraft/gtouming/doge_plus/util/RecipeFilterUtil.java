@@ -82,25 +82,38 @@ public final class RecipeFilterUtil {
     }
 
     /**
-     * 镶合台材料槽数量：目标产物过滤时由该产物镶合配方的 {@code inlays} 数量决定；
-     * 无过滤 / {@code anvilcraft:filter} 时保留最大 6 槽。
+     * 镶合台材料槽数量：基材为空时固定 0，确保基材先入槽；有基材后按剩余空镶孔开放，
+     * 有目标产物过滤时再受「该配方还缺的镶孔数」限制。
      */
     public static int craftingTableMaterialSlotCount(ItemStack filter, ItemStack base, @Nullable Level level) {
-        if (filter.isEmpty() || isFilterItem(filter)) {
-            return InlayCraftingTableBlockEntity.MATERIAL_SLOTS;
-        }
-        if (level == null) {
-            return InlayCraftingTableBlockEntity.MATERIAL_SLOTS;
-        }
+        if (base.isEmpty()) return 0;
+
+        int sockets = MaterialManager.getSocketCount(base);
+        int filled = filledSockets(base);
+        int remaining = Math.min(
+                Math.max(0, sockets - filled),
+                InlayCraftingTableBlockEntity.MATERIAL_SLOTS);
+        if (filter.isEmpty() || isFilterItem(filter) || level == null) return remaining;
+
         int max = 0;
         for (RecipeHolder<InlayCraftingRecipe> holder : level.getRecipeManager()
                 .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get())) {
             InlayCraftingRecipe recipe = holder.value();
             if (!produces(recipe, filter)) continue;
-            if (!base.isEmpty() && recipe.getBaseItem() != base.getItem()) continue;
-            max = Math.max(max, Math.min(recipe.inlays().size(), InlayCraftingTableBlockEntity.MATERIAL_SLOTS));
+            if (recipe.getBaseItem() != base.getItem()) continue;
+            int missing = Math.max(0, recipe.inlays().size() - filled);
+            max = Math.max(max, Math.min(remaining, missing));
         }
         return max;
+    }
+
+    /** 基材上已填入的镶孔数量（空占位不计）。 */
+    private static int filledSockets(ItemStack base) {
+        int filled = 0;
+        for (InlayEntry entry : InlayUtil.getInlays(base)) {
+            if (!entry.isEmpty()) filled++;
+        }
+        return filled;
     }
 
     /**
@@ -115,6 +128,7 @@ public final class RecipeFilterUtil {
                 || materialIndex >= InlayCraftingTableBlockEntity.MATERIAL_SLOTS) {
             return false;
         }
+        if (materialIndex >= craftingTableMaterialSlotCount(filter, base, level)) return false;
         if (isFilterItem(filter)) return FilterItem.filter(filter, stack);
         // 客户端拿不到完整配方表，放行以避免误拒；服务端权威。
         if (level == null || level.isClientSide) return true;
@@ -131,6 +145,49 @@ public final class RecipeFilterUtil {
             if (!base.isEmpty() && recipe.getBaseItem() != base.getItem()) continue;
             if (materialIndex >= recipe.inlays().size()) continue;
             if (recipe.inlays().get(materialIndex).testMaterial(stack)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 自动化插入用：基材尚未到达时也允许先把材料放进材料槽，避免 AE 样板供应器
+     * 在模拟/批量插入时因插入顺序不同而整批失败。玩家右键仍走
+     * {@link #acceptsCraftingTableMaterial}，保持基材优先。
+     */
+    public static boolean acceptsCraftingTableMaterialForInsertion(
+            ItemStack filter, ItemStack base, int materialIndex, ItemStack stack, @Nullable Level level) {
+        if (stack.isEmpty() || materialIndex < 0
+                || materialIndex >= InlayCraftingTableBlockEntity.MATERIAL_SLOTS) {
+            return false;
+        }
+        if (!base.isEmpty()) {
+            return acceptsCraftingTableMaterial(filter, base, materialIndex, stack, level);
+        }
+        if (filter.isEmpty()) {
+            // 无基材时只让真正的镶合材料先暂存，避免把空心磁铁块之类的基材塞进材料槽。
+            if (level == null || level.isClientSide) return true;
+            return isAnyCraftingMaterial(stack, level);
+        }
+        if (isFilterItem(filter)) return FilterItem.filter(filter, stack);
+        if (level == null || level.isClientSide) return true;
+
+        for (RecipeHolder<InlayCraftingRecipe> holder : level.getRecipeManager()
+                .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get())) {
+            InlayCraftingRecipe recipe = holder.value();
+            if (!produces(recipe, filter)) continue;
+            if (materialIndex >= recipe.inlays().size()) continue;
+            if (recipe.inlays().get(materialIndex).testMaterial(stack)) return true;
+        }
+        return false;
+    }
+
+    /** 该物品是否出现在任意镶合配方的材料要求中（不限定基材）。 */
+    private static boolean isAnyCraftingMaterial(ItemStack stack, Level level) {
+        for (RecipeHolder<InlayCraftingRecipe> holder : level.getRecipeManager()
+                .getAllRecipesFor(ModRecipeTypes.INLAY_CRAFTING_TYPE.get())) {
+            for (InlayMatcher matcher : holder.value().inlays()) {
+                if (matcher.testMaterial(stack)) return true;
+            }
         }
         return false;
     }

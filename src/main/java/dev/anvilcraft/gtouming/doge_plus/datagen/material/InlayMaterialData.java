@@ -75,7 +75,7 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
     // 说明：下界合金锭、钻石装备与纹饰材料已不再定义材料——它们没有属性、也没有手写镶嵌配方，
     // 完全由「镶合台静默镶嵌」按镶合条件放行（原先的 NETHERITE_UPGRADE_INLAYS / TRIM_INLAYS 常量随之移除）。
 
-    // ===== 空心磁铁块镶合（无属性材料，手写镶嵌配方引用其材料键）=====
+    // ===== 空心磁铁块镶合：铁锭材料定义保留，兼容外部镶嵌配方；内置配方已迁到镶合 =====
     public static final String IRON_INGOT = "iron_ingot";
 
     /**
@@ -180,7 +180,7 @@ public record InlayMaterialData(String name, JsonArray ingredient, String... att
             PotionKinds.potionInlay(EFFECT1, Items.SPLASH_POTION),
             PotionKinds.potionInlay(EFFECT2, Items.LINGERING_POTION),
 
-            // ===== 空心磁铁块镶合：铁锭（无属性材料，但它是手写镶嵌配方的材料键，故保留定义）=====
+            // ===== 空心磁铁块镶合：铁锭（无属性材料，保留定义以兼容外部镶嵌配方）=====
             builder().name(IRON_INGOT).item(Items.IRON_INGOT).buildInlay(),
 
             // ===== 潜影盒嵌套：潜影盒（自套）与虚空物质块（均为无属性材料）=====

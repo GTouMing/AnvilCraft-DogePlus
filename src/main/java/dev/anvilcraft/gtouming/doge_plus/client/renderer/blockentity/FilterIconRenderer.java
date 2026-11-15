@@ -6,12 +6,10 @@ import dev.anvilcraft.gtouming.doge_plus.api.block.IMultiPartBlock;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -68,7 +66,6 @@ public final class FilterIconRenderer {
     private static final int BRACKET_A = 220;
 
     private static final RenderType PART_RENDER_TYPE = RenderType.cutout();
-    private static final RandomSource RANDOM = RandomSource.create();
 
     private FilterIconRenderer() {
     }
@@ -140,7 +137,8 @@ public final class FilterIconRenderer {
                     buffer, packedLight, packedOverlay);
         } else {
             VertexConsumer consumer = buffer.getBuffer(PART_RENDER_TYPE);
-            renderShaded(flattened(poseStack, center, face), consumer, icon, packedLight, packedOverlay, level);
+            InlayCarrierRenderer.renderShaded(flattened(poseStack, center, face), consumer, icon,
+                    packedLight, packedOverlay, level);
         }
         poseStack.popPose();
     }
@@ -218,45 +216,6 @@ public final class FilterIconRenderer {
         stack.last().pose().set(flat.pose());
         stack.last().normal().set(flat.normal());
         return stack;
-    }
-
-    private static void renderShaded(
-            PoseStack.Pose pose,
-            VertexConsumer consumer,
-            BakedModel model,
-            int packedLight,
-            int packedOverlay,
-            Level level) {
-        for (Direction cull : Direction.values()) {
-            RANDOM.setSeed(42L);
-            renderQuads(pose, consumer, model.getQuads(null, cull, RANDOM), packedLight, packedOverlay, level);
-        }
-        RANDOM.setSeed(42L);
-        renderQuads(pose, consumer, model.getQuads(null, null, RANDOM), packedLight, packedOverlay, level);
-    }
-
-    private static void renderQuads(
-            PoseStack.Pose pose,
-            VertexConsumer consumer,
-            List<BakedQuad> quads,
-            int packedLight,
-            int packedOverlay,
-            Level level) {
-        for (BakedQuad quad : quads) {
-            Direction local = quad.getDirection();
-            Vector3f n = new Vector3f(local.getStepX(), local.getStepY(), local.getStepZ());
-            n.mul(pose.normal());
-            Direction worldDir = Direction.getNearest(n.x(), n.y(), n.z());
-            float shade = level.getShade(worldDir, quad.isShade());
-            consumer.putBulkData(pose, quad, shade, shade, shade, 1.0f,
-                    bakedLight(quad, packedLight), packedOverlay);
-        }
-    }
-
-    /** quad 顶点里烘的 {@code neoforge_data} 光照（UV2 槽）；未写入时回退到方块自身光照。 */
-    private static int bakedLight(BakedQuad quad, int fallback) {
-        int[] vertices = quad.getVertices();
-        return vertices.length > 6 && vertices[6] != 0 ? vertices[6] : fallback;
     }
 
     private static Vector3f axis(Direction face) {

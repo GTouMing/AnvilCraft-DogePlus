@@ -59,12 +59,7 @@
         "x": 90
       },
       "when": {
-        "down": "remote",
-        "east": "none|unpowered|remote",
-        "north": "none|unpowered|remote",
-        "south": "none|unpowered|remote",
-        "up": "none|unpowered|remote",
-        "west": "none|unpowered|remote"
+        "down": "remote"
       }
     },
     {
@@ -82,12 +77,7 @@
         "x": 270
       },
       "when": {
-        "down": "none|unpowered|remote",
-        "east": "none|unpowered|remote",
-        "north": "none|unpowered|remote",
-        "south": "none|unpowered|remote",
-        "up": "remote",
-        "west": "none|unpowered|remote"
+        "up": "remote"
       }
     },
     {
@@ -104,12 +94,7 @@
         "model": "anvilcraft_doge_plus:block/carrier/logistics/wire_remote"
       },
       "when": {
-        "down": "none|unpowered|remote",
-        "east": "none|unpowered|remote",
-        "north": "remote",
-        "south": "none|unpowered|remote",
-        "up": "none|unpowered|remote",
-        "west": "none|unpowered|remote"
+        "north": "remote"
       }
     },
     {
@@ -126,12 +111,7 @@
         "y": 180
       },
       "when": {
-        "down": "none|unpowered|remote",
-        "east": "none|unpowered|remote",
-        "north": "none|unpowered|remote",
-        "south": "remote",
-        "up": "none|unpowered|remote",
-        "west": "none|unpowered|remote"
+        "south": "remote"
       }
     },
     {
@@ -149,11 +129,6 @@
         "y": 270
       },
       "when": {
-        "down": "none|unpowered|remote",
-        "east": "none|unpowered|remote",
-        "north": "none|unpowered|remote",
-        "south": "none|unpowered|remote",
-        "up": "none|unpowered|remote",
         "west": "remote"
       }
     },
@@ -172,12 +147,7 @@
         "y": 90
       },
       "when": {
-        "down": "none|unpowered|remote",
-        "east": "remote",
-        "north": "none|unpowered|remote",
-        "south": "none|unpowered|remote",
-        "up": "none|unpowered|remote",
-        "west": "none|unpowered|remote"
+        "east": "remote"
       }
     },
     {

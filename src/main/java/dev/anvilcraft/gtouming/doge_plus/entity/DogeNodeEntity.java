@@ -13,7 +13,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -37,7 +39,10 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import javax.annotation.Nullable;
 
 /**
@@ -93,6 +98,13 @@ public class DogeNodeEntity extends Entity {
      */
     @Getter
     private final List<ItemEntity> capturedItems = new ArrayList<>();
+
+    /** 已保存但尚未与世界中实体重新绑定的捕获物（等待区块实体加载）。 */
+    private final List<PendingCaptured> pendingCaptured = new ArrayList<>();
+    private int pendingCapturedTicks;
+
+    private record PendingCaptured(UUID uuid, ItemStack stack) {
+    }
 
     // ==================== IItemHandler 实现 ====================
 
@@ -229,12 +241,46 @@ public class DogeNodeEntity extends Entity {
         this.blockPos = NbtUtils.readBlockPos(compoundTag, "BlockPos").orElse(BlockPos.ZERO);
         this.blockState = NbtUtils.readBlockState(
                 this.level().holderLookup(Registries.BLOCK), compoundTag.getCompound("BlockState"));
+        this.getEntityData().set(DATA_BLOCK_POS, this.blockPos);
+        this.getEntityData().set(DATA_BLOCK_STATE, this.blockState);
+        if (this.level().isClientSide) return;
+
+        this.pendingCaptured.clear();
+        this.pendingCapturedTicks = 0;
+        ListTag captured = compoundTag.getList("CapturedItems", Tag.TAG_COMPOUND);
+        for (int i = 0; i < captured.size(); i++) {
+            CompoundTag entry = captured.getCompound(i);
+            Tag uuidTag = entry.get("UUID");
+            if (uuidTag == null) continue;
+            ItemStack stack = ItemStack.parseOptional(this.registryAccess(), entry.getCompound("Item"));
+            if (stack.isEmpty()) continue;
+            this.pendingCaptured.add(new PendingCaptured(NbtUtils.loadUUID(uuidTag), stack));
+        }
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag compoundTag) {
         compoundTag.put("BlockPos", NbtUtils.writeBlockPos(this.blockPos));
         compoundTag.put("BlockState", NbtUtils.writeBlockState(this.blockState));
+
+        ListTag captured = new ListTag();
+        Set<UUID> saved = new HashSet<>();
+        for (ItemEntity item : this.capturedItems) {
+            if (item.isRemoved() || item.getItem().isEmpty() || !saved.add(item.getUUID())) continue;
+            captured.add(this.writeCaptured(item.getUUID(), item.getItem()));
+        }
+        for (PendingCaptured pending : this.pendingCaptured) {
+            if (pending.stack().isEmpty() || !saved.add(pending.uuid())) continue;
+            captured.add(this.writeCaptured(pending.uuid(), pending.stack()));
+        }
+        compoundTag.put("CapturedItems", captured);
+    }
+
+    private CompoundTag writeCaptured(UUID uuid, ItemStack stack) {
+        CompoundTag entry = new CompoundTag();
+        entry.put("UUID", NbtUtils.createUUID(uuid));
+        entry.put("Item", stack.saveOptional(this.registryAccess()));
+        return entry;
     }
 
     @Override
@@ -265,6 +311,11 @@ public class DogeNodeEntity extends Entity {
         super.tick();
         if (this.level().isClientSide) return;
         if (this.isRemoved()) return;
+
+        if (!this.pendingCaptured.isEmpty()) {
+            this.resolvePendingCaptured();
+            if (this.isRemoved()) return;
+        }
 
         // 附着面检查每 tick 做一次：活塞 / 滑轨推走方块的可视窗口只有几 tick，隔 ADAPT_CHECK_PERIOD
         // 采样会整段错过，「搬运中仍与节点重合就先留着」就无从生效。被推走时原格变空气、方块由
@@ -307,6 +358,45 @@ public class DogeNodeEntity extends Entity {
                         || !position().equals(item.position()));
         if (isFull()) return;
         captureNearby(new AABB(above(), above()).inflate(CAPTURE_RADIUS));
+    }
+
+    /**
+     * 重载后把保存的捕获物重新绑定到世界中仍存在的 ItemEntity；等待实体加载几个 tick，
+     * 仍找不到（例如实体已丢失）才用保存的物品堆叠重建。
+     */
+    private void resolvePendingCaptured() {
+        List<PendingCaptured> unresolved = new ArrayList<>();
+        for (PendingCaptured pending : this.pendingCaptured) {
+            ItemEntity found = this.level().getEntitiesOfClass(
+                    ItemEntity.class,
+                    new AABB(this.position(), this.position()).inflate(1.0),
+                    entity -> !entity.isRemoved() && entity.getUUID().equals(pending.uuid())
+            ).stream().findFirst().orElse(null);
+            if (found != null) {
+                if (!this.capturedItems.contains(found)) this.add(found);
+            } else {
+                unresolved.add(pending);
+            }
+        }
+        this.pendingCaptured.clear();
+        if (unresolved.isEmpty()) {
+            this.pendingCapturedTicks = 0;
+            return;
+        }
+        if (++this.pendingCapturedTicks <= 5) {
+            this.pendingCaptured.addAll(unresolved);
+            return;
+        }
+        for (PendingCaptured pending : unresolved) {
+            if (pending.stack().isEmpty()) continue;
+            ItemEntity entity = new ItemEntity(
+                    this.level(), this.position().x, this.position().y, this.position().z,
+                    pending.stack().copy());
+            entity.setPos(this.position());
+            this.level().addFreshEntity(entity);
+            this.add(entity);
+        }
+        this.pendingCapturedTicks = 0;
     }
 
     // ==================== 方块自适应 ====================

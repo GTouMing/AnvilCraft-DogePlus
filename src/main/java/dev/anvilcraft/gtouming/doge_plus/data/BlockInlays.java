@@ -13,6 +13,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,21 @@ public record BlockInlays(
         Map<Direction, ItemStack> filters,
         Map<Direction, RemoteChannel> channels) {
 
+    /**
+     * 面属性统一转成不可变 {@link EnumMap}：{@code getFace} 是渲染 / 红石 / 物流热路径，
+     * EnumMap 按 {@link Direction#ordinal()} 直接数组寻址，避免 HashMap 的节点查找。
+     */
+    public BlockInlays {
+        faces = immutableFaces(faces);
+    }
+
+    private static Map<Direction, FaceMode> immutableFaces(Map<Direction, FaceMode> source) {
+        if (source.isEmpty()) return Map.of();
+        EnumMap<Direction, FaceMode> copy = new EnumMap<>(Direction.class);
+        copy.putAll(source);
+        return Collections.unmodifiableMap(copy);
+    }
+
     /** 逻辑门设定值的默认值（也是上限）。 */
     public static final int DEFAULT_VALUE = 15;
 
@@ -57,7 +74,8 @@ public record BlockInlays(
     private static final StreamCodec<ByteBuf, List<InlayEntry>> INLAY_LIST_CODEC =
             ByteBufCodecs.collection(ArrayList::new, InlayEntry.STREAM_CODEC);
     private static final StreamCodec<ByteBuf, Map<Direction, FaceMode>> FACE_MAP_CODEC =
-            ByteBufCodecs.map(HashMap::new, Direction.STREAM_CODEC, FaceMode.STREAM_CODEC);
+            ByteBufCodecs.map(size -> new EnumMap<>(Direction.class),
+                    Direction.STREAM_CODEC, FaceMode.STREAM_CODEC);
     private static final StreamCodec<ByteBuf, Map<Direction, Integer>> INT_MAP_CODEC =
             ByteBufCodecs.map(HashMap::new, Direction.STREAM_CODEC, ByteBufCodecs.VAR_INT);
     private static final StreamCodec<RegistryFriendlyByteBuf, Map<Direction, ItemStack>> FILTER_MAP_CODEC =
@@ -104,7 +122,7 @@ public record BlockInlays(
     public static BlockInlays fromInlays(Block block, List<InlayEntry> inlays) {
         List<Direction> directionOrder = List.of(Direction.values());
 
-        Map<Direction, FaceMode> faces = new HashMap<>();
+        Map<Direction, FaceMode> faces = new EnumMap<>(Direction.class);
 
         for (Direction dir : directionOrder) {
             faces.put(dir, FaceMode.NONE);
@@ -181,7 +199,8 @@ public record BlockInlays(
      * 获取指定方向的面属性。
      */
     public FaceMode getFace(Direction direction) {
-        return faces.getOrDefault(direction, FaceMode.NONE);
+        FaceMode mode = faces.get(direction);
+        return mode == null ? FaceMode.NONE : mode;
     }
 
     /**
@@ -246,14 +265,15 @@ public record BlockInlays(
      * 不是由 {@link #fromInlays} 从材料推导，而是编程结果的权威来源。</p>
      */
     public BlockInlays withFace(Direction direction, FaceMode mode) {
-        Map<Direction, FaceMode> updated = new HashMap<>(faces);
+        Map<Direction, FaceMode> updated = new EnumMap<>(Direction.class);
+        updated.putAll(faces);
         if (mode == FaceMode.NONE) {
             updated.remove(direction);
         } else {
             updated.put(direction, mode);
         }
         // 换面会改变面语义，旧面的信道标识对新面没有意义，一并清掉。
-        return new BlockInlays(block, inlays, Map.copyOf(updated), values, throughputs, filters,
+        return new BlockInlays(block, inlays, updated, values, throughputs, filters,
                 withChannelRemoved(channels, direction));
     }
 

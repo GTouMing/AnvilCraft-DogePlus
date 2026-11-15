@@ -39,16 +39,11 @@ public class InlayTableBlockEntity extends AbstractProcessingTableBlockEntity {
         super(type, pos, state, SLOT_COUNT);
     }
 
-    /** 该槽位是否接受该物品（受配方过滤约束）。 */
+    /** 该槽位是否接受该物品（基材槽要求带镶孔，并受配方过滤约束）。 */
     @Override
     public boolean accepts(int slot, ItemStack stack) {
+        if (slot == SLOT_BASE && !hasSocket(stack)) return false;
         return RecipeFilterUtil.acceptsInlayTable(slot, recipeFilter, stack, level);
-    }
-
-    /** 基材槽额外要求物品带镶孔；材料槽沿用 {@link #accepts}。 */
-    @Override
-    protected boolean canInsert(int slot, ItemStack stack) {
-        return (slot != SLOT_BASE || hasSocket(stack)) && super.canInsert(slot, stack);
     }
 
     /** 收集掉落物：按槽位顺序插入第一个接受的槽。 */

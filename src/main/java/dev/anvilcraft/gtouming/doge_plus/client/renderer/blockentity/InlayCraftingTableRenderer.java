@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * 渲染镶合台各槽位物品：基材居中，材料按当前实际放入的材料槽数量以骰子点数布局
- * （1 居中、2 分开、3 对角、4 正方、5 分岔、6 两列）；未放入的材料槽不占位。
+ * （1 居中、2 分开、3 对角、4 正方、5 分岔、6 两列、7～9 三列网格）；未放入的材料槽不占位。
  * 材料缩放与镶嵌台材料槽保持一致。
  */
 public class InlayCraftingTableRenderer extends AbstractTableRenderer<InlayCraftingTableBlockEntity> {
@@ -32,6 +32,21 @@ public class InlayCraftingTableRenderer extends AbstractTableRenderer<InlayCraft
             {0.3F, 0.3F}, {0.3F, 0.5F}, {0.3F, 0.7F},
             {0.7F, 0.3F}, {0.7F, 0.5F}, {0.7F, 0.7F}
     };
+    private static final float[][] DICE_7 = {
+            {0.25F, 0.3F}, {0.5F, 0.3F}, {0.75F, 0.3F},
+            {0.35F, 0.55F}, {0.65F, 0.55F},
+            {0.3F, 0.8F}, {0.7F, 0.8F}
+    };
+    private static final float[][] DICE_8 = {
+            {0.25F, 0.3F}, {0.5F, 0.3F}, {0.75F, 0.3F},
+            {0.25F, 0.55F}, {0.5F, 0.55F}, {0.75F, 0.55F},
+            {0.35F, 0.8F}, {0.65F, 0.8F}
+    };
+    private static final float[][] DICE_9 = {
+            {0.25F, 0.3F}, {0.5F, 0.3F}, {0.75F, 0.3F},
+            {0.25F, 0.55F}, {0.5F, 0.55F}, {0.75F, 0.55F},
+            {0.25F, 0.8F}, {0.5F, 0.8F}, {0.75F, 0.8F}
+    };
 
     private static float[] materialPos(int count, int index) {
         float[][] layout = switch (count) {
@@ -40,7 +55,10 @@ public class InlayCraftingTableRenderer extends AbstractTableRenderer<InlayCraft
             case 3 -> DICE_3;
             case 4 -> DICE_4;
             case 5 -> DICE_5;
-            default -> DICE_6;
+            case 6 -> DICE_6;
+            case 7 -> DICE_7;
+            case 8 -> DICE_8;
+            default -> DICE_9;
         };
         return layout[Math.min(index, layout.length - 1)];
     }

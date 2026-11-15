@@ -1,21 +1,3 @@
-# Memory
-
-## Project Overview
-See @README.md for project overview and @package.json for available npm/pnpm commands for this project.
-
-## Code Style Guidelines
-- Use descriptive variable names
-- Follow existing patterns in the codebase
-- Extract complex conditions into meaningful boolean variables
-
-## Architecture Notes
-Add important architectural decisions and patterns here.
-
-## Common Workflows
-Document frequently used workflows and commands here.
-
----
-
 # 全局开发规范
 
 > 适用于所有项目、仓库与需求，包括新功能、重构、修复、审查、文档和规范整理。
@@ -256,3 +238,16 @@ Document frequently used workflows and commands here.
 - 日志中避免输出完整请求体、密码和隐私字段。
 - 新增依赖检查许可证、维护状态和供应链风险。
 - 发现疑似注入、越权或数据泄露时，立即停止并告知用户。
+
+## 七、版本号
+
+- 除非用户特别说明，一律使用三段式 `X.Y.Z`，遵循 SemVer 2.0.0：
+  - `X`（major）：不兼容变更——公共 API、配置结构、数据格式、协议、存档格式。
+  - `Y`（minor）：向后兼容的新功能。
+  - `Z`（patch）：向后兼容的问题修复、文档、内部重构。
+- `0.y.z` 阶段可以按项目约定把不兼容变更并入 `Y`，但必须在项目文档写明；进入 `1.0.0` 后恢复标准 SemVer。
+- 预发布用 `-alpha.N` / `-beta.N` / `-rc.N`；构建元数据用 `+build.N`。
+- 版本号只在发布点提升。
+- 版本号必须有唯一来源，其他副本通过引用或赋值与其保持一致，代码中不得硬编码。
+- 发布 = 打注释 tag `vX.Y.Z`，tag 必须等于版本号；不重写、不删除已发布的 tag，只能往前发新版本。
+- 建议维护 `CHANGELOG.md`（按 Keep a Changelog 分 Added / Changed / Fixed / Removed），每个发布版本对应一个小节。

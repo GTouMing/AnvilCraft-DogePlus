@@ -13,6 +13,7 @@
     "GiantRingBlockEntityMixin",
     "IBlockExtensionMixin",
     "ItemEntityMixin",
+    "ItemStackMixin",
     "LivingEntityMixin",
     "MagnetIngotMarkMixin",
     "PistonBaseBlockMixin",

@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * 镶合台：镶合配方的工作方块。
  *
- * <p>一个基材槽 + 由目标产物过滤/配方决定数量的材料槽（最多 6 个，每槽对应一条镶孔要求）。顶面为输入区：手持物品在顶面放入（优先并入空槽/同类槽，
+ * <p>一个基材槽 + 按基材剩余空镶孔开放的材料槽（基材为空时为 0 槽，有目标产物过滤时再受配方缺失镶孔数限制，最多 9 个）。顶面为输入区：手持物品在顶面放入（优先并入空槽/同类槽，
  * 全满时替换并返还旧物），空手右键取出全部；顶部被铁砧砸击时先执行静默镶嵌、再匹配镶合配方
  * （见 {@link InlayCraftingTableBlockEntity#processCrafting}），产物以掉落物形式生成在台体下方，
  * 供漏斗/溜槽等自动化收集。</p>
@@ -70,7 +70,7 @@ public class InlayCraftingTableBlock extends AbstractInlayTableBlock {
     protected void place(
             AbstractProcessingTableBlockEntity table, Level level, BlockPos pos, Player player, ItemStack stack) {
         for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
-            if (!table.accepts(slot, stack)) continue;
+            if (!table.canPlace(slot, stack)) continue;
             ItemStack existing = table.getItemHandler().getStackInSlot(slot);
             if (!existing.isEmpty() && !ItemStack.isSameItemSameComponents(existing, stack)) continue;
 
@@ -83,9 +83,11 @@ public class InlayCraftingTableBlock extends AbstractInlayTableBlock {
         }
 
         for (int slot = 0; slot < InlayCraftingTableBlockEntity.SLOT_COUNT; slot++) {
-            if (!table.accepts(slot, stack)) continue;
+            if (!table.canPlace(slot, stack)) continue;
             ItemStack existing = table.getItemHandler().getStackInSlot(slot);
-            ItemStack stored = stack.copy();
+            int limit = table.getItemHandler().getSlotLimit(slot);
+            if (limit <= 0) continue;
+            ItemStack stored = stack.copyWithCount(Math.min(stack.getCount(), limit));
             table.setStackInSlot(slot, stored);
             if (!player.getAbilities().instabuild) stack.shrink(stored.getCount());
             if (!existing.isEmpty()) {

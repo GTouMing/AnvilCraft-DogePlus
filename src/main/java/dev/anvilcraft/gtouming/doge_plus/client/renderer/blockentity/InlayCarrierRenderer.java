@@ -48,7 +48,9 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 镶嵌载体连接件与搬运方向指示件渲染器。
@@ -92,6 +94,8 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             LOGISTICS_INSERT, LOGISTICS_EXTRACT);
 
     private static final RandomSource RANDOM = RandomSource.create();
+    private static final Map<BakedModel, float[]> BOUNDS_CACHE = new IdentityHashMap<>();
+    private static final float[] EMPTY_BOUNDS = new float[0];
 
     /**
      * BER 部件的渲染类型：红石连接件与物流方向指示件都是 BER 专用几何（不参与区块渲染，
@@ -359,13 +363,8 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         // 量出模型自己的包围盒：用来把它居中，并按跨度算缩放（不假设物品模型就是 0..1 居中的方块）。
         // 自带 BEWLR 的物品（{@code builtin/entity}，如潜影盒）没有烘进 quad 的几何，包围盒量不出来——
         // 按「一格方块」估一个，几何交给它自己的渲染器画；普通模型量不出来说明模型是空的，不画。
-        float[] bounds = {
-                Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
-                -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
-        if (!accumulateBounds(model, bounds)) {
-            if (!model.isCustomRenderer()) return;
-            bounds = UNIT_BOUNDS;
-        }
+        float[] bounds = boundsFor(model);
+        if (bounds == null) return;
 
         poseStack.pushPose();
         // 与 blockstate multipart 同一套朝向旋转：把「朝北」的模型坐标摆到该面。
@@ -448,6 +447,25 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
         float span = Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ));
         if (span <= 1.0E-5F) return 1.0F;
         return SOCKET_EXTENT * SOCKET_ITEM_FIT / span;
+    }
+
+    /** 每个 BakedModel 的包围盒只算一次，避免每帧遍历所有 quad。 */
+    private static @Nullable float[] boundsFor(BakedModel model) {
+        float[] cached = BOUNDS_CACHE.get(model);
+        if (cached != null) return cached.length == 0 ? null : cached;
+
+        float[] bounds = {
+                Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
+                -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+        if (!accumulateBounds(model, bounds)) {
+            if (!model.isCustomRenderer()) {
+                BOUNDS_CACHE.put(model, EMPTY_BOUNDS);
+                return null;
+            }
+            bounds = UNIT_BOUNDS;
+        }
+        BOUNDS_CACHE.put(model, bounds);
+        return bounds;
     }
 
     /** 累积模型所有 quad 顶点的包围盒（minX,minY,minZ,maxX,maxY,maxZ）；没有 quad 时返回 {@code false}。 */
@@ -746,7 +764,7 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
     }
 
     /** 逐面按世界方向做漫反射着色渲染模型（等价于区块渲染器对静态方块的着色，无 AO）。 */
-    private static void renderShaded(
+    static void renderShaded(
             PoseStack.Pose pose,
             VertexConsumer consumer,
             BakedModel model,
@@ -776,8 +794,47 @@ public class InlayCarrierRenderer implements BlockEntityRenderer<InlayCarrierBlo
             Direction worldDir = Direction.getNearest(n.x(), n.y(), n.z());
             // quad.isShade()：模型里 shade:false 的面不吃方向明暗（自发光件，如 cube_outline）。
             float shade = level.getShade(worldDir, quad.isShade());
-            consumer.putBulkData(pose, quad, shade, shade, shade, 1.0f,
-                    bakedLight(quad, packedLight), packedOverlay);
+            if (n.lengthSquared() > 1.0E-6F) n.normalize();
+            emitQuad(pose, consumer, quad, n, shade, packedLight, packedOverlay);
+        }
+    }
+
+    /**
+     * 手动逐顶点写入，绕过 Sodium 对 {@code BufferBuilder.putBulkData} 的慢路径
+     * （{@code BakedModelEncoder -> BufferBuilder.copySlow -> VertexSerializerRegistry}）。
+     *
+     * <p>顶点布局为 {@code DefaultVertexFormat.BLOCK}：位置、颜色、UV0、UV2、法线各 8 个 int。
+     * 明暗仍按当前 quad 的世界方向和 {@code shade} 参数烘进顶点色；光照沿用 quad 自带的 UV2。</p>
+     */
+    private static void emitQuad(
+            PoseStack.Pose pose,
+            VertexConsumer consumer,
+            BakedQuad quad,
+            Vector3f normal,
+            float shade,
+            int packedLight,
+            int packedOverlay) {
+        int[] vertices = quad.getVertices();
+        int overlayU = packedOverlay & 0xFFFF;
+        int overlayV = (packedOverlay >>> 16) & 0xFFFF;
+        for (int i = 0; i + VERTEX_STRIDE - 1 < vertices.length; i += VERTEX_STRIDE) {
+            float x = Float.intBitsToFloat(vertices[i]);
+            float y = Float.intBitsToFloat(vertices[i + 1]);
+            float z = Float.intBitsToFloat(vertices[i + 2]);
+            int color = vertices[i + 3];
+            float u = Float.intBitsToFloat(vertices[i + 4]);
+            float v = Float.intBitsToFloat(vertices[i + 5]);
+            int light = vertices[i + 6] != 0 ? vertices[i + 6] : packedLight;
+            int red = (int) Math.round(((color >>> 16) & 0xFF) * shade);
+            int green = (int) Math.round(((color >>> 8) & 0xFF) * shade);
+            int blue = (int) Math.round((color & 0xFF) * shade);
+            int alpha = (color >>> 24) & 0xFF;
+            consumer.addVertex(pose, x, y, z)
+                    .setColor(red, green, blue, alpha)
+                    .setUv(u, v)
+                    .setUv1(overlayU, overlayV)
+                    .setUv2(light & 0xFFFF, (light >>> 16) & 0xFFFF)
+                    .setNormal(normal.x(), normal.y(), normal.z());
         }
     }
 

@@ -69,7 +69,7 @@ Hold an Anvil Hammer in the main hand and a sample item in the offhand, then rig
 
 <recipe id="anvilcraft_doge_plus:inlay_smithing/netherite_sword_upgrade"/>
 
-The table accepts one base and up to 6 material slots. A strike first tries silent inlays, then matches an inlay crafting recipe; silent inlays need no separate inlay recipe.
+The table accepts one base and up to 9 material slots. A strike first tries silent inlays, then matches an inlay crafting recipe; silent inlays need no separate inlay recipe.
 
 - Existing inlays count toward matching. Material order does not matter, but the number of filled sockets must match the recipe; an extra inlay can prevent crafting.
 

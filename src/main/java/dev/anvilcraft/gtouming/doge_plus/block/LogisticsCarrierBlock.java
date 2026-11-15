@@ -140,7 +140,7 @@ public class LogisticsCarrierBlock extends InlayCarrierBlock {
 
     @Override
     protected VoxelShape wireShape(BlockState state, Direction direction) {
-        return state.getValue(property(direction)) == CarrierWire.REMOTE
+        return state.getValue(property(direction)).isRemote()
                 ? LOGISTICS_REMOTE_WIRE_SHAPES[direction.ordinal()]
                 : LOGISTICS_WIRE_SHAPES[direction.ordinal()];
     }
@@ -202,8 +202,8 @@ public class LogisticsCarrierBlock extends InlayCarrierBlock {
         return adjacentBlockState.getBlock() instanceof InlayCarrierBlock
                 && state.getValue(property(side)).isInlaid()
                 && adjacentBlockState.getValue(property(side.getOpposite())).isInlaid()
-                && state.getValue(property(side)) != CarrierWire.REMOTE
-                && adjacentBlockState.getValue(property(side.getOpposite())) != CarrierWire.REMOTE;
+                && !state.getValue(property(side)).isRemote()
+                && !adjacentBlockState.getValue(property(side.getOpposite())).isRemote();
     }
 
     @Override

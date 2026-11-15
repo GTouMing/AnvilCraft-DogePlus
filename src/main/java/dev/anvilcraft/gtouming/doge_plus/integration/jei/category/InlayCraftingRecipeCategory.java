@@ -51,6 +51,8 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
 
     private static final int WIDTH = 162;
     private static final int HEIGHT = 64;
+    /** JEI 材料槽显示上限：3×2 网格；镶合台本身最多 9 槽，界面只展示前 6 个。 */
+    private static final int DISPLAYED_MATERIAL_SLOTS = 6;
 
     private final Component title;
     private final IDrawable icon;
@@ -120,6 +122,7 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
         // 聚焦已镶嵌物品且它恰好满足本配方时，直接把它作为基材槽：
         // U 查询会按该物品的具体 INLAY 组件匹配，页面也基于该物品而非普通基材。
         ItemStack focusedBase = focusedInlaidBase(focuses, recipe);
+        boolean baseSatisfiesRecipe = focusedBase != null && recipe.matches(focusedBase);
         ItemStack baseStack = focusedBase != null ? focusedBase : new ItemStack(recipe.getBaseItem());
 
         // 产物预览仍用「由配方镶孔要求构造的已镶满基材」作为 sample；
@@ -143,13 +146,16 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
                             tooltip.add(InlayRecipeTooltips.voidMatterCount(range)));
                 });
 
-        // 材料槽：每条镶孔要求一个槽（最多 6 个，与镶合台一致）。
-        List<InlayMatcher> matchers = recipe.inlays();
-        for (int i = 0; i < matchers.size() && i < 6; i++) {
-            int[] pos = materialPos(i);
-            var slot = builder.addInputSlot(pos[0], pos[1]);
-            List<ItemStack> candidates = matchers.get(i).candidates();
-            if (!candidates.isEmpty()) slot.addItemStacks(candidates);
+        // 材料槽：每条镶孔要求一个槽（界面最多展示前 6 个，3×2 网格）。
+        // 聚焦的基材已经满足本配方时不再显示材料槽，避免 AE 样板把已镶材料重复算进输入。
+        if (!baseSatisfiesRecipe) {
+            List<InlayMatcher> matchers = recipe.inlays();
+            for (int i = 0; i < matchers.size() && i < DISPLAYED_MATERIAL_SLOTS; i++) {
+                int[] pos = materialPos(i);
+                var slot = builder.addInputSlot(pos[0], pos[1]);
+                List<ItemStack> candidates = matchers.get(i).candidates();
+                if (!candidates.isEmpty()) slot.addItemStacks(candidates);
+            }
         }
 
         // 输出：配方声明的全部产物（多产物 / 概率产物 / 推导产物），逐格标注数量与概率
@@ -287,12 +293,13 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
         // 聚焦输出时保留 JEI 默认行为
         if (focuses.getFocuses(RecipeIngredientRole.OUTPUT).findAny().isPresent()) return;
 
-        int materialCount = Math.min(recipe.inlays().size(), 6);
+        ItemStack base = recipeSlots.getFirst().getDisplayedItemStack().orElse(ItemStack.EMPTY);
+        if (base.isEmpty()) base = new ItemStack(recipe.getBaseItem());
+        // 基材已满足配方时 setRecipe 没有材料槽，这里同步按 0 个材料槽计算输出起点。
+        int materialCount = recipe.matches(base) ? 0 : Math.min(recipe.inlays().size(), DISPLAYED_MATERIAL_SLOTS);
         int outputStart = 1 + materialCount;
         if (recipeSlots.size() <= outputStart) return;
 
-        ItemStack base = recipeSlots.getFirst().getDisplayedItemStack().orElse(ItemStack.EMPTY);
-        if (base.isEmpty()) base = new ItemStack(recipe.getBaseItem());
         ItemStack work = base.copyWithCount(1);
         for (int i = 0; i < materialCount; i++) {
             ItemStack material = recipeSlots.get(1 + i).getDisplayedItemStack().orElse(ItemStack.EMPTY);
@@ -337,7 +344,13 @@ public class InlayCraftingRecipeCategory implements IRecipeCategory<RecipeHolder
         // 基材槽 + 材料槽背景
         this.slotDefault.draw(guiGraphics, JeiSlotUtil.INPUT_X - 1,
                 JeiSlotUtil.DEFAULT_Y + JeiSlotUtil.OFFSET - 1);
-        int materialCount = Math.min(recipeHolder.value().inlays().size(), 6);
+        var inputSlots = slotsView.getSlotViews(RecipeIngredientRole.INPUT);
+        ItemStack base = inputSlots.isEmpty()
+                ? ItemStack.EMPTY
+                : inputSlots.getFirst().getDisplayedItemStack().orElse(ItemStack.EMPTY);
+        int materialCount = !base.isEmpty() && recipeHolder.value().matches(base)
+                ? 0
+                : Math.min(recipeHolder.value().inlays().size(), DISPLAYED_MATERIAL_SLOTS);
         for (int i = 0; i < materialCount; i++) {
             int[] pos = materialPos(i);
             this.slotDefault.draw(guiGraphics, pos[0] - 1, pos[1] - 1);

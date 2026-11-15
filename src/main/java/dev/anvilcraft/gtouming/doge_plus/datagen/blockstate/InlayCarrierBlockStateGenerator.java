@@ -23,8 +23,9 @@ import java.util.List;
  * 并按面朝向旋转）+ 物流载体的 12 条棱件（两面都落在 {@link InlayCarrierBlock#edgeStates} 时画；
  * 逻辑 / 普通载体的棱件已移除）。</p>
  *
- * <p>通道与棱件都不再分通电 / 未通电：通电与否由 overlay 那层的颜色表现（见 {@code CarrierColorHandler}），
- * 所以两者各只有一套模型，全部规则都能落在 blockstate 上。</p>
+ * <p>普通通道与棱件不再分通电 / 未通电：通电与否由 overlay 那层的颜色表现（见 {@code CarrierColorHandler}），
+ * 所以两者各只有一套模型，全部规则都能落在 blockstate 上。远程通道例外：它的 {@code remote} /
+ * {@code remote_powered} 两个状态分别对应同信道有无信号，因此各自引用一套模型。</p>
  *
  * <p>中心体有两种取法：普通 / 逻辑载体由 {@code hub} 控制（对穿时隐藏）；物流载体则按「未编程的面」
  * （{@link CarrierWire#NONE}）各画一份——它没有通道的面要把开口堵上，条件与通道正好相反
@@ -133,9 +134,11 @@ public final class InlayCarrierBlockStateGenerator {
                             .addModel()
                             .condition(InlayCarrierBlock.HUB, false)
                             .condition(InlayCarrierBlock.property(face),
-                                    CarrierWire.UNPOWERED, CarrierWire.POWERED, CarrierWire.REMOTE)
+                                    CarrierWire.UNPOWERED, CarrierWire.POWERED,
+                                    CarrierWire.REMOTE, CarrierWire.REMOTE_POWERED)
                             .condition(InlayCarrierBlock.property(opposite),
-                                    CarrierWire.UNPOWERED, CarrierWire.POWERED, CarrierWire.REMOTE)
+                                    CarrierWire.UNPOWERED, CarrierWire.POWERED,
+                                    CarrierWire.REMOTE, CarrierWire.REMOTE_POWERED)
                             .end();
                     // 贯通时任意一面通电就换通电十字件。hub 为 false 保证只有这一对已镶嵌，
                     // 未镶嵌的面永远是 NONE，所以「任意面通电」等价于「这一对里有一面通电」，
@@ -150,7 +153,8 @@ public final class InlayCarrierBlockStateGenerator {
                                 .condition(InlayCarrierBlock.HUB, false)
                                 .condition(InlayCarrierBlock.property(face), CarrierWire.POWERED)
                                 .condition(InlayCarrierBlock.property(opposite),
-                                        CarrierWire.UNPOWERED, CarrierWire.POWERED, CarrierWire.REMOTE)
+                                        CarrierWire.UNPOWERED, CarrierWire.POWERED,
+                                        CarrierWire.REMOTE, CarrierWire.REMOTE_POWERED)
                                 .end();
                         multipart.part()
                                 .modelFile(existing(provider, coreCrossPoweredModel))
@@ -159,7 +163,7 @@ public final class InlayCarrierBlockStateGenerator {
                                 .addModel()
                                 .condition(InlayCarrierBlock.HUB, false)
                                 .condition(InlayCarrierBlock.property(face),
-                                        CarrierWire.UNPOWERED, CarrierWire.REMOTE)
+                                        CarrierWire.UNPOWERED, CarrierWire.REMOTE, CarrierWire.REMOTE_POWERED)
                                 .condition(InlayCarrierBlock.property(opposite), CarrierWire.POWERED)
                                 .end();
                     }
@@ -171,35 +175,23 @@ public final class InlayCarrierBlockStateGenerator {
         // 没有通电变体时只用 base 模型，条件并列两个值表示「已镶嵌」——multipart 只能写相等，
         // 这是它表达「非 NONE」的办法。
         for (Direction face : Direction.values()) {
-            // 远程面：通道换成自带珍珠辉光的 wire_remote。任意面通电时改用通电变体——与中心体同一条件
-            // （远程面自身永远是 REMOTE、不会是 POWERED，所以「任意面通电」等价于「某个其它面 POWERED」）。
-            // 两份模型的几何完全一致（powered 只换了贴图），所以不学中心体那套「外扩盖住」，改用互斥条件：
-            // 普通件要求其余五面都不是 POWERED（枚举除 POWERED 外的全部取值），通电件逐面要求某个面
-            // POWERED——两者不会同时命中，也就不会 z-fighting，模型也不必手工外扩。
-            MultiPartBlockStateBuilder.PartBuilder plainRemote = multipart.part()
+            // 远程面：普通 / 通电两份模型互斥，条件只看该面自己的状态。远程面是否点亮由同信道总线
+            // 信号推导（refreshState -> signalStrength -> peekRemoteBus），不再看其它面是否 POWERED。
+            multipart.part()
                     .modelFile(existing(provider, wireRemoteModel))
                     .rotationX(rotX(face))
                     .rotationY(rotY(face))
                     .addModel()
-                    .condition(InlayCarrierBlock.property(face), CarrierWire.REMOTE);
-            for (Direction other : Direction.values()) {
-                if (other == face) continue;
-                plainRemote.condition(InlayCarrierBlock.property(other),
-                        CarrierWire.NONE, CarrierWire.UNPOWERED, CarrierWire.REMOTE);
-            }
-            plainRemote.end();
+                    .condition(InlayCarrierBlock.property(face), CarrierWire.REMOTE)
+                    .end();
             if (wireRemotePoweredModel != null) {
-                for (Direction powered : Direction.values()) {
-                    if (powered == face) continue;
-                    multipart.part()
-                            .modelFile(existing(provider, wireRemotePoweredModel))
-                            .rotationX(rotX(face))
-                            .rotationY(rotY(face))
-                            .addModel()
-                            .condition(InlayCarrierBlock.property(face), CarrierWire.REMOTE)
-                            .condition(InlayCarrierBlock.property(powered), CarrierWire.POWERED)
-                            .end();
-                }
+                multipart.part()
+                        .modelFile(existing(provider, wireRemotePoweredModel))
+                        .rotationX(rotX(face))
+                        .rotationY(rotY(face))
+                        .addModel()
+                        .condition(InlayCarrierBlock.property(face), CarrierWire.REMOTE_POWERED)
+                        .end();
             }
             // 通道本身（实心边框）与半透明面板是两个模型、两个渲染层：边框先写深度，面板再混合。
             // Sodium 的 multipart 会对渲染类型并集逐层发射每个子模型的全部 quad；由
@@ -214,9 +206,9 @@ public final class InlayCarrierBlockStateGenerator {
         }
 
         CarrierWire[] edgeStates = InlayCarrierBlock.edgeStates(context.get());
-        // 已镶嵌里「没通电」的那部分（即除掉 POWERED），用来表达通电件的「另一面没通电」。
+        // 已镶嵌里「没通电」的那部分（即除掉所有 powered 变体），用来表达通电件的「另一面没通电」。
         CarrierWire[] edgeIdle = Arrays.stream(edgeStates)
-                .filter(state -> state != CarrierWire.POWERED)
+                .filter(state -> !state.isPowered())
                 .toArray(CarrierWire[]::new);
         for (InlayCarrierBlock.Edge edge : InlayCarrierBlock.edgeShapes(context.get())) {
             String plain = edge.vertical() ? edgeVerticalModel : edgeModel;

@@ -177,7 +177,8 @@ public record InlayCraftingData(
                     "magnet_ingot_from_hollow_magnet_block_" + count,
                     ModBlocks.HOLLOW_MAGNET_BLOCK.asItem(),
                     inlays,
-                    List.of(fixed(ModItems.MAGNET_INGOT.get(), count)),
+                    List.of(fixed(ModItems.MAGNET_INGOT.get(), count),
+                            fixed(ModBlocks.HOLLOW_MAGNET_BLOCK.asItem())),
                     InlayCraftingRecipe.Kind.CRAFTING
             ));
         }

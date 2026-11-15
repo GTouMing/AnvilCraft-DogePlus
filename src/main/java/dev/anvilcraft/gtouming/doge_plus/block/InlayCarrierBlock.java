@@ -56,8 +56,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>镶嵌材料存于 {@link BlockInlayManager}（按坐标的 SavedData），因此现有方块镶嵌属性
  * （永恒 / 耐火 / 磁性 / 发生器 / 方向逻辑门等）自动生效，并在破坏/放置时随掉落物往返。</p>
  *
- * <p>方块状态只保留静态几何与通道的通电外观：每面一个 4 值 {@link CarrierWire}
- * （{@code none / unpowered / powered / remote}）+ {@code hub}（中心体是否绘制），共 {@code 4^6 × 2 = 8192} 个状态。
+ * <p>方块状态只保留静态几何与通道的通电外观：每面一个 5 值 {@link CarrierWire}
+ * （{@code none / unpowered / powered / remote / remote_powered}）+ {@code hub}（中心体是否绘制），
+ * 共 {@code 5^6 × 2 = 31250} 个状态。
  * 通道与中心体都由 multipart 绘制，因此带逐顶点环境光遮蔽、与普通方块一致。通道的外观靠模型自己
  * 换贴图（未通电 / 通电两套合成材质）。棱件只剩物流载体保留（见 {@link #edgeShapes}），逻辑 / 普通
  * 载体的 12 个棱件已移除。
@@ -808,18 +809,21 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
      * 它们的全套规则都由 blockstate 画（原版模型渲染会带上环境光遮蔽与 uv 旋转，BER 摆姿态只能拿到
      * 方向漫反射）。
      *
-     * <p>逻辑 / 普通载体取 {@link CarrierWire#UNPOWERED}、{@link CarrierWire#POWERED}、{@link CarrierWire#REMOTE}，
-     * 合起来就是「两面都已镶嵌」；物流载体取 {@link CarrierWire#NONE}，即两面都未编程——它的棱件规则取反。</p>
+     * <p>逻辑 / 普通载体取 {@link CarrierWire#UNPOWERED}、{@link CarrierWire#POWERED}、
+     * {@link CarrierWire#REMOTE}、{@link CarrierWire#REMOTE_POWERED}，合起来就是「两面都已镶嵌」；
+     * 物流载体取 {@link CarrierWire#NONE}，即两面都未编程——它的棱件规则取反。</p>
      */
     public CarrierWire[] edgeStates() {
-        return new CarrierWire[] {CarrierWire.UNPOWERED, CarrierWire.POWERED, CarrierWire.REMOTE};
+        return new CarrierWire[] {
+                CarrierWire.UNPOWERED, CarrierWire.POWERED, CarrierWire.REMOTE, CarrierWire.REMOTE_POWERED};
     }
 
     /** 静态入口：按 Block 查询棱件的状态组合。 */
     public static CarrierWire[] edgeStates(Block block) {
         return block instanceof InlayCarrierBlock carrier
                 ? carrier.edgeStates()
-                : new CarrierWire[] {CarrierWire.UNPOWERED, CarrierWire.POWERED, CarrierWire.REMOTE};
+                : new CarrierWire[] {
+                        CarrierWire.UNPOWERED, CarrierWire.POWERED, CarrierWire.REMOTE, CarrierWire.REMOTE_POWERED};
     }
 
     /**
@@ -900,7 +904,7 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
 
     /** 该面用哪张通道形状：远程门面用带珍珠辉光的远程形状（{@code wire_remote}），其余面用普通通道 / 管线形状。 */
     protected VoxelShape wireShape(BlockState state, Direction direction) {
-        if (state.getValue(property(direction)) == CarrierWire.REMOTE) {
+        if (state.getValue(property(direction)).isRemote()) {
             return REMOTE_WIRE_SHAPES[direction.ordinal()];
         }
         return this.wireShapes()[direction.ordinal()];
@@ -1059,7 +1063,7 @@ public class InlayCarrierBlock extends Block implements EntityBlock {
             if (!wire.isInlaid()) continue;
             index |= 1 << direction.ordinal();
             // 远程门面的形状与普通通道不同，必须单独占一位，否则两种形状会共用同一份缓存。
-            if (wire == CarrierWire.REMOTE) index |= 1 << (SHAPE_INDEX_REMOTE_SHIFT + direction.ordinal());
+            if (wire.isRemote()) index |= 1 << (SHAPE_INDEX_REMOTE_SHIFT + direction.ordinal());
         }
         return index;
     }

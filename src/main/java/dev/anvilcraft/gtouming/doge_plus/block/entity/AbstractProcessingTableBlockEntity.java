@@ -70,7 +70,7 @@ public abstract class AbstractProcessingTableBlockEntity extends BlockEntity
                 if (!ItemStack.isSameItemSameComponents(existing, stack)) {
                     return remaining;
                 }
-                int space = existing.getMaxStackSize() - existing.getCount();
+                int space = Math.max(0, getSlotLimit(slot) - existing.getCount());
                 int toMove = Math.min(space, stack.getCount());
                 remaining.shrink(toMove);
 
@@ -95,13 +95,21 @@ public abstract class AbstractProcessingTableBlockEntity extends BlockEntity
             }
 
             @Override
+            public void setStackInSlot(int slot, ItemStack stack) {
+                if (!isValidSlot(slot)) return;
+                if (!stack.isEmpty() && (stack.getCount() > getSlotLimit(slot) || !canInsert(slot, stack))) return;
+                slots[slot] = stack.copy();
+                syncToClient();
+            }
+
+            @Override
             public int getSlotLimit(int slot) {
-                return 64;
+                return slotLimit(slot);
             }
 
             @Override
             public boolean isItemValid(int slot, ItemStack stack) {
-                return isValidSlot(slot) && !stack.isEmpty() && accepts(slot, stack);
+                return isValidSlot(slot) && !stack.isEmpty() && canInsert(slot, stack);
             }
 
             @Override
@@ -118,7 +126,26 @@ public abstract class AbstractProcessingTableBlockEntity extends BlockEntity
 
             @Override
             public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-                return input.insertItem(slot, stack, simulate);
+                if (!isValidSlot(slot) || stack.isEmpty()) return stack.copy();
+
+                ItemStack remaining = stack;
+                boolean baseTried = false;
+                // 基材槽优先：样板供应器不保证输入顺序，基材即使被请求到材料槽也先归位。
+                if (input.getStackInSlot(0).isEmpty() && input.isItemValid(0, remaining)) {
+                    remaining = input.insertItem(0, remaining, simulate);
+                    baseTried = true;
+                    if (remaining.isEmpty()) return ItemStack.EMPTY;
+                }
+                if (!(slot == 0 && baseTried)) {
+                    remaining = input.insertItem(slot, remaining, simulate);
+                    if (remaining.isEmpty()) return ItemStack.EMPTY;
+                }
+                // 指定槽达到动态上限后，把剩余部分顺延到其它可接受槽位。
+                for (int i = 1; i < slots.length && !remaining.isEmpty(); i++) {
+                    if (i == slot) continue;
+                    remaining = input.insertItem(i, remaining, simulate);
+                }
+                return remaining;
             }
 
             @Override
@@ -158,6 +185,16 @@ public abstract class AbstractProcessingTableBlockEntity extends BlockEntity
     /** 插入前的额外校验；默认等同 {@link #accepts(int, ItemStack)}。 */
     protected boolean canInsert(int slot, ItemStack stack) {
         return accepts(slot, stack);
+    }
+
+    /** 玩家放置校验：空栈用于清空，非空必须满足槽位语义。 */
+    public boolean canPlace(int slot, ItemStack stack) {
+        return isValidSlot(slot) && (stack.isEmpty() || accepts(slot, stack));
+    }
+
+    /** 槽位最大堆叠量；子类可按基材/镶孔状态动态限制。 */
+    protected int slotLimit(int slot) {
+        return 64;
     }
 
     @Override
@@ -240,6 +277,7 @@ public abstract class AbstractProcessingTableBlockEntity extends BlockEntity
 
     public void setStackInSlot(int slot, ItemStack stack) {
         if (!isValidSlot(slot)) return;
+        if (!stack.isEmpty() && (stack.getCount() > slotLimit(slot) || !canInsert(slot, stack))) return;
         slots[slot] = stack.copy();
         syncToClient();
     }
