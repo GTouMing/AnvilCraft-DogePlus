@@ -9,6 +9,7 @@ import dev.anvilcraft.gtouming.doge_plus.data.FaceMode;
 import dev.anvilcraft.gtouming.doge_plus.util.LogisticsFilterMatcher;
 import dev.dubhe.anvilcraft.api.itemhandler.ItemHandlerUtil;
 import dev.dubhe.anvilcraft.init.item.ModItems;
+import dev.dubhe.anvilcraft.item.FilterItem;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -621,7 +622,7 @@ final class LevelTransferNetworks {
                 RoundFace rf = group.get(i);
                 // 服务面自身的过滤 + 沿途每一道「存入」面的过滤，逐级校验。
                 ObjectArrayList<ItemStack> chain = rf.sources.get(rf.pointer).chainFilters();
-                boolean ok = moveOneStack(this.level, handler, rf.target, shares[i], rf.filter, chain);
+                boolean ok = moveItems(this.level, handler, rf.target, shares[i], rf.filter, chain);
                 // 把这次用到的取出源（在 rf.pointer，未必是队首）转到队尾，下一轮先试新的队首：
                 // 成功 → 多取出对一个存入时轮流取货，不会一直压着最近的；失败 → 下一轮别再先选它，
                 // 免得它（模拟与实际不一致等情形下）一直挡住后面的货源。轮转状态就存在这份缓存列表里。
@@ -671,7 +672,7 @@ final class LevelTransferNetworks {
      * 源容器里是否存在「能通过（服务面 + 沿途）过滤、且目标容器确实收得下」的物品。
      *
      * <p>比只按过滤判定多校验了<b>目标容器的可接收性</b>。仅按过滤选源时，若选中的源只有目标容器
-     * 拒收的物品（如储物抽屉只收固定物品、目标恰好已满），{@code moveOneStack} 会搬运失败；而失败
+     * 拒收的物品（如储物抽屉只收固定物品、目标恰好已满），{@code moveItems} 会搬运失败；而失败
      * 既不轮转源列表也不改选下一个源，下一轮又会重新选中同一个源——于是其它有效货源被永久饿死，
      * 表现为「一个取不到货的近端源把远端源全都挡住」。这里直接跳过这类源，顺延到下一个。</p>
      */
@@ -722,26 +723,31 @@ final class LevelTransferNetworks {
      * 从源容器搬出至多 {@code limit} 个物品，塞进目标容器；物品需通过 {@code serviceFilter} 与该路线的
      * {@code chainFilters}（沿途每一道「存入」面的过滤，逐级 AND）才放行。
      *
+     * <p>{@code limit} 是物品<b>个数</b>而不是堆叠上限：多叠不可堆叠物品（例如 64 把铁剑）会按个数
+     * 累计跨多个槽位搬完，堆叠上限为 64 的物品则一叠正好填满一次物流量。</p>
+     *
      * <p>先模拟取出、再模拟插入，只有目标确实能收下的部分才真正取走，避免物品被取出后塞不回去。</p>
      *
      * <p>插入走 {@link ItemHandlerUtil#insertItem}：对前置的 {@code PollableFilteredItemStackHandler} 用
      * 非轮询入口，避免搬运触发轮询副作用。个别容器（如储物抽屉）的模拟与实际容量可能不一致，故实际
      * 塞不下的余量回灌源容器，不静默丢弃。</p>
      *
-     * <p>{@code limit} 是该「存入」面的物流量；过滤判定交给 {@link FilterItem#filter}，因此普通物品、
-     * 内嵌 {@code FilterContent} 的前置过滤器物品都成立。一叠物品同质，按整叠判定即可。</p>
+     * <p>过滤判定交给 {@link FilterItem#filter}，因此普通物品、内嵌 {@code FilterContent} 的前置过滤器
+     * 物品都成立；每一叠单独判定（不同槽位可以是不同物品）。</p>
      *
      * @return 是否真的搬动了物品
      */
-    private static boolean moveOneStack(
+    private static boolean moveItems(
             Level level, IItemHandler source, IItemHandler target, int limit,
             ItemStack serviceFilter, List<ItemStack> chainFilters) {
-        for (int slot = 0; slot < source.getSlots(); slot++) {
-            ItemStack available = source.extractItem(slot, limit, true);
+        int remaining = limit;
+        boolean moved = false;
+        for (int slot = 0; slot < source.getSlots() && remaining > 0; slot++) {
+            ItemStack available = source.extractItem(slot, remaining, true);
             if (available.isEmpty()) continue;
             if (!passesAll(level, available, serviceFilter, chainFilters)) continue;
-            ItemStack leftover = ItemHandlerUtil.insertItem(target, available, true);
-            int accepted = available.getCount() - leftover.getCount();
+            ItemStack simulatedLeftover = ItemHandlerUtil.insertItem(target, available, true);
+            int accepted = available.getCount() - simulatedLeftover.getCount();
             if (accepted <= 0) continue;
             ItemStack taken = source.extractItem(slot, accepted, false);
             if (taken.isEmpty()) continue;
@@ -750,9 +756,12 @@ final class LevelTransferNetworks {
             if (!actualLeftover.isEmpty()) {
                 source.insertItem(slot, actualLeftover, false);
             }
-            return true;
+            int actuallyMoved = taken.getCount() - actualLeftover.getCount();
+            if (actuallyMoved <= 0) continue;
+            remaining -= actuallyMoved;
+            moved = true;
         }
-        return false;
+        return moved;
     }
 
     /**
