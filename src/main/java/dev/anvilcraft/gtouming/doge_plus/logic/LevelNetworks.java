@@ -1402,10 +1402,10 @@ final class LevelNetworks {
         // 中继器等方向敏感信号源按此约定输出，传反则读不到（红石粉不分方向所以不暴露）。
         // 取弱信号与强信号的最大值：红石粉只提供弱信号（getSignal），
         // 而中继器/比较器等只输出强信号（getDirectSignal），两者都需支持。
-        // 直接对同一个 BlockState 取两次：level.getSignal / getDirectSignal 各自会再查一次方块状态。
-        BlockState neighborState = level.getBlockState(neighborPos);
-        int weak = neighborState.getSignal(level, neighborPos, dir);
-        int strong = neighborState.getDirectSignal(level, neighborPos, dir);
+        // 弱信号走 Level#getSignal 而不是 BlockState#getSignal：前者对红石导体（完整方块）
+        // 还会叠加强充能来源的直连信号，使「被强充能的方块」向其它方向输出的弱信号也能读到手。
+        int weak = level.getSignal(neighborPos, dir);
+        int strong = level.getDirectSignal(neighborPos, dir);
         return Math.max(weak, strong);
     }
 
